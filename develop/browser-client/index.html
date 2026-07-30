@@ -609,6 +609,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#channels" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Channels
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#named-events" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1088,6 +1099,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#channels" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Channels
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#named-events" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1292,6 +1314,25 @@ automatically.</p>
 object values are omitted. The <code>channels</code> option wins over an existing
 <code>channels</code> value in the endpoint or query object.</p>
 <p>Do not use query parameters for bearer tokens or secrets.</p>
+<h2 id="channels">Channels</h2>
+<p>Initial channels are passed to the constructor:</p>
+<pre class="highlight"><code class="language-javascript">const live = new SseClient({
+    endpoint: '/sse',
+    channels: ['users.42'],
+});</code></pre>
+<p>Channels can also be changed later:</p>
+<pre class="highlight"><code class="language-javascript">live.subscribe('orders.918');
+live.subscribe(['projects.15.activity', 'public.news']);
+
+live.unsubscribe('orders.918');
+
+live.setChannels(['users.42', 'orders.918']);</code></pre>
+<p><code>subscribe()</code>, <code>unsubscribe()</code>, and <code>setChannels()</code> return the client for
+chaining.</p>
+<p>Native <code>EventSource</code> cannot change its URL after it is opened. When channels
+change on an active client, the wrapper closes the current source and opens a
+new one with the updated <code>channels</code> query parameter. Removing the last channel
+closes the stream.</p>
 <h2 id="named-events">Named events</h2>
 <p>Register a handler before or after connecting:</p>
 <pre class="highlight"><code class="language-javascript">const updateOrder = ({ data }) =&gt; {

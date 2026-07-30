@@ -499,6 +499,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#debug-toolbar" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Debug toolbar
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#broker" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1072,6 +1083,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#debug-toolbar" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Debug toolbar
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#broker" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1321,6 +1343,62 @@ subscriptions, and allows deployments to drain old processes.</p>
 <p>Keep <code>heartbeatInterval</code> lower than the shortest idle timeout between the
 application and browser. A heartbeat is an SSE comment and does not invoke
 application message handlers.</p>
+<h2 id="debug-toolbar">Debug toolbar</h2>
+<p>When CodeIgniter Debug Toolbar is enabled, the package adds an <code>SSE Events</code>
+collector through module discovery. It lists SSE publish calls triggered during
+the current HTTP request.</p>
+<p>The collector records metadata only:</p>
+<ul>
+<li>channel;</li>
+<li>event name;</li>
+<li>event ID;</li>
+<li>publish status;</li>
+<li>payload size in bytes;</li>
+<li>top-level data keys;</li>
+<li>publisher class or error message.</li>
+</ul>
+<p>It does not display payload values, because event data can contain user data or
+other sensitive fields.</p>
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th style="text-align: right;">Default</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>toolbar['enabled']</code></td>
+<td style="text-align: right;"><code>true</code></td>
+<td>Enable publisher tracing during web debug requests.</td>
+</tr>
+<tr>
+<td><code>toolbar['brokers']</code></td>
+<td style="text-align: right;"><code>['*']</code></td>
+<td>Broker names tracked by the toolbar, or <code>*</code> for all configured brokers.</td>
+</tr>
+<tr>
+<td><code>toolbar['maxEvents']</code></td>
+<td style="text-align: right;"><code>100</code></td>
+<td>Maximum number of publish records kept for one request.</td>
+</tr>
+</tbody>
+</table>
+<p>Track only selected brokers:</p>
+<pre class="highlight"><code class="language-php">final class Sse extends BaseSse
+{
+    public array $toolbar = [
+        'brokers' =&gt; ['redis', 'custom'],
+    ];
+}</code></pre>
+<p>Disable tracing when the application does not need it:</p>
+<pre class="highlight"><code class="language-php">final class Sse extends BaseSse
+{
+    public array $toolbar = [
+        'enabled' =&gt; false,
+    ];
+}</code></pre>
 <h2 id="broker">Broker</h2>
 <table>
 <thead>
