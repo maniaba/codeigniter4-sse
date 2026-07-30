@@ -1202,24 +1202,39 @@ final class Sse extends BaseSse
 </thead>
 <tbody>
 <tr>
-<td><code>routeEnabled</code></td>
+<td><code>route['enabled']</code></td>
 <td style="text-align: right;"><code>true</code></td>
 <td>Register the package route through CI4 discovery.</td>
 </tr>
 <tr>
-<td><code>route</code></td>
+<td><code>route['path']</code></td>
 <td style="text-align: right;"><code>sse</code></td>
 <td>Route path without a leading slash.</td>
 </tr>
 <tr>
-<td><code>routeName</code></td>
+<td><code>route['name']</code></td>
 <td style="text-align: right;"><code>sse.stream</code></td>
 <td>Name used by CI4 route lookup.</td>
 </tr>
 <tr>
-<td><code>routeFilters</code></td>
+<td><code>route['controller']</code></td>
+<td style="text-align: right;"><code>SseController::class</code></td>
+<td>Controller class used by the route.</td>
+</tr>
+<tr>
+<td><code>route['method']</code></td>
+<td style="text-align: right;"><code>stream</code></td>
+<td>Controller method used by the route.</td>
+</tr>
+<tr>
+<td><code>route['filters']</code></td>
 <td style="text-align: right;"><code>[]</code></td>
 <td>CI4 filter aliases applied to the route.</td>
+</tr>
+<tr>
+<td><code>route['options']</code></td>
+<td style="text-align: right;"><code>[]</code></td>
+<td>Additional CI4 route options.</td>
 </tr>
 <tr>
 <td><code>requireAcceptHeader</code></td>
@@ -1231,12 +1246,18 @@ final class Sse extends BaseSse
 <p>Example:</p>
 <pre class="highlight"><code class="language-php">final class Sse extends BaseSse
 {
-    public string $route = 'live/events';
-
-    /** @var list&lt;string&gt; */
-    public array $routeFilters = ['auth', 'sse-concurrency'];
+    public array $route = [
+        'path'    =&gt; 'live/events',
+        'name'    =&gt; 'sse.stream',
+        'filters' =&gt; ['auth', 'sse-concurrency'],
+        'options' =&gt; [
+            'priority' =&gt; 100,
+        ],
+    ];
 }</code></pre>
 <p>Both names in this example are application-defined CI4 filter aliases.</p>
+<p>Set <code>route['enabled'] = false</code> when the application registers the SSE endpoint
+manually in <code>app/Config/Routes.php</code>.</p>
 <p>Private streams should use both:</p>
 <ul>
 <li>an application authentication filter;</li>
@@ -1254,7 +1275,7 @@ route explicitly:</p>
     '\\' . \Maniaba\CodeIgniterSse\HTTP\SseController::class . '::stream',
     ['filter' =&gt; 'auth|sse-concurrency'],
 );</code></pre>
-<p><code>SseRoutes::register()</code> honors <code>routeEnabled</code>, so it is intended for automatic
+<p><code>SseRoutes::register()</code> honors <code>route['enabled']</code>, so it is intended for automatic
 package discovery rather than bypassing a disabled route. Keep the request
 method <code>GET</code>; browser <code>EventSource</code> cannot issue a custom POST request.</p>
 <h2 id="stream-behavior">Stream behavior</h2>
@@ -1335,7 +1356,7 @@ application message handlers.</p>
 <p><code>memory</code> is useful for isolated tests in one PHP process. It cannot carry a
 message between separate HTTP requests or workers. <code>null</code> is a message sink:
 it discards published events but an enabled SSE route still keeps each stream
-open until disconnect or maximum lifetime. Set <code>routeEnabled = false</code> to
+open until disconnect or maximum lifetime. Set <code>route['enabled'] = false</code> to
 disable the HTTP endpoint.</p>
 <p>Do not use an empty shared prefix when several applications publish to the
 same Redis instance.</p>
