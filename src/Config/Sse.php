@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Maniaba\CodeIgniterSse\Config;
 
+use Closure;
 use CodeIgniter\Config\BaseConfig;
 use InvalidArgumentException;
 use LogicException;
@@ -100,14 +101,14 @@ class Sse extends BaseConfig
     public bool $withCredentials = true;
 
     /**
-     * @var class-string<ChannelAuthorizerInterface>
+     * @var class-string<ChannelAuthorizerInterface>|Closure(): ChannelAuthorizerInterface
      */
-    public string $channelAuthorizer = PublicChannelAuthorizer::class;
+    public Closure|string $channelAuthorizer = PublicChannelAuthorizer::class;
 
     /**
-     * @var class-string<UserResolverInterface>
+     * @var class-string<UserResolverInterface>|Closure(): UserResolverInterface
      */
-    public string $userResolver = NullUserResolver::class;
+    public Closure|string $userResolver = NullUserResolver::class;
 
     /**
      * Redis adapter options.

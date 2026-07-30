@@ -137,31 +137,30 @@ final class Sse extends BaseSse
 
 ## Dependency injection
 
-The config class resolver instantiates the selected classes without constructor
-arguments. If an authorizer has dependencies, override the corresponding
-service methods in the application's existing `Config\Services` class:
+The config class resolver instantiates selected classes without constructor
+arguments. If an authorizer or user resolver has dependencies, provide a factory
+closure in `Config\Sse`:
 
 ```php
 use App\Sse\PolicyChannelAuthorizer;
-use Maniaba\CodeIgniterSse\Contracts\ChannelAuthorizerInterface;
+use Maniaba\CodeIgniterSse\Config\Sse as BaseSse;
 
-public static function sseChannelAuthorizer(
-    bool $getShared = true,
-): ChannelAuthorizerInterface {
-    if ($getShared) {
-        return static::getSharedInstance('sseChannelAuthorizer');
+final class Sse extends BaseSse
+{
+    public function __construct()
+    {
+        parent::__construct();
+
+        $this->channelAuthorizer = static fn (): PolicyChannelAuthorizer => new PolicyChannelAuthorizer(
+            service('orderPolicy'),
+            service('tenantMemberships'),
+        );
     }
-
-    return new PolicyChannelAuthorizer(
-        service('orderPolicy'),
-        service('tenantMemberships'),
-    );
 }
 ```
 
-An application service override takes precedence over the package's default
-class resolver. Apply the same pattern to `sseUserResolver` if that adapter has
-constructor dependencies.
+Apply the same pattern to `$userResolver` if that adapter has constructor
+dependencies.
 
 Keep database queries bounded: authorization runs before the stream starts,
 but a request can contain up to `maxChannelsPerConnection` channels.

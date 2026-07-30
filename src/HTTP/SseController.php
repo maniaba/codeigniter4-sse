@@ -6,18 +6,26 @@ namespace Maniaba\CodeIgniterSse\HTTP;
 
 use CodeIgniter\HTTP\ResponseInterface;
 use CodeIgniter\RESTful\ResourceController;
-use Maniaba\CodeIgniterSse\Authorization\ChannelAuthorization;
 use Maniaba\CodeIgniterSse\Config\Sse as SseConfig;
 use Maniaba\CodeIgniterSse\Contracts\SseOutputInterface;
-use Maniaba\CodeIgniterSse\Contracts\UserResolverInterface;
 use Maniaba\CodeIgniterSse\Exception\InvalidChannelException;
 use Maniaba\CodeIgniterSse\Exception\InvalidChannelRequestException;
 use Maniaba\CodeIgniterSse\Exception\InvalidOriginException;
 use Maniaba\CodeIgniterSse\Exception\UnauthorizedChannelException;
+use Maniaba\CodeIgniterSse\Factory\AuthorizationFactory;
+use Maniaba\CodeIgniterSse\Factory\ConnectionManagerFactory;
 use Maniaba\CodeIgniterSse\Stream\SseConnectionManager;
 
 final class SseController extends ResourceController
 {
+    public function __construct(
+        private readonly ?SseConnectionManager $manager = null,
+        private readonly ?SseResponseFactory $responseFactory = null,
+        private readonly ?AuthorizationFactory $authorizations = null,
+        private readonly ?ConnectionManagerFactory $connectionManagers = null,
+    ) {
+    }
+
     public function stream(): ResponseInterface
     {
         $config = SseConfig::discover();
@@ -47,10 +55,9 @@ final class SseController extends ResourceController
                 $config->allowPatternSubscriptions,
             ))->parse($this->request->getGet('channels'));
 
-            /** @var UserResolverInterface $userResolver */
-            $userResolver = service('sseUserResolver');
-            /** @var ChannelAuthorization $authorization */
-            $authorization = service('sseChannelAuthorization');
+            $authorizations = $this->authorizations ?? new AuthorizationFactory();
+            $userResolver   = $authorizations->userResolver($config);
+            $authorization  = $authorizations->channelAuthorization($config);
 
             $channels = $authorization->authorizeAll($userResolver->resolve(), $channels);
         } catch (InvalidChannelException|InvalidChannelRequestException $exception) {
@@ -65,10 +72,9 @@ final class SseController extends ResourceController
             );
         }
 
-        /** @var SseConnectionManager $manager */
-        $manager = service('sseConnectionManager');
-        /** @var SseResponseFactory $factory */
-        $factory = service('sseResponseFactory');
+        $manager = $this->manager
+            ?? ($this->connectionManagers ?? new ConnectionManagerFactory())->create($config);
+        $factory = $this->responseFactory ?? new SseResponseFactory($this->response);
 
         $response = $factory->create(
             static function (SseOutputInterface $output) use ($manager, $channels): void {

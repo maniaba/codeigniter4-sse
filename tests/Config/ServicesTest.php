@@ -17,6 +17,8 @@ use Maniaba\CodeIgniterSse\Contracts\ChannelAuthorizerInterface;
 use Maniaba\CodeIgniterSse\Contracts\EventInterface;
 use Maniaba\CodeIgniterSse\Contracts\PublisherInterface;
 use Maniaba\CodeIgniterSse\Contracts\SubscriberInterface;
+use Maniaba\CodeIgniterSse\Factory\AuthorizationFactory;
+use Maniaba\CodeIgniterSse\Factory\BrokerFactory;
 use Maniaba\CodeIgniterSse\Sse as SseManager;
 use ReflectionProperty;
 
@@ -35,8 +37,9 @@ final class ServicesTest extends CIUnitTestCase
         $config         = new Sse();
         $config->broker = 'memory';
 
-        $publisher  = Services::ssePublisher($config, false);
-        $subscriber = Services::sseSubscriber($config, false);
+        $brokers    = new BrokerFactory();
+        $publisher  = $brokers->publisher($config);
+        $subscriber = $brokers->subscriber($config);
 
         $this->assertInstanceOf(InMemoryBroker::class, $publisher);
         $this->assertSame($publisher, $subscriber);
@@ -128,8 +131,10 @@ final class ServicesTest extends CIUnitTestCase
             'subscriber' => static fn (): SubscriberInterface => $subscriber,
         ];
 
-        $this->assertSame($publisher, Services::ssePublisher($config, false));
-        $this->assertSame($subscriber, Services::sseSubscriber($config, false));
+        $brokers = new BrokerFactory();
+
+        $this->assertSame($publisher, $brokers->publisher($config));
+        $this->assertSame($subscriber, $brokers->subscriber($config));
     }
 
     public function testCustomBrokerCanUseSimpleClassNames(): void
@@ -142,10 +147,12 @@ final class ServicesTest extends CIUnitTestCase
             'shared'     => true,
         ];
 
-        $this->assertInstanceOf(NullBroker::class, Services::ssePublisher($config, false));
+        $brokers = new BrokerFactory();
+
+        $this->assertInstanceOf(NullBroker::class, $brokers->publisher($config));
         $this->assertSame(
-            Services::ssePublisher($config, false),
-            Services::sseSubscriber($config, false),
+            $brokers->publisher($config),
+            $brokers->subscriber($config),
         );
     }
 
@@ -176,7 +183,7 @@ final class ServicesTest extends CIUnitTestCase
         }
     }
 
-    public function testAuthorizationServiceUsesApplicationAuthorizerOverride(): void
+    public function testAuthorizationFactoryCanUseConfiguredFactory(): void
     {
         $authorizer = new class () implements ChannelAuthorizerInterface {
             /**
@@ -192,16 +199,13 @@ final class ServicesTest extends CIUnitTestCase
             }
         };
 
-        FrameworkServices::injectMock('sseChannelAuthorizer', $authorizer);
+        $config                    = new Sse();
+        $config->channelAuthorizer = static fn (): ChannelAuthorizerInterface => $authorizer;
 
-        try {
-            $channels = Services::sseChannelAuthorization(getShared: false)
-                ->authorizeAll(null, ['users.42']);
+        $channels = (new AuthorizationFactory())->channelAuthorization($config)
+            ->authorizeAll(null, ['users.42']);
 
-            $this->assertSame(['users.42'], $channels);
-            $this->assertSame(['users.42'], $authorizer->channels);
-        } finally {
-            FrameworkServices::resetSingle('sseChannelAuthorizer');
-        }
+        $this->assertSame(['users.42'], $channels);
+        $this->assertSame(['users.42'], $authorizer->channels);
     }
 }

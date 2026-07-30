@@ -6,8 +6,8 @@ namespace Maniaba\CodeIgniterSse\Commands;
 
 use CodeIgniter\CLI\BaseCommand;
 use CodeIgniter\CLI\CLI;
-use Maniaba\CodeIgniterSse\Broker\Redis\RedisHealthChecker;
 use Maniaba\CodeIgniterSse\Config\Sse;
+use Maniaba\CodeIgniterSse\Factory\HealthCheckerFactory;
 
 final class HealthCheckCommand extends BaseCommand
 {
@@ -32,9 +32,8 @@ final class HealthCheckCommand extends BaseCommand
             return EXIT_SUCCESS;
         }
 
-        /** @var RedisHealthChecker $checker */
-        $checker = service('sseRedisHealthChecker');
         $redis   = $config->redis();
+        $checker = (new HealthCheckerFactory())->create($config);
 
         if (! $checker->check()) {
             CLI::error(

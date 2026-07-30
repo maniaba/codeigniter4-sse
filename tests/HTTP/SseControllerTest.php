@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Tests\HTTP;
 
-use CodeIgniter\Config\Services as FrameworkServices;
 use CodeIgniter\HTTP\RequestInterface;
 use CodeIgniter\HTTP\ResponseInterface;
 use CodeIgniter\Superglobals;
@@ -53,19 +52,18 @@ final class SseControllerTest extends CIUnitTestCase
         $factoryResponse = single_service('response');
         $this->assertInstanceOf(ResponseInterface::class, $factoryResponse);
 
-        FrameworkServices::injectMock('sseConnectionManager', $manager);
-        FrameworkServices::injectMock(
-            'sseResponseFactory',
-            new SseResponseFactory($factoryResponse),
-        );
-
         $superglobals = service('superglobals');
         $this->assertInstanceOf(Superglobals::class, $superglobals);
         $previousGet = $superglobals->getGetArray();
         $superglobals->setGetArray(['channels' => 'public.news']);
 
         try {
-            $result = $this->controllerResponse(null, 'text/event-stream');
+            $result = $this->controllerResponse(
+                null,
+                'text/event-stream',
+                $manager,
+                new SseResponseFactory($factoryResponse),
+            );
 
             ob_start();
             $result->send();
@@ -83,13 +81,15 @@ final class SseControllerTest extends CIUnitTestCase
             $this->assertStringContainsString('"channels":["public.news"]', $output);
         } finally {
             $superglobals->setGetArray($previousGet);
-            FrameworkServices::resetSingle('sseConnectionManager');
-            FrameworkServices::resetSingle('sseResponseFactory');
         }
     }
 
-    private function controllerResponse(?string $origin, ?string $accept): ResponseInterface
-    {
+    private function controllerResponse(
+        ?string $origin,
+        ?string $accept,
+        ?SseConnectionManager $manager = null,
+        ?SseResponseFactory $responseFactory = null,
+    ): ResponseInterface {
         $request  = single_service('request');
         $response = single_service('response');
         $logger   = service('logger');
@@ -109,7 +109,7 @@ final class SseControllerTest extends CIUnitTestCase
             $request->setHeader('Accept', $accept);
         }
 
-        $controller = new SseController();
+        $controller = new SseController($manager, $responseFactory);
         $controller->initController($request, $response, $logger);
 
         return $controller->stream();
