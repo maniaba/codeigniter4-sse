@@ -1191,13 +1191,16 @@ sse()-&gt;publish(
     "users.{$order-&gt;user_id}",
     'notification.created',
     [
-        'title'   =&gt; 'Narudžba je plaćena',
+        'title'   =&gt; 'Order paid',
         'orderId' =&gt; $order-&gt;id,
     ],
 );</code></pre>
 <p>The publisher builds a versioned envelope and sends it to the prefixed Redis
 channel. Application code does not build Redis channel names and does not
 write SSE frames.</p>
+<p>If the application already has an event object, implement
+<code>PublishableEventInterface</code> and call <code>sse()-&gt;publish($object)</code>. The object
+provides the channel, event name or event object, and payload.</p>
 <h2 id="4-connect-from-the-browser">4. Connect from the browser</h2>
 <pre class="highlight"><code class="language-javascript">import { SseClient } from '/vendor/codeigniter4-sse/sse-client.js';
 

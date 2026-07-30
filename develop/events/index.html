@@ -1079,6 +1079,39 @@ the browser decides how the page should react.</p>
         'orderId' =&gt; 918,
     ],
 );</code></pre>
+<p>Domain code can also publish one object that knows its channel, event name, and
+payload:</p>
+<pre class="highlight"><code class="language-php">use Maniaba\CodeIgniterSse\Contracts\PublishableEventInterface;
+use Maniaba\CodeIgniterSse\Support\Channel;
+
+final readonly class OrderPaidNotification implements PublishableEventInterface
+{
+    public function __construct(
+        private int $userId,
+        private int $orderId,
+    ) {
+    }
+
+    public function channel(): Channel
+    {
+        return Channel::join('users', $this-&gt;userId);
+    }
+
+    public function event(): string
+    {
+        return 'notification.created';
+    }
+
+    public function data(): array
+    {
+        return [
+            'title'   =&gt; 'Order paid',
+            'orderId' =&gt; $this-&gt;orderId,
+        ];
+    }
+}
+
+sse()-&gt;publish(new OrderPaidNotification($userId, 918));</code></pre>
 <p>Advanced code can publish a concrete event object:</p>
 <pre class="highlight"><code class="language-php">use Maniaba\CodeIgniterSse\Event\SseEvent;
 use Maniaba\CodeIgniterSse\Support\Channel;
