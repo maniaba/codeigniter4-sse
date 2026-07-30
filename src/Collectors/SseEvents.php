@@ -91,13 +91,8 @@ final class SseEvents extends BaseCollector
 
     public function icon(): string
     {
-        return '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">'
-            . '<g fill="none" stroke="#dd4814" stroke-linecap="round" stroke-linejoin="round" stroke-width="2">'
-            . '<path d="M18.364 19.364a9 9 0 1 0-12.728 0"/>'
-            . '<path d="M15.536 16.536a5 5 0 1 0-7.072 0"/>'
-            . '<path d="M11 13a1 1 0 1 0 2 0a1 1 0 1 0-2 0"/>'
-            . '</g>'
-            . '</svg>';
+        return 'data:image/svg+xml;base64,'
+            . 'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0Ij48ZyBmaWxsPSJub25lIiBzdHJva2U9IiNkZDQ4MTQiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIgc3Ryb2tlLXdpZHRoPSIyIj48cGF0aCBkPSJNMTguMzY0IDE5LjM2NGE5IDkgMCAxIDAtMTIuNzI4IDAiLz48cGF0aCBkPSJNMTUuNTM2IDE2LjUzNmE1IDUgMCAxIDAtNy4wNzIgMCIvPjxwYXRoIGQ9Ik0xMSAxM2ExIDEgMCAxIDAgMiAwYTEgMSAwIDEgMC0yIDAiLz48L2c+PC9zdmc+';
     }
 
     private static function escape(string $value): string

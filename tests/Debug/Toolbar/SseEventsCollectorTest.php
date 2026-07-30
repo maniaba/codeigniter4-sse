@@ -56,9 +56,12 @@ final class SseEventsCollectorTest extends TestCase
     public function testItUsesBroadcastIcon(): void
     {
         $icon = (new SseEvents())->icon();
+        $svg  = base64_decode(substr($icon, strlen('data:image/svg+xml;base64,')), true);
 
-        $this->assertStringContainsString('viewBox="0 0 24 24"', $icon);
-        $this->assertStringContainsString('M18.364 19.364a9 9 0 1 0-12.728 0', $icon);
-        $this->assertStringContainsString('stroke="#dd4814"', $icon);
+        $this->assertStringStartsWith('data:image/svg+xml;base64,', $icon);
+        $this->assertIsString($svg);
+        $this->assertStringContainsString('viewBox="0 0 24 24"', $svg);
+        $this->assertStringContainsString('M18.364 19.364a9 9 0 1 0-12.728 0', $svg);
+        $this->assertStringContainsString('stroke="#dd4814"', $svg);
     }
 }
