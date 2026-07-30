@@ -1,0 +1,75 @@
+# Module structure
+
+The package keeps application publishing, broker transport, HTTP streaming,
+and browser behavior separate.
+
+```text
+src/
+├── Authorization/
+├── Broker/
+│   └── Redis/
+├── Commands/
+├── Config/
+├── Contracts/
+├── Event/
+├── Exception/
+├── HTTP/
+├── Stream/
+└── Support/
+```
+
+## Public API
+
+Application code should normally use:
+
+```php
+service('sse')->publish($channel, $eventName, $data);
+```
+
+For typed integrations, depend on:
+
+- `PublisherInterface`
+- `SubscriberInterface`
+- `ChannelAuthorizerInterface`
+- `UserResolverInterface`
+- `EventInterface`
+- `SerializerInterface`
+
+## Broker layer
+
+`Broker\Redis` contains the Pub/Sub implementation and the RESP socket client.
+Publisher and subscriber connections are separate because Redis subscriptions
+are blocking.
+
+`InMemoryBroker` is for tests and one-process examples. `NullBroker` is useful
+when applications want the API enabled without delivering live events.
+
+## HTTP layer
+
+`HTTP\SseController` parses the channel request, resolves the current user,
+authorizes every channel, and starts the stream.
+
+`HTTP\SseResponseFactory` selects the output implementation at runtime:
+
+```text
+CodeIgniter 4.8 native eventStream()
+    └── CodeIgniterSseOutput
+
+CodeIgniter 4.7 compatibility path
+    └── LegacySseResponse
+```
+
+## Stream layer
+
+`SseConnectionManager` owns the long-running stream loop. It sends retry
+configuration, the optional connected event, broker events, idle heartbeats,
+and maximum-lifetime shutdown.
+
+## Browser asset
+
+`resources/js/sse-client.js` is a dependency-free wrapper around native
+`EventSource`. It is published to the host application by:
+
+```bash
+php spark sse:install
+```
