@@ -549,10 +549,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#dependency-injection" class="md-nav__link">
+  <a href="#dependencies" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Dependency injection
+        Dependencies
       
     </span>
   </a>
@@ -1088,10 +1088,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#dependency-injection" class="md-nav__link">
+  <a href="#dependencies" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Dependency injection
+        Dependencies
       
     </span>
   </a>
@@ -1208,6 +1208,17 @@ final class UserResolver implements UserResolverInterface
 <p>The resolver may use CodeIgniter Shield, a session, JWT claims, or an
 application-specific auth service. It must return the authenticated subject or
 <code>null</code>; it must not trust a user ID from the <code>channels</code> query parameter.</p>
+<p>For CodeIgniter Shield, use the packaged resolver. It uses Shield's <code>auth</code>
+helper and returns <code>auth()-&gt;user()</code>:</p>
+<pre class="highlight"><code class="language-php">namespace Config;
+
+use Maniaba\CodeIgniterSse\Authorization\ShieldUserResolver;
+use Maniaba\CodeIgniterSse\Config\Sse as BaseSse;
+
+final class Sse extends BaseSse
+{
+    public string $userResolver = ShieldUserResolver::class;
+}</code></pre>
 <p>Resolve authentication before the long-lived stream starts. If the
 authentication layer opens a locking PHP session, release the session lock
 after resolving the user so the SSE connection does not block the user's
@@ -1256,27 +1267,35 @@ final class Sse extends BaseSse
     public string $channelAuthorizer = ChannelAuthorizer::class;
     public string $userResolver = UserResolver::class;
 }</code></pre>
-<h2 id="dependency-injection">Dependency injection</h2>
-<p>The config class resolver instantiates selected classes without constructor
-arguments. If an authorizer or user resolver has dependencies, provide a factory
-closure in <code>Config\Sse</code>:</p>
+<h2 id="dependencies">Dependencies</h2>
+<p>The config stores class names. Keep these adapters small and constructor-free.
+When an adapter needs application services, resolve them inside the adapter
+method:</p>
 <pre class="highlight"><code class="language-php">use App\Sse\PolicyChannelAuthorizer;
 use Maniaba\CodeIgniterSse\Config\Sse as BaseSse;
 
 final class Sse extends BaseSse
 {
-    public function __construct()
-    {
-        parent::__construct();
+    public string $channelAuthorizer = PolicyChannelAuthorizer::class;
+}</code></pre>
+<pre class="highlight"><code class="language-php">namespace App\Sse;
 
-        $this-&gt;channelAuthorizer = static fn (): PolicyChannelAuthorizer =&gt; new PolicyChannelAuthorizer(
-            service('orderPolicy'),
-            service('tenantMemberships'),
-        );
+use Maniaba\CodeIgniterSse\Contracts\ChannelAuthorizerInterface;
+
+final class PolicyChannelAuthorizer implements ChannelAuthorizerInterface
+{
+    public function authorize(?object $user, string $channel): bool
+    {
+        $orderPolicy = service('orderPolicy');
+        $memberships = service('tenantMemberships');
+
+        // Apply application rules here.
+        return $orderPolicy-&gt;allows($user, $channel)
+            || $memberships-&gt;allows($user, $channel);
     }
 }</code></pre>
-<p>Apply the same pattern to <code>$userResolver</code> if that adapter has constructor
-dependencies.</p>
+<p>This keeps package internals out of CodeIgniter's global service registry while
+still letting the application integrate its own dependencies.</p>
 <p>Keep database queries bounded: authorization runs before the stream starts,
 but a request can contain up to <code>maxChannelsPerConnection</code> channels.</p>
 <p>Batch tenant or project membership checks when possible instead of executing

@@ -1103,7 +1103,7 @@ and browser behavior separate.</p>
 └── Support/</code></pre>
 <h2 id="public-api">Public API</h2>
 <p>Application code should normally use:</p>
-<pre class="highlight"><code class="language-php">service('sse')-&gt;publish($channel, $eventName, $data);</code></pre>
+<pre class="highlight"><code class="language-php">sse()-&gt;publish($channel, $eventName, $data);</code></pre>
 <p>For typed integrations, depend on:</p>
 <ul>
 <li><code>PublisherInterface</code></li>

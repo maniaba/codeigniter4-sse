@@ -1091,7 +1091,7 @@
 applications without coupling application code to Redis sockets or HTTP
 streaming details.</p>
 <pre class="highlight"><code class="language-text">Application
-   ↓ service('sse')-&gt;publish()
+   ↓ sse()-&gt;publish()
 Publisher contract
    ↓
 Redis Pub/Sub
@@ -1103,7 +1103,7 @@ CodeIgniter SSE response
 Browser EventSource</code></pre>
 <h2 id="what-it-provides">What it provides</h2>
 <ul>
-<li>a small <code>service('sse')-&gt;publish()</code> API;</li>
+<li>a small <code>sse()-&gt;publish()</code> API;</li>
 <li>versioned JSON event envelopes with stable event IDs;</li>
 <li>Redis Pub/Sub over an internal RESP2 stream client;</li>
 <li>logical channel validation, limits, and server-side authorization;</li>
@@ -1120,7 +1120,7 @@ Browser EventSource</code></pre>
 <p>PhpRedis and Predis are not required.</p>
 <h2 id="minimal-example">Minimal example</h2>
 <p>Publish:</p>
-<pre class="highlight"><code class="language-php">service('sse')-&gt;publish(
+<pre class="highlight"><code class="language-php">sse()-&gt;publish(
     "users.{$userId}",
     'notification.created',
     [

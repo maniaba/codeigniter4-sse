@@ -1071,7 +1071,7 @@
 services, and workers publish events without touching Redis directly.</p>
 <h2 id="user-notification">User notification</h2>
 <p>Publish from any PHP process:</p>
-<pre class="highlight"><code class="language-php">service('sse')-&gt;publish(
+<pre class="highlight"><code class="language-php">sse()-&gt;publish(
     "users.{$userId}",
     'notification.created',
     [
@@ -1093,7 +1093,7 @@ live.on('notification.created', ({ data }) =&gt; {
 live.connect();</code></pre>
 <h2 id="order-status">Order status</h2>
 <p>Publish a domain event:</p>
-<pre class="highlight"><code class="language-php">service('sse')-&gt;publish(
+<pre class="highlight"><code class="language-php">sse()-&gt;publish(
     'orders.918',
     'order.updated',
     [
@@ -1108,7 +1108,7 @@ live.connect();</code></pre>
 });</code></pre>
 <h2 id="dashboard-refresh">Dashboard refresh</h2>
 <p>Publish a tenant dashboard metric:</p>
-<pre class="highlight"><code class="language-php">service('sse')-&gt;publish(
+<pre class="highlight"><code class="language-php">sse()-&gt;publish(
     "tenants.{$tenantId}.dashboard",
     'dashboard.metric.changed',
     [
@@ -1124,7 +1124,7 @@ live.connect();</code></pre>
 <h2 id="optional-ui-patch">Optional UI patch</h2>
 <p>For generic internal screens, the application may choose to send a small UI
 patch event:</p>
-<pre class="highlight"><code class="language-php">service('sse')-&gt;publish(
+<pre class="highlight"><code class="language-php">sse()-&gt;publish(
     'orders.918',
     'ui.patch',
     [

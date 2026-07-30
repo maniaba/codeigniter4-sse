@@ -1184,7 +1184,7 @@ useful for the first smoke test:</p>
     'http://localhost:8080/sse?channels=public.demo'</code></pre>
 <p>In a second terminal, publish a test event from application code or a small
 Spark command:</p>
-<pre class="highlight"><code class="language-php">service('sse')-&gt;publish(
+<pre class="highlight"><code class="language-php">sse()-&gt;publish(
     'public.demo',
     'demo.updated',
     ['ready' =&gt; true],

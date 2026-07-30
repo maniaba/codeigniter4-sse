@@ -1158,7 +1158,7 @@ and browser behavior.</p>
       Browser EventSource</code></pre>
 <h2 id="public-application-boundary">Public application boundary</h2>
 <p>Normal application code uses the high-level service:</p>
-<pre class="highlight"><code class="language-php">service('sse')-&gt;publish($channel, $eventName, $data);</code></pre>
+<pre class="highlight"><code class="language-php">sse()-&gt;publish($channel, $eventName, $data);</code></pre>
 <p>Advanced code can depend on <code>PublisherInterface</code> and provide an
 <code>EventInterface</code> directly. Neither path exposes Redis connection objects or
 the SSE response implementation.</p>

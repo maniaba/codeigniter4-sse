@@ -1570,6 +1570,8 @@ ACL policy allows it.</p>
 channels are used:</p>
 <pre class="highlight"><code class="language-php">public string $channelAuthorizer = \App\Sse\ChannelAuthorizer::class;
 public string $userResolver = \App\Sse\UserResolver::class;</code></pre>
+<p>Applications using CodeIgniter Shield can use the packaged resolver:</p>
+<pre class="highlight"><code class="language-php">public string $userResolver = \Maniaba\CodeIgniterSse\Authorization\ShieldUserResolver::class;</code></pre>
 <p>Both classes must implement their package contracts. See
 <a href="../channels-and-authorization/">Channels and authorization</a>.</p>
 <h2 id="cors-and-credentials">CORS and credentials</h2>

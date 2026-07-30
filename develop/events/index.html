@@ -1071,7 +1071,7 @@
 the browser decides how the page should react.</p>
 <h2 id="publish-an-event">Publish an event</h2>
 <p>The high-level service accepts a logical channel, an event name, and a payload:</p>
-<pre class="highlight"><code class="language-php">service('sse')-&gt;publish(
+<pre class="highlight"><code class="language-php">sse()-&gt;publish(
     "users.{$userId}",
     'notification.created',
     [
