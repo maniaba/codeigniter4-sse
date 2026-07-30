@@ -1114,11 +1114,14 @@
 <p>This example publishes a user notification and updates the page without a full
 reload.</p>
 <h2 id="1-configure-redis">1. Configure Redis</h2>
-<p>Add the development connection to <code>.env</code>:</p>
-<pre class="highlight"><code class="language-dotenv">sse.redisHost = 127.0.0.1
-sse.redisPort = 6379
-sse.redisDatabase = 0
-sse.channelPrefix = example:sse:</code></pre>
+<p>Add the development connection to <code>app/Config/Sse.php</code>:</p>
+<pre class="highlight"><code class="language-php">public string $channelPrefix = 'example:sse:';
+
+public array $redis = [
+    'host'     =&gt; '127.0.0.1',
+    'port'     =&gt; 6379,
+    'database' =&gt; 0,
+];</code></pre>
 <p>Verify it:</p>
 <pre class="highlight"><code class="language-bash">php spark sse:health-check</code></pre>
 <h2 id="2-authorize-the-user-channel">2. Authorize the user channel</h2>

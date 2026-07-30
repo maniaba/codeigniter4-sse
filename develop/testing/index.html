@@ -1226,7 +1226,7 @@ issue a broad Redis flush against a shared environment.</p>
 <li>malformed RESP and Redis error frames fail predictably.</li>
 </ol>
 <p>From a host CodeIgniter application, run the operational check after setting
-its matching <code>sse.redisHost</code>, <code>sse.redisPort</code>, and other <code>sse.*</code> values:</p>
+the matching <code>channelPrefix</code> and <code>redis</code> config array values:</p>
 <pre class="highlight"><code class="language-bash">php spark sse:health-check</code></pre>
 <p>The <code>SSE_REDIS_HOST</code> and <code>SSE_REDIS_PORT</code> variables above belong only to this
 repository's integration test and are not read by the Spark command.</p>

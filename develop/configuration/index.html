@@ -1184,16 +1184,13 @@ final class Sse extends BaseSse
     public string $channelPrefix = 'storefront:sse:';
     public int $heartbeatInterval = 15;
     public int $maxConnectionSeconds = 300;
+
+    public array $redis = [
+        'host'     =&gt; '127.0.0.1',
+        'port'     =&gt; 6379,
+        'database' =&gt; 2,
+    ];
 }</code></pre>
-<p>Scalar properties can also be overridden through <code>.env</code> using the <code>sse.</code>
-prefix and the exact property name:</p>
-<pre class="highlight"><code class="language-dotenv">sse.redisHost = 127.0.0.1
-sse.redisPort = 6379
-sse.redisPassword =
-sse.redisDatabase = 2
-sse.channelPrefix = storefront:sse:
-sse.heartbeatInterval = 15
-sse.maxConnectionSeconds = 300</code></pre>
 <h2 id="http-route">HTTP route</h2>
 <table>
 <thead>
@@ -1316,7 +1313,12 @@ application message handlers.</p>
 <tr>
 <td><code>broker</code></td>
 <td style="text-align: right;"><code>redis</code></td>
-<td><code>redis</code>, <code>memory</code>, or <code>null</code>.</td>
+<td>Active key from <code>brokers</code>.</td>
+</tr>
+<tr>
+<td><code>brokers</code></td>
+<td style="text-align: right;">built-in Redis, memory, null definitions</td>
+<td>Publisher/subscriber class or factory map.</td>
 </tr>
 <tr>
 <td><code>channelPrefix</code></td>
@@ -1337,106 +1339,168 @@ open until disconnect or maximum lifetime. Set <code>routeEnabled = false</code>
 disable the HTTP endpoint.</p>
 <p>Do not use an empty shared prefix when several applications publish to the
 same Redis instance.</p>
-<p>Redis Pub/Sub is global across numbered Redis databases. <code>redisDatabase</code>
+<p>Redis Pub/Sub is global across numbered Redis databases. <code>redis['database']</code>
 therefore does not separate SSE traffic; <code>channelPrefix</code> is the isolation
 boundary.</p>
+<p>Custom brokers are added by registering a new key in <code>brokers</code>:</p>
+<pre class="highlight"><code class="language-php">use App\Sse\CustomPublisher;
+use App\Sse\CustomSubscriber;
+
+final class Sse extends BaseSse
+{
+    public string $broker = 'custom';
+
+    public array $brokers = [
+        'redis' =&gt; [
+            'publisher'  =&gt; \Maniaba\CodeIgniterSse\Broker\Redis\RedisPublisher::class,
+            'subscriber' =&gt; \Maniaba\CodeIgniterSse\Broker\Redis\RedisSubscriber::class,
+        ],
+        'memory' =&gt; [
+            'publisher'  =&gt; \Maniaba\CodeIgniterSse\Broker\InMemoryBroker::class,
+            'subscriber' =&gt; \Maniaba\CodeIgniterSse\Broker\InMemoryBroker::class,
+            'shared'     =&gt; true,
+        ],
+        'null' =&gt; [
+            'publisher'  =&gt; \Maniaba\CodeIgniterSse\Broker\NullBroker::class,
+            'subscriber' =&gt; \Maniaba\CodeIgniterSse\Broker\NullBroker::class,
+            'shared'     =&gt; true,
+        ],
+        'custom' =&gt; [
+            'publisher'  =&gt; CustomPublisher::class,
+            'subscriber' =&gt; CustomSubscriber::class,
+        ],
+    ];
+}</code></pre>
+<p>When a broker needs application services or constructor arguments, use factory
+closures:</p>
+<pre class="highlight"><code class="language-php">public array $brokers = [
+    'redis' =&gt; [
+        'publisher'  =&gt; \Maniaba\CodeIgniterSse\Broker\Redis\RedisPublisher::class,
+        'subscriber' =&gt; \Maniaba\CodeIgniterSse\Broker\Redis\RedisSubscriber::class,
+    ],
+    'custom' =&gt; [
+        'publisher'  =&gt; static fn (): PublisherInterface =&gt; service('customSsePublisher'),
+        'subscriber' =&gt; static fn (): SubscriberInterface =&gt; service('customSseSubscriber'),
+    ],
+];</code></pre>
 <h2 id="redis-connection">Redis connection</h2>
+<p>All Redis options live under one config property:</p>
+<pre class="highlight"><code class="language-php">public array $redis = [
+    'scheme'                     =&gt; 'tcp',
+    'host'                       =&gt; '127.0.0.1',
+    'port'                       =&gt; 6379,
+    'username'                   =&gt; null,
+    'password'                   =&gt; null,
+    'database'                   =&gt; 0,
+    'connectTimeout'             =&gt; 2.5,
+    'readTimeout'                =&gt; 2.5,
+    'pollInterval'               =&gt; 1.0,
+    'pingInterval'               =&gt; 15.0,
+    'reconnectAttempts'          =&gt; 2,
+    'reconnectDelayMilliseconds' =&gt; 250,
+    'deduplicationCapacity'      =&gt; 1024,
+    'maxPayloadBytes'            =&gt; 1_048_576,
+    'maxResponseElements'        =&gt; 1024,
+    'maxResponseDepth'           =&gt; 8,
+    'clientName'                 =&gt; null,
+    'streamContext'              =&gt; [],
+];</code></pre>
 <table>
 <thead>
 <tr>
-<th>Property</th>
+<th>Array key</th>
 <th style="text-align: right;">Default</th>
 <th>Purpose</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>redisScheme</code></td>
+<td><code>scheme</code></td>
 <td style="text-align: right;"><code>tcp</code></td>
 <td>PHP stream scheme, normally <code>tcp</code> or <code>tls</code>.</td>
 </tr>
 <tr>
-<td><code>redisHost</code></td>
+<td><code>host</code></td>
 <td style="text-align: right;"><code>127.0.0.1</code></td>
 <td>Redis hostname or IP address.</td>
 </tr>
 <tr>
-<td><code>redisPort</code></td>
+<td><code>port</code></td>
 <td style="text-align: right;"><code>6379</code></td>
 <td>Redis port.</td>
 </tr>
 <tr>
-<td><code>redisUsername</code></td>
+<td><code>username</code></td>
 <td style="text-align: right;"><code>null</code></td>
 <td>ACL username.</td>
 </tr>
 <tr>
-<td><code>redisPassword</code></td>
+<td><code>password</code></td>
 <td style="text-align: right;"><code>null</code></td>
 <td>Password or ACL secret.</td>
 </tr>
 <tr>
-<td><code>redisDatabase</code></td>
+<td><code>database</code></td>
 <td style="text-align: right;"><code>0</code></td>
 <td>Database selected after authentication; it does not isolate Pub/Sub channels.</td>
 </tr>
 <tr>
-<td><code>redisConnectTimeout</code></td>
+<td><code>connectTimeout</code></td>
 <td style="text-align: right;"><code>2.5</code></td>
 <td>Socket connect timeout in seconds.</td>
 </tr>
 <tr>
-<td><code>redisReadTimeout</code></td>
+<td><code>readTimeout</code></td>
 <td style="text-align: right;"><code>2.5</code></td>
 <td>Timeout for complete Redis command/handshake reads.</td>
 </tr>
 <tr>
-<td><code>redisPollInterval</code></td>
+<td><code>pollInterval</code></td>
 <td style="text-align: right;"><code>1.0</code></td>
 <td>Maximum idle poll before stream checks run.</td>
 </tr>
 <tr>
-<td><code>redisPingInterval</code></td>
+<td><code>pingInterval</code></td>
 <td style="text-align: right;"><code>15.0</code></td>
 <td>Verify an otherwise idle subscribed socket with Redis PING.</td>
 </tr>
 <tr>
-<td><code>redisReconnectAttempts</code></td>
+<td><code>reconnectAttempts</code></td>
 <td style="text-align: right;"><code>2</code></td>
 <td>Publisher/subscriber transport reconnect attempts.</td>
 </tr>
 <tr>
-<td><code>redisReconnectDelayMilliseconds</code></td>
+<td><code>reconnectDelayMilliseconds</code></td>
 <td style="text-align: right;"><code>250</code></td>
 <td>Delay between Redis reconnect attempts.</td>
 </tr>
 <tr>
-<td><code>redisDeduplicationCapacity</code></td>
+<td><code>deduplicationCapacity</code></td>
 <td style="text-align: right;"><code>1024</code></td>
 <td>Recent event IDs retained to suppress duplicates after reconnects or overlapping subscriptions.</td>
 </tr>
 <tr>
-<td><code>redisMaxPayloadBytes</code></td>
+<td><code>maxPayloadBytes</code></td>
 <td style="text-align: right;"><code>1048576</code></td>
 <td>Maximum serialized event or inbound RESP bulk string size.</td>
 </tr>
 <tr>
-<td><code>redisMaxResponseElements</code></td>
+<td><code>maxResponseElements</code></td>
 <td style="text-align: right;"><code>1024</code></td>
 <td>Maximum elements accepted in one RESP array.</td>
 </tr>
 <tr>
-<td><code>redisMaxResponseDepth</code></td>
+<td><code>maxResponseDepth</code></td>
 <td style="text-align: right;"><code>8</code></td>
 <td>Maximum accepted RESP nesting depth.</td>
 </tr>
 <tr>
-<td><code>redisClientName</code></td>
+<td><code>clientName</code></td>
 <td style="text-align: right;"><code>null</code></td>
 <td>Optional Redis connection name.</td>
 </tr>
 <tr>
-<td><code>redisStreamContext</code></td>
+<td><code>streamContext</code></td>
 <td style="text-align: right;"><code>[]</code></td>
 <td>PHP stream context options, usually under <code>ssl</code>.</td>
 </tr>
@@ -1452,8 +1516,10 @@ larger events. When pattern subscriptions are enabled, <code>channelPrefix</code
 not contain Redis glob metacharacters.</p>
 <h3 id="redis-acl">Redis ACL</h3>
 <p>Supply both username and password when ACL authentication is enabled:</p>
-<pre class="highlight"><code class="language-dotenv">sse.redisUsername = sse_app
-sse.redisPassword = change-me</code></pre>
+<pre class="highlight"><code class="language-php">public array $redis = [
+    'username' =&gt; 'sse_app',
+    'password' =&gt; 'change-me',
+];</code></pre>
 <p>Use environment secrets rather than committing credentials to the config
 file.</p>
 <p>The Redis identity needs only the commands used by the adapter, including
@@ -1464,14 +1530,16 @@ ACL policy allows it.</p>
 <p>Configure TLS and certificate validation in the PHP config class:</p>
 <pre class="highlight"><code class="language-php">final class Sse extends BaseSse
 {
-    public string $redisScheme = 'tls';
-    public int $redisPort = 6380;
+    public array $redis = [
+        'scheme' =&gt; 'tls',
+        'port'   =&gt; 6380,
 
-    public array $redisStreamContext = [
-        'ssl' =&gt; [
-            'verify_peer'      =&gt; true,
-            'verify_peer_name' =&gt; true,
-            'cafile'           =&gt; '/etc/ssl/certs/redis-ca.pem',
+        'streamContext' =&gt; [
+            'ssl' =&gt; [
+                'verify_peer'      =&gt; true,
+                'verify_peer_name' =&gt; true,
+                'cafile'           =&gt; '/etc/ssl/certs/redis-ca.pem',
+            ],
         ],
     ];
 }</code></pre>

@@ -1151,10 +1151,13 @@ php spark list</code></pre>
 contain <code>sse:health-check</code>.</p>
 <h2 id="configure-redis">Configure Redis</h2>
 <p>For local development:</p>
-<pre class="highlight"><code class="language-dotenv">sse.redisHost = 127.0.0.1
-sse.redisPort = 6379
-sse.redisDatabase = 0
-sse.channelPrefix = app:sse:</code></pre>
+<pre class="highlight"><code class="language-php">public string $channelPrefix = 'app:sse:';
+
+public array $redis = [
+    'host'     =&gt; '127.0.0.1',
+    'port'     =&gt; 6379,
+    'database' =&gt; 0,
+];</code></pre>
 <p>Then check connectivity:</p>
 <pre class="highlight"><code class="language-bash">redis-cli ping
 php spark sse:health-check</code></pre>

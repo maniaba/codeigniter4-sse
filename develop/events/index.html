@@ -1084,7 +1084,7 @@ the browser decides how the page should react.</p>
 use Maniaba\CodeIgniterSse\Support\Channel;
 
 service('ssePublisher')-&gt;publish(
-    (string) Channel::order(918),
+    (string) Channel::join('orders', 918),
     new SseEvent(
         'order.updated',
         ['orderId' =&gt; 918, 'status' =&gt; 'paid'],
