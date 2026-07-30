@@ -6,7 +6,7 @@ streaming details.
 
 ```text
 Application
-   ↓ service('sse')->publish()
+   ↓ sse()->publish()
 Publisher contract
    ↓
 Redis Pub/Sub
@@ -20,7 +20,7 @@ Browser EventSource
 
 ## What it provides
 
-- a small `service('sse')->publish()` API;
+- a small `sse()->publish()` API;
 - versioned JSON event envelopes with stable event IDs;
 - Redis Pub/Sub over an internal RESP2 stream client;
 - logical channel validation, limits, and server-side authorization;
@@ -41,7 +41,7 @@ PhpRedis and Predis are not required.
 Publish:
 
 ```php
-service('sse')->publish(
+sse()->publish(
     "users.{$userId}",
     'notification.created',
     [

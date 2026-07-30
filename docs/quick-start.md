@@ -103,7 +103,7 @@ Publish only after the domain operation has succeeded:
 ```php
 $order->markAsPaid();
 
-service('sse')->publish(
+sse()->publish(
     "users.{$order->user_id}",
     'notification.created',
     [
@@ -168,7 +168,7 @@ listeners.
 Send domain facts:
 
 ```php
-service('sse')->publish(
+sse()->publish(
     "orders.{$order->id}",
     'order.updated',
     [

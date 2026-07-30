@@ -40,6 +40,9 @@
         "rector/rector": "^2.0"
     },
     "autoload": {
+        "files": [
+            "src/Helpers/sse_helper.php"
+        ],
         "psr-4": {
             "Maniaba\\CodeIgniterSse\\": "src/"
         }

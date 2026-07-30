@@ -8,7 +8,7 @@ services, and workers publish events without touching Redis directly.
 Publish from any PHP process:
 
 ```php
-service('sse')->publish(
+sse()->publish(
     "users.{$userId}",
     'notification.created',
     [
@@ -39,7 +39,7 @@ live.connect();
 Publish a domain event:
 
 ```php
-service('sse')->publish(
+sse()->publish(
     'orders.918',
     'order.updated',
     [
@@ -63,7 +63,7 @@ live.on('order.updated', ({ data }) => {
 Publish a tenant dashboard metric:
 
 ```php
-service('sse')->publish(
+sse()->publish(
     "tenants.{$tenantId}.dashboard",
     'dashboard.metric.changed',
     [
@@ -88,7 +88,7 @@ For generic internal screens, the application may choose to send a small UI
 patch event:
 
 ```php
-service('sse')->publish(
+sse()->publish(
     'orders.918',
     'ui.patch',
     [

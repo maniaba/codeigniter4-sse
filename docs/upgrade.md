@@ -15,7 +15,7 @@ The current package line targets:
 
 These APIs should be treated as the main compatibility surface:
 
-- `service('sse')->publish()`
+- `sse()->publish()`
 - `PublisherInterface`
 - `SubscriberInterface`
 - `ChannelAuthorizerInterface`

@@ -8,7 +8,7 @@ the browser decides how the page should react.
 The high-level service accepts a logical channel, an event name, and a payload:
 
 ```php
-service('sse')->publish(
+sse()->publish(
     "users.{$userId}",
     'notification.created',
     [

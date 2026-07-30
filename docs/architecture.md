@@ -30,7 +30,7 @@ Application service / controller / worker
 Normal application code uses the high-level service:
 
 ```php
-service('sse')->publish($channel, $eventName, $data);
+sse()->publish($channel, $eventName, $data);
 ```
 
 Advanced code can depend on `PublisherInterface` and provide an

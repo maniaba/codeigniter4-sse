@@ -141,7 +141,7 @@ In a second terminal, publish a test event from application code or a small
 Spark command:
 
 ```php
-service('sse')->publish(
+sse()->publish(
     'public.demo',
     'demo.updated',
     ['ready' => true],

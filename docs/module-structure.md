@@ -23,7 +23,7 @@ src/
 Application code should normally use:
 
 ```php
-service('sse')->publish($channel, $eventName, $data);
+sse()->publish($channel, $eventName, $data);
 ```
 
 For typed integrations, depend on:

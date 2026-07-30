@@ -11,7 +11,7 @@ and streams the events to the browser.
 
 ```text
 CodeIgniter application
-    ↓ service('sse')->publish()
+    ↓ sse()->publish()
 Redis Pub/Sub
     ↓
 GET /sse?channels=...
@@ -61,7 +61,7 @@ Publish an event from a controller, domain service, listener, command, or queue
 worker:
 
 ```php
-service('sse')->publish(
+sse()->publish(
     "users.{$userId}",
     'notification.created',
     [
