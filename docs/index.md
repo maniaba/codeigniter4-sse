@@ -45,7 +45,7 @@ sse()->publish(
     "users.{$userId}",
     'notification.created',
     [
-        'title'   => 'Narudžba je plaćena',
+        'title'   => 'Order paid',
         'orderId' => 918,
     ],
 );
