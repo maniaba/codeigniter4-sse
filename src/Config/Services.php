@@ -4,11 +4,10 @@ declare(strict_types=1);
 
 namespace Maniaba\CodeIgniterSse\Config;
 
+use Closure;
 use CodeIgniter\Config\BaseService;
 use LogicException;
 use Maniaba\CodeIgniterSse\Authorization\ChannelAuthorization;
-use Maniaba\CodeIgniterSse\Broker\InMemoryBroker;
-use Maniaba\CodeIgniterSse\Broker\NullBroker;
 use Maniaba\CodeIgniterSse\Broker\Redis\RedisConfig;
 use Maniaba\CodeIgniterSse\Broker\Redis\RedisConnectionFactory;
 use Maniaba\CodeIgniterSse\Broker\Redis\RedisConnectionFactoryInterface;
@@ -28,25 +27,50 @@ use Maniaba\CodeIgniterSse\Stream\SseConnectionManager;
 
 class Services extends BaseService
 {
+    /**
+     * @var array<string, object>
+     */
+    private static array $brokerInstances = [];
+
     public static function sse(
         ?PublisherInterface $publisher = null,
         ?EventFactory $events = null,
         bool $getShared = true,
     ): SseManager {
         if ($getShared) {
-            return self::shared('sse', SseManager::class, $publisher, $events);
+            $service = static::getSharedInstance('sse', $publisher, $events);
+
+            if (! $service instanceof SseManager) {
+                throw new LogicException('The shared sse service must be an instance of ' . SseManager::class . '.');
+            }
+
+            return $service;
         }
 
-        return new SseManager(
-            $publisher ?? self::resolved('ssePublisher', PublisherInterface::class),
-            $events ?? self::resolved('sseEventFactory', EventFactory::class),
-        );
+        $publisher ??= service('ssePublisher');
+        $events ??= service('sseEventFactory');
+
+        if (! $publisher instanceof PublisherInterface) {
+            throw new LogicException('The ssePublisher service must implement ' . PublisherInterface::class . '.');
+        }
+
+        if (! $events instanceof EventFactory) {
+            throw new LogicException('The sseEventFactory service must be an instance of ' . EventFactory::class . '.');
+        }
+
+        return new SseManager($publisher, $events);
     }
 
     public static function sseEventFactory(bool $getShared = true): EventFactory
     {
         if ($getShared) {
-            return self::shared('sseEventFactory', EventFactory::class);
+            $service = static::getSharedInstance('sseEventFactory');
+
+            if (! $service instanceof EventFactory) {
+                throw new LogicException('The shared sseEventFactory service must be an instance of ' . EventFactory::class . '.');
+            }
+
+            return $service;
         }
 
         return new EventFactory();
@@ -55,7 +79,13 @@ class Services extends BaseService
     public static function sseSerializer(bool $getShared = true): SerializerInterface
     {
         if ($getShared) {
-            return self::shared('sseSerializer', SerializerInterface::class);
+            $service = static::getSharedInstance('sseSerializer');
+
+            if (! $service instanceof SerializerInterface) {
+                throw new LogicException('The shared sseSerializer service must implement ' . SerializerInterface::class . '.');
+            }
+
+            return $service;
         }
 
         return new JsonEventSerializer();
@@ -66,28 +96,25 @@ class Services extends BaseService
         bool $getShared = true,
     ): PublisherInterface {
         if ($getShared) {
-            return self::shared('ssePublisher', PublisherInterface::class, $config);
+            $service = static::getSharedInstance('ssePublisher', $config);
+
+            if (! $service instanceof PublisherInterface) {
+                throw new LogicException('The shared ssePublisher service must implement ' . PublisherInterface::class . '.');
+            }
+
+            return $service;
         }
 
-        $hasExplicitConfig = $config !== null;
         $config ??= Sse::discover();
         $config->validate();
 
-        return match (strtolower($config->broker)) {
-            'redis' => new RedisPublisher(
-                static::sseRedisConfig($config, false),
-                self::resolved('sseSerializer', SerializerInterface::class),
-                $hasExplicitConfig
-                    ? static::sseRedisConnectionFactory($config, false)
-                    : self::resolved(
-                        'sseRedisConnectionFactory',
-                        RedisConnectionFactoryInterface::class,
-                    ),
-            ),
-            'memory' => static::sseInMemoryBroker(),
-            'null'   => static::sseNullBroker(),
-            default  => throw new LogicException('Unsupported SSE broker: ' . $config->broker),
-        };
+        $publisher = self::broker($config, 'publisher');
+
+        if (! $publisher instanceof PublisherInterface) {
+            throw new LogicException('The configured SSE publisher must implement ' . PublisherInterface::class . '.');
+        }
+
+        return $publisher;
     }
 
     public static function sseSubscriber(
@@ -95,112 +122,45 @@ class Services extends BaseService
         bool $getShared = true,
     ): SubscriberInterface {
         if ($getShared) {
-            return self::shared('sseSubscriber', SubscriberInterface::class, $config);
-        }
+            $service = static::getSharedInstance('sseSubscriber', $config);
 
-        $hasExplicitConfig = $config !== null;
-        $config ??= Sse::discover();
-        $config->validate();
+            if (! $service instanceof SubscriberInterface) {
+                throw new LogicException('The shared sseSubscriber service must implement ' . SubscriberInterface::class . '.');
+            }
 
-        return match (strtolower($config->broker)) {
-            'redis' => new RedisSubscriber(
-                static::sseRedisConfig($config, false),
-                self::resolved('sseSerializer', SerializerInterface::class),
-                $hasExplicitConfig
-                    ? static::sseRedisConnectionFactory($config, false)
-                    : self::resolved(
-                        'sseRedisConnectionFactory',
-                        RedisConnectionFactoryInterface::class,
-                    ),
-            ),
-            'memory' => static::sseInMemoryBroker(),
-            'null'   => static::sseNullBroker(),
-            default  => throw new LogicException('Unsupported SSE broker: ' . $config->broker),
-        };
-    }
-
-    public static function sseInMemoryBroker(bool $getShared = true): InMemoryBroker
-    {
-        if ($getShared) {
-            return self::shared('sseInMemoryBroker', InMemoryBroker::class);
-        }
-
-        return new InMemoryBroker();
-    }
-
-    public static function sseNullBroker(bool $getShared = true): NullBroker
-    {
-        if ($getShared) {
-            return self::shared('sseNullBroker', NullBroker::class);
-        }
-
-        return new NullBroker();
-    }
-
-    public static function sseRedisConfig(
-        ?Sse $config = null,
-        bool $getShared = true,
-    ): RedisConfig {
-        if ($getShared) {
-            return self::shared('sseRedisConfig', RedisConfig::class, $config);
+            return $service;
         }
 
         $config ??= Sse::discover();
         $config->validate();
 
-        return new RedisConfig(
-            host: $config->redisHost,
-            port: $config->redisPort,
-            password: $config->redisPassword,
-            database: $config->redisDatabase,
-            connectTimeout: $config->redisConnectTimeout,
-            readTimeout: $config->redisReadTimeout,
-            channelPrefix: $config->channelPrefix,
-            pollIntervalSeconds: $config->redisPollInterval,
-            subscriberPingIntervalSeconds: $config->redisPingInterval,
-            maxReconnectAttempts: $config->redisReconnectAttempts,
-            reconnectDelayMilliseconds: $config->redisReconnectDelayMilliseconds,
-            deduplicationCapacity: $config->redisDeduplicationCapacity,
-            maxPayloadBytes: $config->redisMaxPayloadBytes,
-            maxResponseElements: $config->redisMaxResponseElements,
-            maxResponseDepth: $config->redisMaxResponseDepth,
-            allowPatternSubscriptions: $config->allowPatternSubscriptions,
-            username: $config->redisUsername,
-            scheme: $config->redisScheme,
-            streamContext: $config->redisStreamContext,
-            clientName: $config->redisClientName,
-        );
-    }
+        $subscriber = self::broker($config, 'subscriber');
 
-    public static function sseRedisConnectionFactory(
-        ?Sse $config = null,
-        bool $getShared = true,
-    ): RedisConnectionFactoryInterface {
-        if ($getShared) {
-            return self::shared(
-                'sseRedisConnectionFactory',
-                RedisConnectionFactoryInterface::class,
-                $config,
-            );
+        if (! $subscriber instanceof SubscriberInterface) {
+            throw new LogicException('The configured SSE subscriber must implement ' . SubscriberInterface::class . '.');
         }
 
-        return new RedisConnectionFactory(static::sseRedisConfig($config, false));
+        return $subscriber;
     }
 
     public static function sseRedisHealthChecker(
         ?RedisConnectionFactoryInterface $factory = null,
+        ?Sse $config = null,
         bool $getShared = true,
     ): RedisHealthChecker {
         if ($getShared) {
-            return self::shared('sseRedisHealthChecker', RedisHealthChecker::class, $factory);
+            $service = static::getSharedInstance('sseRedisHealthChecker', $factory, $config);
+
+            if (! $service instanceof RedisHealthChecker) {
+                throw new LogicException('The shared sseRedisHealthChecker service must be an instance of ' . RedisHealthChecker::class . '.');
+            }
+
+            return $service;
         }
 
-        return new RedisHealthChecker(
-            $factory ?? self::resolved(
-                'sseRedisConnectionFactory',
-                RedisConnectionFactoryInterface::class,
-            ),
-        );
+        $config ??= Sse::discover();
+
+        return new RedisHealthChecker($factory ?? self::redisConnectionFactory($config));
     }
 
     public static function sseChannelAuthorizer(
@@ -208,11 +168,13 @@ class Services extends BaseService
         bool $getShared = true,
     ): ChannelAuthorizerInterface {
         if ($getShared) {
-            return self::shared(
-                'sseChannelAuthorizer',
-                ChannelAuthorizerInterface::class,
-                $config,
-            );
+            $service = static::getSharedInstance('sseChannelAuthorizer', $config);
+
+            if (! $service instanceof ChannelAuthorizerInterface) {
+                throw new LogicException('The shared sseChannelAuthorizer service must implement ' . ChannelAuthorizerInterface::class . '.');
+            }
+
+            return $service;
         }
 
         $config ??= Sse::discover();
@@ -232,7 +194,13 @@ class Services extends BaseService
         bool $getShared = true,
     ): UserResolverInterface {
         if ($getShared) {
-            return self::shared('sseUserResolver', UserResolverInterface::class, $config);
+            $service = static::getSharedInstance('sseUserResolver', $config);
+
+            if (! $service instanceof UserResolverInterface) {
+                throw new LogicException('The shared sseUserResolver service must implement ' . UserResolverInterface::class . '.');
+            }
+
+            return $service;
         }
 
         $config ??= Sse::discover();
@@ -252,19 +220,22 @@ class Services extends BaseService
         bool $getShared = true,
     ): ChannelAuthorization {
         if ($getShared) {
-            return self::shared(
-                'sseChannelAuthorization',
-                ChannelAuthorization::class,
-                $authorizer,
-            );
+            $service = static::getSharedInstance('sseChannelAuthorization', $authorizer);
+
+            if (! $service instanceof ChannelAuthorization) {
+                throw new LogicException('The shared sseChannelAuthorization service must be an instance of ' . ChannelAuthorization::class . '.');
+            }
+
+            return $service;
         }
 
-        return new ChannelAuthorization(
-            $authorizer ?? self::resolved(
-                'sseChannelAuthorizer',
-                ChannelAuthorizerInterface::class,
-            ),
-        );
+        $authorizer ??= service('sseChannelAuthorizer');
+
+        if (! $authorizer instanceof ChannelAuthorizerInterface) {
+            throw new LogicException('The sseChannelAuthorizer service must implement ' . ChannelAuthorizerInterface::class . '.');
+        }
+
+        return new ChannelAuthorization($authorizer);
     }
 
     public static function sseConnectionManager(
@@ -275,28 +246,45 @@ class Services extends BaseService
         bool $getShared = true,
     ): SseConnectionManager {
         if ($getShared) {
-            return self::shared(
+            $service = static::getSharedInstance(
                 'sseConnectionManager',
-                SseConnectionManager::class,
                 $subscriber,
                 $serializer,
                 $events,
                 $config,
             );
+
+            if (! $service instanceof SseConnectionManager) {
+                throw new LogicException('The shared sseConnectionManager service must be an instance of ' . SseConnectionManager::class . '.');
+            }
+
+            return $service;
         }
 
-        $hasExplicitConfig = $config !== null;
+        $hasConfig = $config instanceof Sse;
         $config ??= Sse::discover();
         $config->validate();
 
+        $subscriber ??= $hasConfig ? static::sseSubscriber($config, false) : service('sseSubscriber');
+        $serializer ??= service('sseSerializer');
+        $events ??= service('sseEventFactory');
+
+        if (! $subscriber instanceof SubscriberInterface) {
+            throw new LogicException('The sseSubscriber service must implement ' . SubscriberInterface::class . '.');
+        }
+
+        if (! $serializer instanceof SerializerInterface) {
+            throw new LogicException('The sseSerializer service must implement ' . SerializerInterface::class . '.');
+        }
+
+        if (! $events instanceof EventFactory) {
+            throw new LogicException('The sseEventFactory service must be an instance of ' . EventFactory::class . '.');
+        }
+
         return new SseConnectionManager(
-            $subscriber ?? (
-                $hasExplicitConfig
-                    ? static::sseSubscriber($config, false)
-                    : self::resolved('sseSubscriber', SubscriberInterface::class)
-            ),
-            $serializer ?? self::resolved('sseSerializer', SerializerInterface::class),
-            $events ?? self::resolved('sseEventFactory', EventFactory::class),
+            $subscriber,
+            $serializer,
+            $events,
             $config->heartbeatInterval,
             $config->maxConnectionSeconds,
             $config->retryMilliseconds,
@@ -309,7 +297,13 @@ class Services extends BaseService
         bool $getShared = true,
     ): SseResponseFactory {
         if ($getShared) {
-            return self::shared('sseResponseFactory', SseResponseFactory::class, $response);
+            $service = static::getSharedInstance('sseResponseFactory', $response);
+
+            if (! $service instanceof SseResponseFactory) {
+                throw new LogicException('The shared sseResponseFactory service must be an instance of ' . SseResponseFactory::class . '.');
+            }
+
+            return $service;
         }
 
         $response ??= service('response');
@@ -321,46 +315,116 @@ class Services extends BaseService
         return new SseResponseFactory($response);
     }
 
-    /**
-     * @template T of object
-     *
-     * @param class-string<T> $expected
-     *
-     * @return T
-     */
-    private static function shared(string $name, string $expected, mixed ...$arguments): object
+    private static function broker(Sse $config, string $role): object
     {
-        $service = static::getSharedInstance($name, ...$arguments);
+        $definition = $config->brokers[$config->broker] ?? null;
 
-        if (! $service instanceof $expected) {
-            throw new LogicException(
-                sprintf('The shared service "%s" must be an instance of %s.', $name, $expected),
-            );
+        if (! is_array($definition)) {
+            throw new LogicException('The configured SSE broker definition must be an array.');
         }
 
-        return $service;
+        if (($definition['shared'] ?? false) === true) {
+            $sharedKey = $definition['publisher'] === $definition['subscriber'] ? 'broker' : $role;
+            $cacheKey  = spl_object_id($config) . ':' . $config->broker . ':' . $sharedKey;
+
+            if (! isset(self::$brokerInstances[$cacheKey])) {
+                self::$brokerInstances[$cacheKey] = self::makeBroker($config, $definition[$role] ?? null, $role);
+            }
+
+            return self::$brokerInstances[$cacheKey];
+        }
+
+        return self::makeBroker($config, $definition[$role] ?? null, $role);
     }
 
-    /**
-     * Resolve a dependency through CodeIgniter's service discovery so an
-     * application-level service override remains effective.
-     *
-     * @template T of object
-     *
-     * @param class-string<T> $expected
-     *
-     * @return T
-     */
-    private static function resolved(string $name, string $expected): object
+    private static function makeBroker(Sse $config, mixed $definition, string $role): object
     {
-        $service = service($name);
+        if ($definition instanceof Closure) {
+            return $definition($config);
+        }
 
-        if (! $service instanceof $expected) {
-            throw new LogicException(
-                sprintf('The service "%s" must be an instance of %s.', $name, $expected),
+        if (is_callable($definition) && ! is_string($definition)) {
+            return $definition($config);
+        }
+
+        if (is_string($definition)) {
+            return self::makeBrokerClass($config, $definition);
+        }
+
+        throw new LogicException(sprintf('The SSE %s broker definition is invalid.', $role));
+    }
+
+    private static function makeBrokerClass(Sse $config, string $class): object
+    {
+        if (! class_exists($class)) {
+            throw new LogicException(sprintf('The configured SSE broker class "%s" does not exist.', $class));
+        }
+
+        if (is_a($class, RedisPublisher::class, true)) {
+            return new $class(
+                self::redisConfig($config),
+                self::serializer(),
+                self::redisConnectionFactory($config),
             );
         }
 
-        return $service;
+        if (is_a($class, RedisSubscriber::class, true)) {
+            return new $class(
+                self::redisConfig($config),
+                self::serializer(),
+                self::redisConnectionFactory($config),
+            );
+        }
+
+        return new $class();
+    }
+
+    private static function serializer(): SerializerInterface
+    {
+        $serializer = service('sseSerializer');
+
+        if (! $serializer instanceof SerializerInterface) {
+            throw new LogicException('The sseSerializer service must implement ' . SerializerInterface::class . '.');
+        }
+
+        return $serializer;
+    }
+
+    private static function redisConnectionFactory(Sse $config): RedisConnectionFactoryInterface
+    {
+        return new RedisConnectionFactory(self::redisConfig($config));
+    }
+
+    private static function redisConfig(Sse $config): RedisConfig
+    {
+        $redis = $config->redis();
+
+        return new RedisConfig(
+            host: (string) $redis['host'],
+            port: (int) $redis['port'],
+            password: self::nullableString($redis['password'] ?? null),
+            database: (int) $redis['database'],
+            connectTimeout: (float) $redis['connectTimeout'],
+            readTimeout: (float) $redis['readTimeout'],
+            channelPrefix: $config->channelPrefix,
+            pollIntervalSeconds: (float) $redis['pollInterval'],
+            subscriberPingIntervalSeconds: (float) $redis['pingInterval'],
+            maxReconnectAttempts: (int) $redis['reconnectAttempts'],
+            reconnectDelayMilliseconds: (int) $redis['reconnectDelayMilliseconds'],
+            deduplicationCapacity: (int) $redis['deduplicationCapacity'],
+            maxPayloadBytes: (int) $redis['maxPayloadBytes'],
+            maxResponseElements: (int) $redis['maxResponseElements'],
+            maxResponseDepth: (int) $redis['maxResponseDepth'],
+            allowPatternSubscriptions: $config->allowPatternSubscriptions,
+            username: self::nullableString($redis['username'] ?? null),
+            scheme: (string) $redis['scheme'],
+            streamContext: is_array($redis['streamContext']) ? $redis['streamContext'] : [],
+            clientName: self::nullableString($redis['clientName'] ?? null),
+        );
+    }
+
+    private static function nullableString(mixed $value): ?string
+    {
+        return is_string($value) ? $value : null;
     }
 }

@@ -17,20 +17,13 @@ final class Sse extends BaseSse
     public string $channelPrefix = 'storefront:sse:';
     public int $heartbeatInterval = 15;
     public int $maxConnectionSeconds = 300;
+
+    public array $redis = [
+        'host'     => '127.0.0.1',
+        'port'     => 6379,
+        'database' => 2,
+    ];
 }
-```
-
-Scalar properties can also be overridden through `.env` using the `sse.`
-prefix and the exact property name:
-
-```dotenv
-sse.redisHost = 127.0.0.1
-sse.redisPort = 6379
-sse.redisPassword =
-sse.redisDatabase = 2
-sse.channelPrefix = storefront:sse:
-sse.heartbeatInterval = 15
-sse.maxConnectionSeconds = 300
 ```
 
 ## HTTP route
@@ -105,7 +98,8 @@ application message handlers.
 
 | Property | Default | Purpose |
 |---|---:|---|
-| `broker` | `redis` | `redis`, `memory`, or `null`. |
+| `broker` | `redis` | Active key from `brokers`. |
+| `brokers` | built-in Redis, memory, null definitions | Publisher/subscriber class or factory map. |
 | `channelPrefix` | `app:sse:` | Prefix added to logical Redis channels. |
 | `allowPatternSubscriptions` | `false` | Permit Redis-style pattern requests. |
 
@@ -118,32 +112,106 @@ disable the HTTP endpoint.
 Do not use an empty shared prefix when several applications publish to the
 same Redis instance.
 
-Redis Pub/Sub is global across numbered Redis databases. `redisDatabase`
+Redis Pub/Sub is global across numbered Redis databases. `redis['database']`
 therefore does not separate SSE traffic; `channelPrefix` is the isolation
 boundary.
 
+Custom brokers are added by registering a new key in `brokers`:
+
+```php
+use App\Sse\CustomPublisher;
+use App\Sse\CustomSubscriber;
+
+final class Sse extends BaseSse
+{
+    public string $broker = 'custom';
+
+    public array $brokers = [
+        'redis' => [
+            'publisher'  => \Maniaba\CodeIgniterSse\Broker\Redis\RedisPublisher::class,
+            'subscriber' => \Maniaba\CodeIgniterSse\Broker\Redis\RedisSubscriber::class,
+        ],
+        'memory' => [
+            'publisher'  => \Maniaba\CodeIgniterSse\Broker\InMemoryBroker::class,
+            'subscriber' => \Maniaba\CodeIgniterSse\Broker\InMemoryBroker::class,
+            'shared'     => true,
+        ],
+        'null' => [
+            'publisher'  => \Maniaba\CodeIgniterSse\Broker\NullBroker::class,
+            'subscriber' => \Maniaba\CodeIgniterSse\Broker\NullBroker::class,
+            'shared'     => true,
+        ],
+        'custom' => [
+            'publisher'  => CustomPublisher::class,
+            'subscriber' => CustomSubscriber::class,
+        ],
+    ];
+}
+```
+
+When a broker needs application services or constructor arguments, use factory
+closures:
+
+```php
+public array $brokers = [
+    'redis' => [
+        'publisher'  => \Maniaba\CodeIgniterSse\Broker\Redis\RedisPublisher::class,
+        'subscriber' => \Maniaba\CodeIgniterSse\Broker\Redis\RedisSubscriber::class,
+    ],
+    'custom' => [
+        'publisher'  => static fn (): PublisherInterface => service('customSsePublisher'),
+        'subscriber' => static fn (): SubscriberInterface => service('customSseSubscriber'),
+    ],
+];
+```
+
 ## Redis connection
 
-| Property | Default | Purpose |
+All Redis options live under one config property:
+
+```php
+public array $redis = [
+    'scheme'                     => 'tcp',
+    'host'                       => '127.0.0.1',
+    'port'                       => 6379,
+    'username'                   => null,
+    'password'                   => null,
+    'database'                   => 0,
+    'connectTimeout'             => 2.5,
+    'readTimeout'                => 2.5,
+    'pollInterval'               => 1.0,
+    'pingInterval'               => 15.0,
+    'reconnectAttempts'          => 2,
+    'reconnectDelayMilliseconds' => 250,
+    'deduplicationCapacity'      => 1024,
+    'maxPayloadBytes'            => 1_048_576,
+    'maxResponseElements'        => 1024,
+    'maxResponseDepth'           => 8,
+    'clientName'                 => null,
+    'streamContext'              => [],
+];
+```
+
+| Array key | Default | Purpose |
 |---|---:|---|
-| `redisScheme` | `tcp` | PHP stream scheme, normally `tcp` or `tls`. |
-| `redisHost` | `127.0.0.1` | Redis hostname or IP address. |
-| `redisPort` | `6379` | Redis port. |
-| `redisUsername` | `null` | ACL username. |
-| `redisPassword` | `null` | Password or ACL secret. |
-| `redisDatabase` | `0` | Database selected after authentication; it does not isolate Pub/Sub channels. |
-| `redisConnectTimeout` | `2.5` | Socket connect timeout in seconds. |
-| `redisReadTimeout` | `2.5` | Timeout for complete Redis command/handshake reads. |
-| `redisPollInterval` | `1.0` | Maximum idle poll before stream checks run. |
-| `redisPingInterval` | `15.0` | Verify an otherwise idle subscribed socket with Redis PING. |
-| `redisReconnectAttempts` | `2` | Publisher/subscriber transport reconnect attempts. |
-| `redisReconnectDelayMilliseconds` | `250` | Delay between Redis reconnect attempts. |
-| `redisDeduplicationCapacity` | `1024` | Recent event IDs retained to suppress duplicates after reconnects or overlapping subscriptions. |
-| `redisMaxPayloadBytes` | `1048576` | Maximum serialized event or inbound RESP bulk string size. |
-| `redisMaxResponseElements` | `1024` | Maximum elements accepted in one RESP array. |
-| `redisMaxResponseDepth` | `8` | Maximum accepted RESP nesting depth. |
-| `redisClientName` | `null` | Optional Redis connection name. |
-| `redisStreamContext` | `[]` | PHP stream context options, usually under `ssl`. |
+| `scheme` | `tcp` | PHP stream scheme, normally `tcp` or `tls`. |
+| `host` | `127.0.0.1` | Redis hostname or IP address. |
+| `port` | `6379` | Redis port. |
+| `username` | `null` | ACL username. |
+| `password` | `null` | Password or ACL secret. |
+| `database` | `0` | Database selected after authentication; it does not isolate Pub/Sub channels. |
+| `connectTimeout` | `2.5` | Socket connect timeout in seconds. |
+| `readTimeout` | `2.5` | Timeout for complete Redis command/handshake reads. |
+| `pollInterval` | `1.0` | Maximum idle poll before stream checks run. |
+| `pingInterval` | `15.0` | Verify an otherwise idle subscribed socket with Redis PING. |
+| `reconnectAttempts` | `2` | Publisher/subscriber transport reconnect attempts. |
+| `reconnectDelayMilliseconds` | `250` | Delay between Redis reconnect attempts. |
+| `deduplicationCapacity` | `1024` | Recent event IDs retained to suppress duplicates after reconnects or overlapping subscriptions. |
+| `maxPayloadBytes` | `1048576` | Maximum serialized event or inbound RESP bulk string size. |
+| `maxResponseElements` | `1024` | Maximum elements accepted in one RESP array. |
+| `maxResponseDepth` | `8` | Maximum accepted RESP nesting depth. |
+| `clientName` | `null` | Optional Redis connection name. |
+| `streamContext` | `[]` | PHP stream context options, usually under `ssl`. |
 
 Publisher and subscriber connections are always separate. The subscriber uses
 the poll interval to return control for heartbeats, client disconnect checks,
@@ -159,9 +227,11 @@ not contain Redis glob metacharacters.
 
 Supply both username and password when ACL authentication is enabled:
 
-```dotenv
-sse.redisUsername = sse_app
-sse.redisPassword = change-me
+```php
+public array $redis = [
+    'username' => 'sse_app',
+    'password' => 'change-me',
+];
 ```
 
 Use environment secrets rather than committing credentials to the config
@@ -179,14 +249,16 @@ Configure TLS and certificate validation in the PHP config class:
 ```php
 final class Sse extends BaseSse
 {
-    public string $redisScheme = 'tls';
-    public int $redisPort = 6380;
+    public array $redis = [
+        'scheme' => 'tls',
+        'port'   => 6380,
 
-    public array $redisStreamContext = [
-        'ssl' => [
-            'verify_peer'      => true,
-            'verify_peer_name' => true,
-            'cafile'           => '/etc/ssl/certs/redis-ca.pem',
+        'streamContext' => [
+            'ssl' => [
+                'verify_peer'      => true,
+                'verify_peer_name' => true,
+                'cafile'           => '/etc/ssl/certs/redis-ca.pem',
+            ],
         ],
     ];
 }

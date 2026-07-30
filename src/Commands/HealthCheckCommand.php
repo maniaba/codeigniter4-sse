@@ -34,15 +34,16 @@ final class HealthCheckCommand extends BaseCommand
 
         /** @var RedisHealthChecker $checker */
         $checker = service('sseRedisHealthChecker');
+        $redis   = $config->redis();
 
         if (! $checker->check()) {
             CLI::error(
                 sprintf(
                     'Redis SSE health check failed for %s://%s:%d (database %d).',
-                    $config->redisScheme,
-                    $config->redisHost,
-                    $config->redisPort,
-                    $config->redisDatabase,
+                    $redis['scheme'],
+                    $redis['host'],
+                    $redis['port'],
+                    $redis['database'],
                 ),
             );
 
@@ -52,9 +53,9 @@ final class HealthCheckCommand extends BaseCommand
         CLI::write(
             sprintf(
                 '[OK] Redis SSE broker is reachable at %s://%s:%d.',
-                $config->redisScheme,
-                $config->redisHost,
-                $config->redisPort,
+                $redis['scheme'],
+                $redis['host'],
+                $redis['port'],
             ),
             'green',
         );

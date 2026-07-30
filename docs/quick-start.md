@@ -5,13 +5,16 @@ reload.
 
 ## 1. Configure Redis
 
-Add the development connection to `.env`:
+Add the development connection to `app/Config/Sse.php`:
 
-```dotenv
-sse.redisHost = 127.0.0.1
-sse.redisPort = 6379
-sse.redisDatabase = 0
-sse.channelPrefix = example:sse:
+```php
+public string $channelPrefix = 'example:sse:';
+
+public array $redis = [
+    'host'     => '127.0.0.1',
+    'port'     => 6379,
+    'database' => 0,
+];
 ```
 
 Verify it:

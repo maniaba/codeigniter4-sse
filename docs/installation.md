@@ -74,11 +74,14 @@ contain `sse:health-check`.
 
 For local development:
 
-```dotenv
-sse.redisHost = 127.0.0.1
-sse.redisPort = 6379
-sse.redisDatabase = 0
-sse.channelPrefix = app:sse:
+```php
+public string $channelPrefix = 'app:sse:';
+
+public array $redis = [
+    'host'     => '127.0.0.1',
+    'port'     => 6379,
+    'database' => 0,
+];
 ```
 
 Then check connectivity:

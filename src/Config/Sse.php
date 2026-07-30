@@ -9,11 +9,41 @@ use InvalidArgumentException;
 use LogicException;
 use Maniaba\CodeIgniterSse\Authorization\NullUserResolver;
 use Maniaba\CodeIgniterSse\Authorization\PublicChannelAuthorizer;
+use Maniaba\CodeIgniterSse\Broker\InMemoryBroker;
+use Maniaba\CodeIgniterSse\Broker\NullBroker;
+use Maniaba\CodeIgniterSse\Broker\Redis\RedisPublisher;
+use Maniaba\CodeIgniterSse\Broker\Redis\RedisSubscriber;
 use Maniaba\CodeIgniterSse\Contracts\ChannelAuthorizerInterface;
+use Maniaba\CodeIgniterSse\Contracts\PublisherInterface;
+use Maniaba\CodeIgniterSse\Contracts\SubscriberInterface;
 use Maniaba\CodeIgniterSse\Contracts\UserResolverInterface;
 
 class Sse extends BaseConfig
 {
+    /**
+     * @var array<string, mixed>
+     */
+    private const DEFAULT_REDIS = [
+        'scheme'                     => 'tcp',
+        'host'                       => '127.0.0.1',
+        'port'                       => 6379,
+        'username'                   => null,
+        'password'                   => null,
+        'database'                   => 0,
+        'connectTimeout'             => 2.5,
+        'readTimeout'                => 2.5,
+        'pollInterval'               => 1.0,
+        'pingInterval'               => 15.0,
+        'reconnectAttempts'          => 2,
+        'reconnectDelayMilliseconds' => 250,
+        'deduplicationCapacity'      => 1024,
+        'maxPayloadBytes'            => 1_048_576,
+        'maxResponseElements'        => 1024,
+        'maxResponseDepth'           => 8,
+        'clientName'                 => null,
+        'streamContext'              => [],
+    ];
+
     /**
      * Register the package GET route automatically.
      */
@@ -27,10 +57,31 @@ class Sse extends BaseConfig
      */
     public array $routeFilters = [];
 
-    /**
-     * redis, memory, or null.
-     */
     public string $broker = 'redis';
+
+    /**
+     * @var array<string, array{
+     *     publisher: callable(self): PublisherInterface|class-string<PublisherInterface>,
+     *     subscriber: callable(self): SubscriberInterface|class-string<SubscriberInterface>,
+     *     shared?: bool
+     * }>
+     */
+    public array $brokers = [
+        'redis' => [
+            'publisher'  => RedisPublisher::class,
+            'subscriber' => RedisSubscriber::class,
+        ],
+        'memory' => [
+            'publisher'  => InMemoryBroker::class,
+            'subscriber' => InMemoryBroker::class,
+            'shared'     => true,
+        ],
+        'null' => [
+            'publisher'  => NullBroker::class,
+            'subscriber' => NullBroker::class,
+            'shared'     => true,
+        ],
+    ];
 
     public string $channelPrefix           = 'app:sse:';
     public int $retryMilliseconds          = 3000;
@@ -58,40 +109,12 @@ class Sse extends BaseConfig
      */
     public string $userResolver = NullUserResolver::class;
 
-    public string $redisScheme        = 'tcp';
-    public string $redisHost          = '127.0.0.1';
-    public int $redisPort             = 6379;
-    public ?string $redisUsername     = null;
-    public ?string $redisPassword     = null;
-    public int $redisDatabase         = 0;
-    public float $redisConnectTimeout = 2.5;
-    public float $redisReadTimeout    = 2.5;
-
     /**
-     * Maximum time stream_select() waits before returning control for
-     * heartbeat and disconnect checks.
-     */
-    public float $redisPollInterval = 1.0;
-
-    /**
-     * Verify an otherwise idle subscribed socket with Redis PING.
-     */
-    public float $redisPingInterval = 15.0;
-
-    public int $redisReconnectAttempts          = 2;
-    public int $redisReconnectDelayMilliseconds = 250;
-    public int $redisDeduplicationCapacity      = 1024;
-    public int $redisMaxPayloadBytes            = 1_048_576;
-    public int $redisMaxResponseElements        = 1024;
-    public int $redisMaxResponseDepth           = 8;
-    public ?string $redisClientName             = null;
-
-    /**
-     * PHP stream context options, normally under the "ssl" key.
+     * Redis adapter options.
      *
-     * @var array<string, array<string, mixed>>
+     * @var array<string, mixed>
      */
-    public array $redisStreamContext = [];
+    public array $redis = self::DEFAULT_REDIS;
 
     public function __construct()
     {
@@ -116,8 +139,10 @@ class Sse extends BaseConfig
 
     public function validate(): void
     {
-        if (! in_array(strtolower($this->broker), ['redis', 'memory', 'null'], true)) {
-            throw new InvalidArgumentException('SSE broker must be redis, memory, or null.');
+        if (! isset($this->brokers[$this->broker])) {
+            throw new InvalidArgumentException(
+                sprintf('SSE broker "%s" is not defined in Sse::$brokers.', $this->broker),
+            );
         }
 
         if ($this->routeEnabled && trim($this->route, " /\t\n\r\0\x0B") === '') {
@@ -147,5 +172,13 @@ class Sse extends BaseConfig
                 'A wildcard SSE origin cannot be combined with credentials.',
             );
         }
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function redis(): array
+    {
+        return array_replace_recursive(self::DEFAULT_REDIS, $this->redis);
     }
 }

@@ -184,7 +184,7 @@ users merely because the corresponding exact channel would be allowed.
 
 Redis may report the same publication through overlapping exact and pattern
 subscriptions. The adapter suppresses recently seen event IDs using
-`redisDeduplicationCapacity`; avoid unnecessary overlap so correctness does
+`redis['deduplicationCapacity']`; avoid unnecessary overlap so correctness does
 not depend on a bounded deduplication window.
 
 ## Browser authentication

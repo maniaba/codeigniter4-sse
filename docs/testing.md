@@ -111,7 +111,7 @@ Integration scenarios should include:
 9. malformed RESP and Redis error frames fail predictably.
 
 From a host CodeIgniter application, run the operational check after setting
-its matching `sse.redisHost`, `sse.redisPort`, and other `sse.*` values:
+the matching `channelPrefix` and `redis` config array values:
 
 ```bash
 php spark sse:health-check

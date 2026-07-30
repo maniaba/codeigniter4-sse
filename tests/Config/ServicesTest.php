@@ -7,6 +7,7 @@ namespace Tests\Config;
 use CodeIgniter\Config\Services as FrameworkServices;
 use CodeIgniter\Test\CIUnitTestCase;
 use Maniaba\CodeIgniterSse\Broker\InMemoryBroker;
+use Maniaba\CodeIgniterSse\Broker\NullBroker;
 use Maniaba\CodeIgniterSse\Broker\Redis\RedisConfig;
 use Maniaba\CodeIgniterSse\Broker\Redis\RedisConnectionFactory;
 use Maniaba\CodeIgniterSse\Broker\Redis\RedisPublisher;
@@ -15,6 +16,7 @@ use Maniaba\CodeIgniterSse\Config\Sse;
 use Maniaba\CodeIgniterSse\Contracts\ChannelAuthorizerInterface;
 use Maniaba\CodeIgniterSse\Contracts\EventInterface;
 use Maniaba\CodeIgniterSse\Contracts\PublisherInterface;
+use Maniaba\CodeIgniterSse\Contracts\SubscriberInterface;
 use Maniaba\CodeIgniterSse\Sse as SseManager;
 use ReflectionProperty;
 
@@ -42,25 +44,28 @@ final class ServicesTest extends CIUnitTestCase
 
     public function testRedisConfigMapsAllConnectionSettings(): void
     {
-        $config                                  = new Sse();
-        $config->redisScheme                     = 'tls';
-        $config->redisHost                       = 'redis.internal';
-        $config->redisPort                       = 6380;
-        $config->redisUsername                   = 'app';
-        $config->redisPassword                   = 'secret';
-        $config->redisDatabase                   = 3;
-        $config->channelPrefix                   = 'test:sse:';
-        $config->allowPatternSubscriptions       = true;
-        $config->redisDeduplicationCapacity      = 50;
-        $config->redisReconnectAttempts          = 4;
-        $config->redisReconnectDelayMilliseconds = 500;
-        $config->redisPingInterval               = 12.5;
-        $config->redisMaxPayloadBytes            = 2048;
-        $config->redisMaxResponseElements        = 128;
-        $config->redisMaxResponseDepth           = 4;
-        $config->redisClientName                 = 'ci-sse';
+        $config        = new Sse();
+        $config->redis = [
+            'scheme'                     => 'tls',
+            'host'                       => 'redis.internal',
+            'port'                       => 6380,
+            'username'                   => 'app',
+            'password'                   => 'secret',
+            'database'                   => 3,
+            'deduplicationCapacity'      => 50,
+            'reconnectAttempts'          => 4,
+            'reconnectDelayMilliseconds' => 500,
+            'pingInterval'               => 12.5,
+            'maxPayloadBytes'            => 2048,
+            'maxResponseElements'        => 128,
+            'maxResponseDepth'           => 4,
+            'clientName'                 => 'ci-sse',
+        ];
+        $config->channelPrefix             = 'test:sse:';
+        $config->allowPatternSubscriptions = true;
 
-        $redis = Services::sseRedisConfig($config, false);
+        $publisher = Services::ssePublisher($config, false);
+        $redis     = (new ReflectionProperty($publisher, 'config'))->getValue($publisher);
 
         $this->assertInstanceOf(RedisConfig::class, $redis);
         $this->assertSame('tls://redis.internal:6380', $redis->endpoint());
@@ -79,30 +84,69 @@ final class ServicesTest extends CIUnitTestCase
 
     public function testExplicitRedisConfigDoesNotReuseAnExistingSharedConfig(): void
     {
-        FrameworkServices::resetSingle('sseRedisConfig');
-        Services::sseRedisConfig();
+        $config        = new Sse();
+        $config->redis = ['host' => 'explicit.redis.internal'];
+        $publisher     = Services::ssePublisher($config, false);
 
-        try {
-            $config            = new Sse();
-            $config->redisHost = 'explicit.redis.internal';
-            $publisher         = Services::ssePublisher($config, false);
+        $this->assertInstanceOf(RedisPublisher::class, $publisher);
 
-            $this->assertInstanceOf(RedisPublisher::class, $publisher);
+        $publisherConfig = (new ReflectionProperty($publisher, 'config'))->getValue($publisher);
+        $factory         = (new ReflectionProperty($publisher, 'connectionFactory'))->getValue($publisher);
 
-            $publisherConfig = (new ReflectionProperty($publisher, 'config'))->getValue($publisher);
-            $factory         = (new ReflectionProperty($publisher, 'connectionFactory'))->getValue($publisher);
+        $this->assertInstanceOf(RedisConfig::class, $publisherConfig);
+        $this->assertSame('explicit.redis.internal', $publisherConfig->host);
+        $this->assertInstanceOf(RedisConnectionFactory::class, $factory);
 
-            $this->assertInstanceOf(RedisConfig::class, $publisherConfig);
-            $this->assertSame('explicit.redis.internal', $publisherConfig->host);
-            $this->assertInstanceOf(RedisConnectionFactory::class, $factory);
+        $factoryConfig = (new ReflectionProperty($factory, 'config'))->getValue($factory);
 
-            $factoryConfig = (new ReflectionProperty($factory, 'config'))->getValue($factory);
+        $this->assertInstanceOf(RedisConfig::class, $factoryConfig);
+        $this->assertSame('explicit.redis.internal', $factoryConfig->host);
+    }
 
-            $this->assertInstanceOf(RedisConfig::class, $factoryConfig);
-            $this->assertSame('explicit.redis.internal', $factoryConfig->host);
-        } finally {
-            FrameworkServices::resetSingle('sseRedisConfig');
-        }
+    public function testCustomBrokerCanBeConfiguredWithFactories(): void
+    {
+        $publisher = new class () implements PublisherInterface {
+            public function publish(string $channel, EventInterface $event): void
+            {
+            }
+        };
+
+        $subscriber = new class () implements SubscriberInterface {
+            public function subscribe(
+                array $channels,
+                callable $onMessage,
+                ?callable $shouldStop = null,
+                ?callable $onIdle = null,
+            ): void {
+            }
+        };
+
+        $config                    = new Sse();
+        $config->broker            = 'custom';
+        $config->brokers['custom'] = [
+            'publisher'  => static fn (): PublisherInterface => $publisher,
+            'subscriber' => static fn (): SubscriberInterface => $subscriber,
+        ];
+
+        $this->assertSame($publisher, Services::ssePublisher($config, false));
+        $this->assertSame($subscriber, Services::sseSubscriber($config, false));
+    }
+
+    public function testCustomBrokerCanUseSimpleClassNames(): void
+    {
+        $config                         = new Sse();
+        $config->broker                 = 'custom-null';
+        $config->brokers['custom-null'] = [
+            'publisher'  => NullBroker::class,
+            'subscriber' => NullBroker::class,
+            'shared'     => true,
+        ];
+
+        $this->assertInstanceOf(NullBroker::class, Services::ssePublisher($config, false));
+        $this->assertSame(
+            Services::ssePublisher($config, false),
+            Services::sseSubscriber($config, false),
+        );
     }
 
     public function testConvenienceServiceUsesApplicationPublisherOverride(): void

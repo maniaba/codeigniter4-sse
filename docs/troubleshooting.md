@@ -73,7 +73,7 @@ php spark sse:health-check
 
 Then verify:
 
-- `redisScheme`, host, and port;
+- Redis `scheme`, `host`, and `port`;
 - container or firewall networking;
 - ACL username and password;
 - selected Redis database;
