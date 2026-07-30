@@ -85,6 +85,36 @@ object values are omitted. The `channels` option wins over an existing
 
 Do not use query parameters for bearer tokens or secrets.
 
+## Channels
+
+Initial channels are passed to the constructor:
+
+```javascript
+const live = new SseClient({
+    endpoint: '/sse',
+    channels: ['users.42'],
+});
+```
+
+Channels can also be changed later:
+
+```javascript
+live.subscribe('orders.918');
+live.subscribe(['projects.15.activity', 'public.news']);
+
+live.unsubscribe('orders.918');
+
+live.setChannels(['users.42', 'orders.918']);
+```
+
+`subscribe()`, `unsubscribe()`, and `setChannels()` return the client for
+chaining.
+
+Native `EventSource` cannot change its URL after it is opened. When channels
+change on an active client, the wrapper closes the current source and opens a
+new one with the updated `channels` query parameter. Removing the last channel
+closes the stream.
+
 ## Named events
 
 Register a handler before or after connecting:

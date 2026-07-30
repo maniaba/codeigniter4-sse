@@ -27,6 +27,8 @@ export type SseQuery =
     | URLSearchParams
     | Record<string, SseQueryValue | SseQueryValue[]>;
 
+export type SseChannelInput = string | readonly string[];
+
 /**
  * Parsed message delivered to named event handlers and global message handlers.
  */
@@ -228,6 +230,24 @@ export declare class SseClient {
      * Convenience alias for on('message', handler).
      */
     onMessage<TData = unknown>(handler: SseMessageHandler<TData>): this;
+
+    /**
+     * Replace all subscribed channels. Active connections are restarted with
+     * the new channel query. An empty array removes the channels parameter.
+     */
+    setChannels(channels: SseChannelInput): this;
+
+    /**
+     * Add one or more channels. Active connections are restarted with the
+     * expanded channel query.
+     */
+    subscribe(channels: SseChannelInput): this;
+
+    /**
+     * Remove one or more channels. Active connections are restarted with the
+     * remaining channels. Removing the last channel closes the stream.
+     */
+    unsubscribe(channels: SseChannelInput): this;
 
     /**
      * Open the EventSource connection. Repeated calls are idempotent while active.

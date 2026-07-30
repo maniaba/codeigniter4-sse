@@ -65,12 +65,6 @@ export class SseClient {
             throw new TypeError('SseClient requires a non-empty endpoint.');
         }
 
-        if (!Array.isArray(channels) || channels.some((channel) => (
-            typeof channel !== 'string' || channel.trim() === ''
-        ))) {
-            throw new TypeError('SseClient channels must be non-empty strings.');
-        }
-
         if (
             !queryIsUrlSearchParams
             && (query === null || typeof query !== 'object' || Array.isArray(query))
@@ -94,7 +88,7 @@ export class SseClient {
         }
 
         this.endpoint = endpoint.trim();
-        this.channels = [...new Set(channels.map((channel) => channel.trim()))];
+        this.channels = this._normalizeChannels(channels);
         this.query = query;
         this.withCredentials = Boolean(withCredentials);
 
@@ -206,6 +200,78 @@ export class SseClient {
      */
     onMessage(handler) {
         return this.on(GLOBAL_MESSAGE_EVENT, handler);
+    }
+
+    /**
+     * Replace all subscribed channels. If the connection is active, it is
+     * restarted with the new channel query.
+     *
+     * @param {string|string[]} channels
+     * @returns {SseClient}
+     */
+    setChannels(channels) {
+        const nextChannels = this._normalizeChannels(channels);
+
+        if (this._sameChannels(nextChannels)) {
+            return this;
+        }
+
+        this.channels = nextChannels;
+        this._restartForChannelChange();
+
+        return this;
+    }
+
+    /**
+     * Add one or more channels. If the connection is active, it is restarted
+     * with the expanded channel query.
+     *
+     * @param {string|string[]} channels
+     * @returns {SseClient}
+     */
+    subscribe(channels) {
+        const additions = this._normalizeChannels(channels);
+        const next = new Set(this.channels);
+        let changed = false;
+
+        for (const channel of additions) {
+            if (!next.has(channel)) {
+                next.add(channel);
+                changed = true;
+            }
+        }
+
+        if (!changed) {
+            return this;
+        }
+
+        this.channels = [...next];
+        this._restartForChannelChange();
+
+        return this;
+    }
+
+    /**
+     * Remove one or more channels. If the connection is active, it is restarted
+     * with the remaining channels. Removing the last channel closes the stream.
+     *
+     * @param {string|string[]} channels
+     * @returns {SseClient}
+     */
+    unsubscribe(channels) {
+        const removals = new Set(this._normalizeChannels(channels));
+        const nextChannels = this.channels.filter((channel) => (
+            !removals.has(channel)
+        ));
+
+        if (this._sameChannels(nextChannels)) {
+            return this;
+        }
+
+        this.channels = nextChannels;
+        this._restartForChannelChange();
+
+        return this;
     }
 
     /**
@@ -367,6 +433,35 @@ export class SseClient {
     }
 
     /**
+     * @returns {boolean}
+     */
+    _hasActiveSource() {
+        return (
+            this._source !== null
+            && this._status !== SseClientStatus.CLOSED
+            && this._status !== SseClientStatus.UNSUPPORTED
+        );
+    }
+
+    _restartForChannelChange() {
+        if (!this._hasActiveSource()) {
+            return;
+        }
+
+        this._teardownSource();
+
+        if (this.channels.length === 0) {
+            this._setStatus(SseClientStatus.CLOSED, {
+                reason: 'channels-empty',
+            });
+
+            return;
+        }
+
+        this.connect();
+    }
+
+    /**
      * @returns {string}
      */
     _buildUrl() {
@@ -420,6 +515,33 @@ export class SseClient {
         url.hash = '';
 
         return url.toString();
+    }
+
+    /**
+     * @param {string|string[]} channels
+     * @returns {string[]}
+     */
+    _normalizeChannels(channels) {
+        const values = Array.isArray(channels) ? channels : [channels];
+
+        if (values.some((channel) => (
+            typeof channel !== 'string' || channel.trim() === ''
+        ))) {
+            throw new TypeError('SseClient channels must be non-empty strings.');
+        }
+
+        return [...new Set(values.map((channel) => channel.trim()))];
+    }
+
+    /**
+     * @param {string[]} channels
+     * @returns {boolean}
+     */
+    _sameChannels(channels) {
+        return (
+            this.channels.length === channels.length
+            && this.channels.every((channel, index) => channel === channels[index])
+        );
     }
 
     /**

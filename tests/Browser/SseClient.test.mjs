@@ -132,3 +132,60 @@ test('preserves invalid JSON and invokes unsupported fallback once', () => {
     assert.equal(unsupported.status, SseClientStatus.UNSUPPORTED);
     assert.equal(fallbackCalls, 1);
 });
+
+test('subscribes and unsubscribes channels by reconnecting active sources', () => {
+    const sources = [];
+    const urls = [];
+    const statuses = [];
+
+    const client = new SseClient({
+        endpoint: 'https://example.test/sse',
+        channels: ['public.news'],
+        eventSourceFactory: (url) => {
+            const source = new FakeEventSource();
+
+            sources.push(source);
+            urls.push(url);
+
+            return source;
+        },
+    });
+
+    client.on('status', ({ status }) => statuses.push(status)).connect();
+    sources[0].readyState = 1;
+    sources[0].dispatch('open', { type: 'open' });
+
+    client.subscribe(['users.42', 'public.news']);
+
+    assert.equal(sources.length, 2);
+    assert.equal(sources[0].closed, true);
+    assert.equal(
+        new URL(urls[1]).searchParams.get('channels'),
+        'public.news,users.42',
+    );
+    assert.equal(client.status, SseClientStatus.CONNECTING);
+
+    sources[1].readyState = 1;
+    sources[1].dispatch('open', { type: 'open' });
+
+    client.unsubscribe('public.news');
+
+    assert.equal(sources.length, 3);
+    assert.equal(sources[1].closed, true);
+    assert.equal(new URL(urls[2]).searchParams.get('channels'), 'users.42');
+
+    client.unsubscribe('users.42');
+
+    assert.equal(sources.length, 3);
+    assert.equal(sources[2].closed, true);
+    assert.equal(client.status, SseClientStatus.CLOSED);
+    assert.deepEqual(client.channels, []);
+    assert.deepEqual(statuses, [
+        SseClientStatus.CONNECTING,
+        SseClientStatus.OPEN,
+        SseClientStatus.CONNECTING,
+        SseClientStatus.OPEN,
+        SseClientStatus.CONNECTING,
+        SseClientStatus.CLOSED,
+    ]);
+});
