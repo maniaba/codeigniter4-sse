@@ -6,6 +6,7 @@ namespace Maniaba\CodeIgniterSse;
 
 use InvalidArgumentException;
 use Maniaba\CodeIgniterSse\Contracts\EventInterface;
+use Maniaba\CodeIgniterSse\Contracts\PublishableEventInterface;
 use Maniaba\CodeIgniterSse\Contracts\PublisherInterface;
 use Maniaba\CodeIgniterSse\Event\EventFactory;
 use Maniaba\CodeIgniterSse\Support\Channel;
@@ -22,10 +23,26 @@ final readonly class Sse
      * @param array<string, mixed> $data
      */
     public function publish(
-        Channel|string $channel,
-        EventInterface|string $event,
+        Channel|PublishableEventInterface|string $channel,
+        EventInterface|string|null $event = null,
         array $data = [],
     ): EventInterface {
+        if ($channel instanceof PublishableEventInterface) {
+            if ($event !== null || $data !== []) {
+                throw new InvalidArgumentException(
+                    'The event and data arguments must be omitted when publishing a PublishableEventInterface instance.',
+                );
+            }
+
+            return $this->publish($channel->channel(), $channel->event(), $channel->data());
+        }
+
+        if ($event === null) {
+            throw new InvalidArgumentException(
+                'The event argument is required when publishing by channel.',
+            );
+        }
+
         if ($event instanceof EventInterface) {
             if ($data !== []) {
                 throw new InvalidArgumentException(

@@ -18,6 +18,43 @@ sse()->publish(
 );
 ```
 
+Domain code can also publish one object that knows its channel, event name, and
+payload:
+
+```php
+use Maniaba\CodeIgniterSse\Contracts\PublishableEventInterface;
+use Maniaba\CodeIgniterSse\Support\Channel;
+
+final readonly class OrderPaidNotification implements PublishableEventInterface
+{
+    public function __construct(
+        private int $userId,
+        private int $orderId,
+    ) {
+    }
+
+    public function channel(): Channel
+    {
+        return Channel::join('users', $this->userId);
+    }
+
+    public function event(): string
+    {
+        return 'notification.created';
+    }
+
+    public function data(): array
+    {
+        return [
+            'title'   => 'Order paid',
+            'orderId' => $this->orderId,
+        ];
+    }
+}
+
+sse()->publish(new OrderPaidNotification($userId, 918));
+```
+
 Advanced code can publish a concrete event object:
 
 ```php

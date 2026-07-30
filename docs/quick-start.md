@@ -117,6 +117,10 @@ The publisher builds a versioned envelope and sends it to the prefixed Redis
 channel. Application code does not build Redis channel names and does not
 write SSE frames.
 
+If the application already has an event object, implement
+`PublishableEventInterface` and call `sse()->publish($object)`. The object
+provides the channel, event name or event object, and payload.
+
 ## 4. Connect from the browser
 
 ```javascript
