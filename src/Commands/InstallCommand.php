@@ -46,6 +46,14 @@ final class InstallCommand extends BaseCommand
             )) {
                 $failed = true;
             }
+
+            if (! $this->publish(
+                $root . '/resources/js/sse-client.d.ts',
+                FCPATH . 'vendor/codeigniter4-sse/sse-client.d.ts',
+                $force,
+            )) {
+                $failed = true;
+            }
         }
 
         return $failed ? EXIT_ERROR : EXIT_SUCCESS;

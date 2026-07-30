@@ -35,6 +35,26 @@ The module also provides a default export:
 import SseClient from '/vendor/codeigniter4-sse/sse-client.js';
 ```
 
+The package ships TypeScript declarations next to the module:
+
+```text
+resources/js/sse-client.d.ts
+```
+
+When `php spark sse:install` publishes browser assets, it copies both
+`sse-client.js` and `sse-client.d.ts`.
+
+TypeScript projects can import the public types:
+
+```typescript
+import {
+    SseClient,
+    type SseClientOptions,
+    type SseMessage,
+    type SseStatusEvent,
+} from '/vendor/codeigniter4-sse/sse-client.js';
+```
+
 ## Constructor
 
 ```javascript

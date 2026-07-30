@@ -33,6 +33,7 @@ The command creates:
 ```text
 app/Config/Sse.php
 public/vendor/codeigniter4-sse/sse-client.js
+public/vendor/codeigniter4-sse/sse-client.d.ts
 ```
 
 Existing files are skipped. Use `--force` only when they should be replaced,
@@ -116,6 +117,8 @@ Alternatively, copy the source into an existing asset pipeline:
 ```bash
 cp vendor/maniaba/codeigniter4-sse/resources/js/sse-client.js \
     public/assets/sse-client.js
+cp vendor/maniaba/codeigniter4-sse/resources/js/sse-client.d.ts \
+    public/assets/sse-client.d.ts
 ```
 
 Then import it:
