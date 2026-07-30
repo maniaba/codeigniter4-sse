@@ -95,6 +95,5 @@ nav:
   - Testing: testing.md
   - Troubleshooting: troubleshooting.md
   - Upgrade:
-      - Versioned docs: versioning.md
       - Upgrade policy: upgrade.md
   - Module structure: module-structure.md
