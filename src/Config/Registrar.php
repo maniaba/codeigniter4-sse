@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Maniaba\CodeIgniterSse\Config;
 
-use Maniaba\CodeIgniterSse\Debug\Toolbar\Collectors\SseEvents;
+use Maniaba\CodeIgniterSse\Collectors\SseEvents;
 
 final class Registrar
 {

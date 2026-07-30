@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Debug\Toolbar;
 
-use Maniaba\CodeIgniterSse\Debug\Toolbar\Collectors\SseEvents;
+use Maniaba\CodeIgniterSse\Collectors\SseEvents;
 use Maniaba\CodeIgniterSse\Debug\Toolbar\SseEventHistory;
 use Maniaba\CodeIgniterSse\Debug\Toolbar\TraceablePublisher;
 use Maniaba\CodeIgniterSse\Event\SseEvent;
@@ -21,12 +21,16 @@ final class SseEventsCollectorTest extends TestCase
         SseEventHistory::clear();
     }
 
-    public function testItIsEmptyUntilAnEventIsPublished(): void
+    public function testItIsVisibleEvenBeforeAnEventIsPublished(): void
     {
         $collector = new SseEvents();
 
-        $this->assertTrue($collector->isEmpty());
+        $this->assertFalse($collector->isEmpty());
         $this->assertSame(0, $collector->getBadgeValue());
+        $this->assertStringContainsString(
+            'No SSE events were published during this request.',
+            $collector->display(),
+        );
     }
 
     public function testItDisplaysPublishedEventMetadata(): void

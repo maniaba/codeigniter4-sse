@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Maniaba\CodeIgniterSse\Debug\Toolbar\Collectors;
+namespace Maniaba\CodeIgniterSse\Collectors;
 
 use CodeIgniter\Debug\Toolbar\Collectors\BaseCollector;
 use Maniaba\CodeIgniterSse\Debug\Toolbar\SseEventHistory;
@@ -86,7 +86,7 @@ final class SseEvents extends BaseCollector
 
     public function isEmpty(): bool
     {
-        return SseEventHistory::count() === 0;
+        return false;
     }
 
     public function icon(): string
