@@ -16,7 +16,7 @@
         <link rel="prev" href="../deployment/">
       
       
-        <link rel="next" href="../codeigniter-4.8/">
+        <link rel="next" href="../events/">
       
       
         
@@ -782,34 +782,6 @@
 
               
             
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../codeigniter-4.8/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    CodeIgniter 4.8 migration
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
           </ul>
         </nav>
       
@@ -971,34 +943,6 @@
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../versioning/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Versioned docs
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
             
               
                 
@@ -1264,8 +1208,8 @@ messages. This is required to:</p>
 <li>enforce maximum connection lifetime;</li>
 <li>stop cleanly on read timeout or transport failure.</li>
 </ul>
-<p>CodeIgniter 4.8 provides a native <code>SSEResponse</code> path. Older supported versions
-use the package's compatibility response and the same stream contracts.</p>
+<p>The HTTP layer is hidden behind stream contracts so application code does not
+depend on a specific response implementation.</p>
 <h2 id="pubsub-trade-offs">Pub/Sub trade-offs</h2>
 <p>Redis Pub/Sub is a good fit for dashboards, notifications, cache
 invalidation, and live UI hints. It provides broadcast but not persistence:</p>
@@ -1286,7 +1230,8 @@ different and must be documented explicitly.</p>
 <ul>
 <li>it is GPL-3.0-or-later while this package is MIT;</li>
 <li>its PSR-7 response does not provide live emission;</li>
-<li>coupling the core to one emitter would defeat the native CI4 4.8 bridge.</li>
+<li>coupling the core to one emitter would make future framework integration
+  harder.</li>
 </ul>
 <p>An application does not need to know which response adapter is active.</p>
 
@@ -1341,13 +1286,13 @@ different and must be documented explicitly.</p>
         
         
           
-          <a href="../codeigniter-4.8/" class="md-footer__link md-footer__link--next" aria-label="Next: CodeIgniter 4.8 migration">
+          <a href="../events/" class="md-footer__link md-footer__link--next" aria-label="Next: Events">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                CodeIgniter 4.8 migration
+                Events
               </div>
             </div>
             <div class="md-footer__button md-icon">

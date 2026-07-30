@@ -654,34 +654,6 @@
 
               
             
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../codeigniter-4.8/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    CodeIgniter 4.8 migration
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
           </ul>
         </nav>
       
@@ -843,34 +815,6 @@
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../versioning/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Versioned docs
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
             
               
                 
@@ -1179,10 +1123,7 @@ when applications want the API enabled without delivering live events.</p>
 <p><code>HTTP\SseController</code> parses the channel request, resolves the current user,
 authorizes every channel, and starts the stream.</p>
 <p><code>HTTP\SseResponseFactory</code> selects the output implementation at runtime:</p>
-<pre class="highlight"><code class="language-text">CodeIgniter 4.8 native eventStream()
-    └── CodeIgniterSseOutput
-
-CodeIgniter 4.7 compatibility path
+<pre class="highlight"><code class="language-text">Current package streaming response
     └── LegacySseResponse</code></pre>
 <h2 id="stream-layer">Stream layer</h2>
 <p><code>SseConnectionManager</code> owns the long-running stream loop. It sends retry

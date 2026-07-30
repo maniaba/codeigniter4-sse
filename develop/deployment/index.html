@@ -815,34 +815,6 @@
 
               
             
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../codeigniter-4.8/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    CodeIgniter 4.8 migration
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
           </ul>
         </nav>
       
@@ -1004,34 +976,6 @@
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../versioning/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Versioned docs
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
             
               
                 
@@ -1268,10 +1212,8 @@ Connection: keep-alive
 X-Accel-Buffering: no</code></pre>
 <p>Cross-origin responses additionally receive the configured CORS headers.
 <code>Connection: keep-alive</code> applies to HTTP/1.x and is not emitted for HTTP/2.
-Never cache the endpoint. The CI4 4.7 compatibility response includes
-<code>no-transform</code>. The current native CI4 4.8 development response owns its exact
-<code>Cache-Control</code> header and emits <code>no-cache</code>; proxy/CDN transformation must
-therefore still be disabled explicitly for a deployment that uses that path.</p>
+Never cache the endpoint and keep <code>no-transform</code> in place so proxies and CDNs
+do not buffer or modify the stream.</p>
 <h2 id="heartbeats-and-connection-lifetime">Heartbeats and connection lifetime</h2>
 <p>An idle heartbeat is an SSE comment:</p>
 <pre class="highlight"><code class="language-text">: heartbeat 2026-07-30T19:20:00Z
