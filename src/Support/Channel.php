@@ -37,34 +37,9 @@ final readonly class Channel implements Stringable
         return $channel instanceof self ? $channel : new self($channel);
     }
 
-    public static function publicChannel(string $name): self
+    public static function join(int|string ...$segments): self
     {
-        return new self('public.' . self::segment($name));
-    }
-
-    public static function user(int|string $userId): self
-    {
-        return new self('users.' . self::segment($userId));
-    }
-
-    public static function tenant(int|string $tenantId, ?string $suffix = null): self
-    {
-        return self::withOptionalSuffix('tenants.' . self::segment($tenantId), $suffix);
-    }
-
-    public static function order(int|string $orderId): self
-    {
-        return new self('orders.' . self::segment($orderId));
-    }
-
-    public static function project(int|string $projectId, ?string $suffix = null): self
-    {
-        return self::withOptionalSuffix('projects.' . self::segment($projectId), $suffix);
-    }
-
-    public static function role(string $role): self
-    {
-        return new self('roles.' . self::segment($role));
+        return new self(implode('.', array_map(self::segment(...), $segments)));
     }
 
     public function value(): string
@@ -75,15 +50,6 @@ final readonly class Channel implements Stringable
     public function __toString(): string
     {
         return $this->name;
-    }
-
-    private static function withOptionalSuffix(string $base, ?string $suffix): self
-    {
-        if ($suffix === null || trim($suffix) === '') {
-            return new self($base);
-        }
-
-        return new self($base . '.' . self::segment($suffix));
     }
 
     private static function segment(int|string $value): string

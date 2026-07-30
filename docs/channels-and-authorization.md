@@ -27,16 +27,15 @@ roles.support-agent
 Invalid examples include empty segments, whitespace, slashes, Redis control
 characters, and wildcard syntax while pattern subscriptions are disabled.
 
-Server-side PHP can use the value object helpers:
+Server-side PHP can use the value object for validation, or `join()` when it
+needs to safely compose a channel from dynamic segments:
 
 ```php
 use Maniaba\CodeIgniterSse\Support\Channel;
 
-$public = Channel::publicChannel('news');
-$user = Channel::user($userId);
-$tenant = Channel::tenant($tenantId, 'dashboard');
-$order = Channel::order($orderId);
-$project = Channel::project($projectId, 'activity');
+$channel = new Channel('public.news');
+$user = Channel::join('users', $userId);
+$tenantDashboard = Channel::join('tenants', $tenantId, 'dashboard');
 ```
 
 ## Secure default

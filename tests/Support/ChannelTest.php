@@ -14,13 +14,19 @@ use PHPUnit\Framework\TestCase;
  */
 final class ChannelTest extends TestCase
 {
-    public function testChannelHelpersBuildLogicalNames(): void
+    public function testChannelCanBeBuiltFromAString(): void
     {
-        $this->assertSame('public.news', (string) Channel::publicChannel('news'));
-        $this->assertSame('users.42', (string) Channel::user(42));
-        $this->assertSame('tenants.7.dashboard', (string) Channel::tenant(7, 'dashboard'));
-        $this->assertSame('orders.918', (string) Channel::order(918));
-        $this->assertSame('projects.15.activity', (string) Channel::project(15, 'activity'));
+        $channel = new Channel('any.domain_42-event');
+
+        $this->assertSame('any.domain_42-event', $channel->value());
+        $this->assertSame('any.domain_42-event', (string) $channel);
+        $this->assertSame($channel, Channel::from($channel));
+        $this->assertSame('any.domain_42-event', (string) Channel::from('any.domain_42-event'));
+    }
+
+    public function testChannelCanBeBuiltFromGenericSegments(): void
+    {
+        $this->assertSame('any.42.dashboard', (string) Channel::join('any', 42, 'dashboard'));
     }
 
     #[DataProvider('provideUnsafeChannelNamesAreRejected')]

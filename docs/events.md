@@ -25,7 +25,7 @@ use Maniaba\CodeIgniterSse\Event\SseEvent;
 use Maniaba\CodeIgniterSse\Support\Channel;
 
 service('ssePublisher')->publish(
-    (string) Channel::order(918),
+    (string) Channel::join('orders', 918),
     new SseEvent(
         'order.updated',
         ['orderId' => 918, 'status' => 'paid'],

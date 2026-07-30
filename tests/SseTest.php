@@ -27,7 +27,7 @@ final class SseTest extends TestCase
         );
 
         $event = $sse->publish(
-            Channel::user(42),
+            Channel::join('users', 42),
             'notification.created',
             ['title' => 'Paid'],
         );
