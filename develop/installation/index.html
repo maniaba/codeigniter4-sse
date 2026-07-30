@@ -1130,7 +1130,8 @@ commands through Composer.</p>
 <pre class="highlight"><code class="language-bash">php spark sse:install</code></pre>
 <p>The command creates:</p>
 <pre class="highlight"><code class="language-text">app/Config/Sse.php
-public/vendor/codeigniter4-sse/sse-client.js</code></pre>
+public/vendor/codeigniter4-sse/sse-client.js
+public/vendor/codeigniter4-sse/sse-client.d.ts</code></pre>
 <p>Existing files are skipped. Use <code>--force</code> only when they should be replaced,
 or <code>--no-assets</code> to publish only the PHP config:</p>
 <pre class="highlight"><code class="language-bash">php spark sse:install --no-assets</code></pre>
@@ -1172,7 +1173,9 @@ distinct <code>channelPrefix</code> for each application and test suite.</p>
 <pre class="highlight"><code class="language-javascript">import { SseClient } from '/vendor/codeigniter4-sse/sse-client.js';</code></pre>
 <p>Alternatively, copy the source into an existing asset pipeline:</p>
 <pre class="highlight"><code class="language-bash">cp vendor/maniaba/codeigniter4-sse/resources/js/sse-client.js \
-    public/assets/sse-client.js</code></pre>
+    public/assets/sse-client.js
+cp vendor/maniaba/codeigniter4-sse/resources/js/sse-client.d.ts \
+    public/assets/sse-client.d.ts</code></pre>
 <p>Then import it:</p>
 <pre class="highlight"><code class="language-javascript">import { SseClient } from '/assets/sse-client.js';</code></pre>
 <p>Do not serve the entire <code>vendor/</code> directory from the web root.</p>

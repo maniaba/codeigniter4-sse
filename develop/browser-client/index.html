@@ -1225,6 +1225,17 @@ automatically.</p>
 } from '/vendor/codeigniter4-sse/sse-client.js';</code></pre>
 <p>The module also provides a default export:</p>
 <pre class="highlight"><code class="language-javascript">import SseClient from '/vendor/codeigniter4-sse/sse-client.js';</code></pre>
+<p>The package ships TypeScript declarations next to the module:</p>
+<pre class="highlight"><code class="language-text">resources/js/sse-client.d.ts</code></pre>
+<p>When <code>php spark sse:install</code> publishes browser assets, it copies both
+<code>sse-client.js</code> and <code>sse-client.d.ts</code>.</p>
+<p>TypeScript projects can import the public types:</p>
+<pre class="highlight"><code class="language-typescript">import {
+    SseClient,
+    type SseClientOptions,
+    type SseMessage,
+    type SseStatusEvent,
+} from '/vendor/codeigniter4-sse/sse-client.js';</code></pre>
 <h2 id="constructor">Constructor</h2>
 <pre class="highlight"><code class="language-javascript">const live = new SseClient({
     endpoint: '/sse',
@@ -1324,7 +1335,7 @@ SSE comments and never dispatch a JavaScript event.</p>
     console.log(message.version);
 });</code></pre>
 <p>The complete shape is:</p>
-<pre class="highlight"><code class="language-javascript">{
+<pre class="highlight"><code class="language-text">{
     id: '019...',
     event: 'order.updated',
     channel: 'orders.918',
@@ -1410,7 +1421,7 @@ fallback when EventSource is unavailable or a connection reports an error:</p>
     },
 });</code></pre>
 <p>The hook receives:</p>
-<pre class="highlight"><code class="language-javascript">{
+<pre class="highlight"><code class="language-text">{
     reason,
     event,
     error,
