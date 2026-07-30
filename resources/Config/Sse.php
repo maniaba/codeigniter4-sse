@@ -79,6 +79,19 @@ class Sse extends BaseSse
     public bool $requireAcceptHeader = true;
 
     /**
+     * CodeIgniter Debug Toolbar publisher tracing.
+     *
+     * `brokers` accepts concrete broker names from `$brokers` or `*` for all.
+     *
+     * @var array<string, mixed>
+     */
+    public array $toolbar = [
+        'enabled'   => true,
+        'brokers'   => ['*'],
+        'maxEvents' => 100,
+    ];
+
+    /**
      * Cross-origin frontend origins. Leave empty for same-origin usage.
      *
      * @var list<string>

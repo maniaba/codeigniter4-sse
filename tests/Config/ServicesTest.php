@@ -16,6 +16,9 @@ use Maniaba\CodeIgniterSse\Config\Sse;
 use Maniaba\CodeIgniterSse\Contracts\EventInterface;
 use Maniaba\CodeIgniterSse\Contracts\PublisherInterface;
 use Maniaba\CodeIgniterSse\Contracts\SubscriberInterface;
+use Maniaba\CodeIgniterSse\Debug\Toolbar\SseEventHistory;
+use Maniaba\CodeIgniterSse\Debug\Toolbar\TraceablePublisher;
+use Maniaba\CodeIgniterSse\Event\SseEvent;
 use Maniaba\CodeIgniterSse\Factory\AuthorizationFactory;
 use Maniaba\CodeIgniterSse\Factory\BrokerFactory;
 use Maniaba\CodeIgniterSse\Sse as SseManager;
@@ -27,6 +30,11 @@ use Tests\Config\Fixtures\ConfiguredChannelAuthorizer;
  */
 final class ServicesTest extends CIUnitTestCase
 {
+    protected function tearDown(): void
+    {
+        SseEventHistory::clear();
+    }
+
     public function testConvenienceServiceIsAutoDiscovered(): void
     {
         $this->assertInstanceOf(SseManager::class, service('sse'));
@@ -154,6 +162,68 @@ final class ServicesTest extends CIUnitTestCase
             $brokers->publisher($config),
             $brokers->subscriber($config),
         );
+    }
+
+    public function testToolbarTracingCanTrackCustomBrokersCreatedByTheBrokerFactory(): void
+    {
+        $publisher = new class () implements PublisherInterface {
+            /**
+             * @var list<array{channel: string, event: EventInterface}>
+             */
+            public array $published = [];
+
+            public function publish(string $channel, EventInterface $event): void
+            {
+                $this->published[] = ['channel' => $channel, 'event' => $event];
+            }
+        };
+
+        $subscriber = new class () implements SubscriberInterface {
+            public function subscribe(
+                array $channels,
+                callable $onMessage,
+                ?callable $shouldStop = null,
+                ?callable $onIdle = null,
+            ): void {
+            }
+        };
+
+        $config                    = new Sse();
+        $config->broker            = 'custom';
+        $config->toolbar           = ['brokers' => ['custom']];
+        $config->brokers['custom'] = [
+            'publisher'  => static fn (): PublisherInterface => $publisher,
+            'subscriber' => static fn (): SubscriberInterface => $subscriber,
+        ];
+
+        $traceable = (new BrokerFactory(enableToolbarTracing: true))->publisher($config);
+
+        $this->assertInstanceOf(TraceablePublisher::class, $traceable);
+
+        $traceable->publish('public.news', new SseEvent('news.created', ['id' => 42], 'event-1'));
+
+        $history = SseEventHistory::all();
+
+        $this->assertCount(1, $publisher->published);
+        $this->assertCount(1, $history);
+        $this->assertSame('custom', $config->broker);
+        $this->assertSame('public.news', $history[0]['channel']);
+        $this->assertSame('news.created', $history[0]['event']);
+    }
+
+    public function testToolbarTracingIgnoresBrokersThatAreNotConfiguredForTracing(): void
+    {
+        $config          = new Sse();
+        $config->broker  = 'null';
+        $config->toolbar = ['brokers' => ['redis']];
+
+        $publisher = (new BrokerFactory(enableToolbarTracing: true))->publisher($config);
+
+        $this->assertInstanceOf(NullBroker::class, $publisher);
+
+        $publisher->publish('public.news', new SseEvent('news.created', ['id' => 42], 'event-1'));
+
+        $this->assertSame([], SseEventHistory::all());
     }
 
     public function testConvenienceServiceUsesApplicationPublisherOverride(): void

@@ -1,0 +1,51 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Tests\Debug\Toolbar;
+
+use Maniaba\CodeIgniterSse\Debug\Toolbar\Collectors\SseEvents;
+use Maniaba\CodeIgniterSse\Debug\Toolbar\SseEventHistory;
+use Maniaba\CodeIgniterSse\Debug\Toolbar\TraceablePublisher;
+use Maniaba\CodeIgniterSse\Event\SseEvent;
+use PHPUnit\Framework\TestCase;
+use Tests\Support\RecordingPublisher;
+
+/**
+ * @internal
+ */
+final class SseEventsCollectorTest extends TestCase
+{
+    protected function tearDown(): void
+    {
+        SseEventHistory::clear();
+    }
+
+    public function testItIsEmptyUntilAnEventIsPublished(): void
+    {
+        $collector = new SseEvents();
+
+        $this->assertTrue($collector->isEmpty());
+        $this->assertSame(0, $collector->getBadgeValue());
+    }
+
+    public function testItDisplaysPublishedEventMetadata(): void
+    {
+        (new TraceablePublisher(new RecordingPublisher()))->publish(
+            'users.42',
+            new SseEvent('notification.created', ['title' => 'Paid'], 'event-1'),
+        );
+
+        $collector = new SseEvents();
+        $display   = $collector->display();
+
+        $this->assertFalse($collector->isEmpty());
+        $this->assertSame(1, $collector->getBadgeValue());
+        $this->assertSame('1 event', $collector->getTitleDetails());
+        $this->assertStringContainsString('users.42', $display);
+        $this->assertStringContainsString('notification.created', $display);
+        $this->assertStringContainsString('event-1', $display);
+        $this->assertStringContainsString('title', $display);
+        $this->assertStringNotContainsString('Paid', $display);
+    }
+}

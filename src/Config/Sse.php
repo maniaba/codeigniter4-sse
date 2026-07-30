@@ -59,6 +59,15 @@ class Sse extends BaseConfig
     ];
 
     /**
+     * @var array<string, mixed>
+     */
+    private const DEFAULT_TOOLBAR = [
+        'enabled'   => true,
+        'brokers'   => ['*'],
+        'maxEvents' => 100,
+    ];
+
+    /**
      * Route configuration used by package route discovery.
      *
      * @var array{
@@ -107,6 +116,19 @@ class Sse extends BaseConfig
     public bool $allowPatternSubscriptions = false;
     public bool $emitConnectedEvent        = true;
     public bool $requireAcceptHeader       = true;
+
+    /**
+     * CodeIgniter Debug Toolbar publisher tracing.
+     *
+     * `brokers` accepts concrete broker names from `$brokers` or `*` for all.
+     *
+     * @var array{
+     *     enabled?: bool,
+     *     brokers?: list<string>|string,
+     *     maxEvents?: int
+     * }
+     */
+    public array $toolbar = self::DEFAULT_TOOLBAR;
 
     /**
      * @var list<string>
@@ -200,6 +222,14 @@ class Sse extends BaseConfig
                 'A wildcard SSE origin cannot be combined with credentials.',
             );
         }
+
+        $toolbar = $this->toolbar();
+
+        if ($toolbar['maxEvents'] < 1 || $toolbar['maxEvents'] > 1000) {
+            throw new InvalidArgumentException(
+                'SSE toolbar maxEvents must be between 1 and 1000.',
+            );
+        }
     }
 
     /**
@@ -233,6 +263,24 @@ class Sse extends BaseConfig
             'method'     => (string) $route['method'],
             'filters'    => $this->normalizeRouteFilters($route['filters']),
             'options'    => $this->normalizeRouteOptions($route['options']),
+        ];
+    }
+
+    /**
+     * @return array{
+     *     enabled: bool,
+     *     brokers: list<string>,
+     *     maxEvents: int
+     * }
+     */
+    public function toolbar(): array
+    {
+        $toolbar = array_replace(self::DEFAULT_TOOLBAR, $this->toolbar);
+
+        return [
+            'enabled'   => (bool) $toolbar['enabled'],
+            'brokers'   => $this->normalizeToolbarBrokers($toolbar['brokers']),
+            'maxEvents' => (int) $toolbar['maxEvents'],
         ];
     }
 
@@ -273,5 +321,24 @@ class Sse extends BaseConfig
         }
 
         return $normalized;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function normalizeToolbarBrokers(mixed $brokers): array
+    {
+        if (is_string($brokers)) {
+            $brokers = [$brokers];
+        }
+
+        if (! is_array($brokers)) {
+            return [];
+        }
+
+        return array_values(array_unique(array_filter(
+            array_map(static fn (mixed $broker): string => is_string($broker) ? trim($broker) : '', $brokers),
+            static fn (string $broker): bool => $broker !== '',
+        )));
     }
 }

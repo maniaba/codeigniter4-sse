@@ -104,6 +104,53 @@ Keep `heartbeatInterval` lower than the shortest idle timeout between the
 application and browser. A heartbeat is an SSE comment and does not invoke
 application message handlers.
 
+## Debug toolbar
+
+When CodeIgniter Debug Toolbar is enabled, the package adds an `SSE Events`
+collector through module discovery. It lists SSE publish calls triggered during
+the current HTTP request.
+
+The collector records metadata only:
+
+- channel;
+- event name;
+- event ID;
+- publish status;
+- payload size in bytes;
+- top-level data keys;
+- publisher class or error message.
+
+It does not display payload values, because event data can contain user data or
+other sensitive fields.
+
+| Property | Default | Purpose |
+|---|---:|---|
+| `toolbar['enabled']` | `true` | Enable publisher tracing during web debug requests. |
+| `toolbar['brokers']` | `['*']` | Broker names tracked by the toolbar, or `*` for all configured brokers. |
+| `toolbar['maxEvents']` | `100` | Maximum number of publish records kept for one request. |
+
+Track only selected brokers:
+
+```php
+final class Sse extends BaseSse
+{
+    public array $toolbar = [
+        'brokers' => ['redis', 'custom'],
+    ];
+}
+```
+
+Disable tracing when the application does not need it:
+
+```php
+final class Sse extends BaseSse
+{
+    public array $toolbar = [
+        'enabled' => false,
+    ];
+}
+```
+
 ## Broker
 
 | Property | Default | Purpose |
