@@ -1240,24 +1240,35 @@ browser <code>EventSource</code>.</p>
 <code>EventSource</code> follows the server's SSE <code>retry</code> value and reconnects
 automatically.</p>
 <h2 id="import">Import</h2>
-<p>Copy the module to a public asset path or include it in the frontend build:</p>
+<p>Install the browser client from npm when the application already has a frontend
+build:</p>
+<pre class="highlight"><code class="language-bash">npm install @maniaba/codeigniter4-sse-browser</code></pre>
+<p>Then import it through the package export:</p>
 <pre class="highlight"><code class="language-javascript">import {
     SseClient,
     SseClientStatus,
-} from '/vendor/codeigniter4-sse/sse-client.js';</code></pre>
+} from '@maniaba/codeigniter4-sse-browser';</code></pre>
 <p>The module also provides a default export:</p>
-<pre class="highlight"><code class="language-javascript">import SseClient from '/vendor/codeigniter4-sse/sse-client.js';</code></pre>
-<p>The package ships TypeScript declarations next to the module:</p>
-<pre class="highlight"><code class="language-text">resources/js/sse-client.d.ts</code></pre>
-<p>When <code>php spark sse:install</code> publishes browser assets, it copies both
-<code>sse-client.js</code> and <code>sse-client.d.ts</code>.</p>
+<pre class="highlight"><code class="language-javascript">import SseClient from '@maniaba/codeigniter4-sse-browser';</code></pre>
 <p>TypeScript projects can import the public types:</p>
 <pre class="highlight"><code class="language-typescript">import {
     SseClient,
     type SseClientOptions,
     type SseMessage,
     type SseStatusEvent,
+} from '@maniaba/codeigniter4-sse-browser';</code></pre>
+<p>Without npm, copy the module to a public asset path or include it directly from
+published package assets:</p>
+<pre class="highlight"><code class="language-javascript">import {
+    SseClient,
+    SseClientStatus,
 } from '/vendor/codeigniter4-sse/sse-client.js';</code></pre>
+<p>The direct asset module also provides a default export:</p>
+<pre class="highlight"><code class="language-javascript">import SseClient from '/vendor/codeigniter4-sse/sse-client.js';</code></pre>
+<p>The package ships TypeScript declarations next to the module:</p>
+<pre class="highlight"><code class="language-text">resources/js/sse-client.d.ts</code></pre>
+<p>When <code>php spark sse:install</code> publishes browser assets, it copies both
+<code>sse-client.js</code> and <code>sse-client.d.ts</code>.</p>
 <h2 id="constructor">Constructor</h2>
 <pre class="highlight"><code class="language-javascript">const live = new SseClient({
     endpoint: '/sse',

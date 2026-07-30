@@ -1167,7 +1167,12 @@ connection without starting an HTTP stream.</p>
 <p>Redis Pub/Sub channels are not isolated by selected database. Always use a
 distinct <code>channelPrefix</code> for each application and test suite.</p>
 <h2 id="install-the-browser-client">Install the browser client</h2>
-<p>The installer publishes the source ES module from:</p>
+<p>Applications with a frontend build can install the browser client from npm:</p>
+<pre class="highlight"><code class="language-bash">npm install @maniaba/codeigniter4-sse-browser</code></pre>
+<p>Then import it from the package:</p>
+<pre class="highlight"><code class="language-javascript">import { SseClient } from '@maniaba/codeigniter4-sse-browser';</code></pre>
+<p>The package includes TypeScript declarations.</p>
+<p>Without npm, the installer publishes the source ES module from:</p>
 <pre class="highlight"><code class="language-text">vendor/maniaba/codeigniter4-sse/resources/js/sse-client.js</code></pre>
 <p>The default public import is:</p>
 <pre class="highlight"><code class="language-javascript">import { SseClient } from '/vendor/codeigniter4-sse/sse-client.js';</code></pre>
