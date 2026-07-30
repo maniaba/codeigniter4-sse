@@ -91,10 +91,12 @@ final class SseEvents extends BaseCollector
 
     public function icon(): string
     {
-        return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">'
-            . '<path fill="#dd4814" d="M4 5h8v2H6v10h6v2H4z"/>'
-            . '<path fill="#dd4814" d="M9 9h7v2H9zm0 4h7v2H9z"/>'
-            . '<path fill="#dd4814" d="M17.5 7.5a5.5 5.5 0 0 1 0 9l-1.1-1.7a3.5 3.5 0 0 0 0-5.6z"/>'
+        return '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">'
+            . '<g fill="none" stroke="#dd4814" stroke-linecap="round" stroke-linejoin="round" stroke-width="2">'
+            . '<path d="M18.364 19.364a9 9 0 1 0-12.728 0"/>'
+            . '<path d="M15.536 16.536a5 5 0 1 0-7.072 0"/>'
+            . '<path d="M11 13a1 1 0 1 0 2 0a1 1 0 1 0-2 0"/>'
+            . '</g>'
             . '</svg>';
     }
 
