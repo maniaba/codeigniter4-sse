@@ -53,12 +53,15 @@ final class TraceablePublisherTest extends TestCase
         $publisher = new class () implements PublisherInterface {
             public function publish(string $channel, EventInterface $event): void
             {
-                throw new RuntimeException('Redis unavailable');
+                throw new RuntimeException(
+                    'Unable to publish the SSE event after reconnecting to Redis.',
+                    previous: new RuntimeException('Connection refused'),
+                );
             }
         };
 
         $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('Redis unavailable');
+        $this->expectExceptionMessage('Unable to publish the SSE event after reconnecting to Redis.');
 
         try {
             (new TraceablePublisher($publisher))->publish(
@@ -70,7 +73,11 @@ final class TraceablePublisherTest extends TestCase
 
             $this->assertCount(1, $history);
             $this->assertSame('failed', $history[0]['status']);
-            $this->assertStringContainsString('Redis unavailable', (string) $history[0]['error']);
+            $this->assertStringContainsString(
+                'Unable to publish the SSE event after reconnecting to Redis.',
+                (string) $history[0]['error'],
+            );
+            $this->assertStringContainsString('Connection refused', (string) $history[0]['error']);
         }
     }
 

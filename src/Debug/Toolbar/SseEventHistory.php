@@ -43,7 +43,7 @@ final class SseEventHistory
         Throwable $error,
         int $limit,
     ): void {
-        self::record($channel, $event, $publisher, 'failed', $error::class . ': ' . $error->getMessage(), $limit);
+        self::record($channel, $event, $publisher, 'failed', self::errorChain($error), $limit);
     }
 
     /**
@@ -131,5 +131,22 @@ final class SseEventHistory
         } catch (JsonException) {
             return 0;
         }
+    }
+
+    private static function errorChain(Throwable $error): string
+    {
+        $messages = [];
+
+        do {
+            $message = $error::class . ': ' . $error->getMessage();
+
+            if (! in_array($message, $messages, true)) {
+                $messages[] = $message;
+            }
+
+            $error = $error->getPrevious();
+        } while ($error instanceof Throwable);
+
+        return implode(' <- ', $messages);
     }
 }

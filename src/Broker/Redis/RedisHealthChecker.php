@@ -6,23 +6,28 @@ namespace Maniaba\CodeIgniterSse\Broker\Redis;
 
 use Throwable;
 
-final readonly class RedisHealthChecker
+final class RedisHealthChecker
 {
+    private ?Throwable $lastError = null;
+
     public function __construct(
-        private RedisConnectionFactoryInterface $connectionFactory,
+        private readonly RedisConnectionFactoryInterface $connectionFactory,
     ) {
     }
 
     public function check(): bool
     {
-        $connection = null;
+        $connection      = null;
+        $this->lastError = null;
 
         try {
             $connection = $this->connectionFactory->create();
             $connection->connect();
 
             return $connection->ping();
-        } catch (Throwable) {
+        } catch (Throwable $error) {
+            $this->lastError = $error;
+
             return false;
         } finally {
             $connection?->close();
@@ -32,5 +37,10 @@ final readonly class RedisHealthChecker
     public function isHealthy(): bool
     {
         return $this->check();
+    }
+
+    public function lastError(): ?Throwable
+    {
+        return $this->lastError;
     }
 }

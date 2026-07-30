@@ -46,6 +46,13 @@ final class HealthCheckCommand extends BaseCommand
                 ),
             );
 
+            $error = $checker->lastError();
+
+            while ($error !== null) {
+                CLI::error($error::class . ': ' . $error->getMessage());
+                $error = $error->getPrevious();
+            }
+
             return EXIT_ERROR;
         }
 
