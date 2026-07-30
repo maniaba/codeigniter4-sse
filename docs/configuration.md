@@ -30,10 +30,13 @@ final class Sse extends BaseSse
 
 | Property | Default | Purpose |
 |---|---:|---|
-| `routeEnabled` | `true` | Register the package route through CI4 discovery. |
-| `route` | `sse` | Route path without a leading slash. |
-| `routeName` | `sse.stream` | Name used by CI4 route lookup. |
-| `routeFilters` | `[]` | CI4 filter aliases applied to the route. |
+| `route['enabled']` | `true` | Register the package route through CI4 discovery. |
+| `route['path']` | `sse` | Route path without a leading slash. |
+| `route['name']` | `sse.stream` | Name used by CI4 route lookup. |
+| `route['controller']` | `SseController::class` | Controller class used by the route. |
+| `route['method']` | `stream` | Controller method used by the route. |
+| `route['filters']` | `[]` | CI4 filter aliases applied to the route. |
+| `route['options']` | `[]` | Additional CI4 route options. |
 | `requireAcceptHeader` | `true` | Require `Accept: text/event-stream`. |
 
 Example:
@@ -41,14 +44,21 @@ Example:
 ```php
 final class Sse extends BaseSse
 {
-    public string $route = 'live/events';
-
-    /** @var list<string> */
-    public array $routeFilters = ['auth', 'sse-concurrency'];
+    public array $route = [
+        'path'    => 'live/events',
+        'name'    => 'sse.stream',
+        'filters' => ['auth', 'sse-concurrency'],
+        'options' => [
+            'priority' => 100,
+        ],
+    ];
 }
 ```
 
 Both names in this example are application-defined CI4 filter aliases.
+
+Set `route['enabled'] = false` when the application registers the SSE endpoint
+manually in `app/Config/Routes.php`.
 
 Private streams should use both:
 
@@ -72,7 +82,7 @@ $routes->get(
 );
 ```
 
-`SseRoutes::register()` honors `routeEnabled`, so it is intended for automatic
+`SseRoutes::register()` honors `route['enabled']`, so it is intended for automatic
 package discovery rather than bypassing a disabled route. Keep the request
 method `GET`; browser `EventSource` cannot issue a custom POST request.
 
@@ -106,7 +116,7 @@ application message handlers.
 `memory` is useful for isolated tests in one PHP process. It cannot carry a
 message between separate HTTP requests or workers. `null` is a message sink:
 it discards published events but an enabled SSE route still keeps each stream
-open until disconnect or maximum lifetime. Set `routeEnabled = false` to
+open until disconnect or maximum lifetime. Set `route['enabled'] = false` to
 disable the HTTP endpoint.
 
 Do not use an empty shared prefix when several applications publish to the

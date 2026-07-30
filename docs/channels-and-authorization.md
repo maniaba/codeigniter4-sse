@@ -128,7 +128,7 @@ Every requested channel must pass. If any channel is denied, the connection is
 rejected rather than silently subscribing to a subset.
 
 For private streams, also apply an application authentication filter and a
-rate/concurrency filter through `Config\Sse::$routeFilters`. Authentication
+rate/concurrency filter through `Config\Sse::$route['filters']`. Authentication
 filters reject unauthenticated requests early; concurrency limits prevent one
 user or reconnect loop from consuming an unbounded number of PHP workers.
 Neither replaces per-channel authorization.

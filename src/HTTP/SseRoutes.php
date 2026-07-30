@@ -14,20 +14,27 @@ final class SseRoutes
         $config ??= Sse::discover();
         $config->validate();
 
-        if (! $config->routeEnabled) {
+        $route = $config->route();
+
+        if (! $route['enabled']) {
             return;
         }
 
-        $route   = trim($config->route, " /\t\n\r\0\x0B");
-        $options = ['as' => $config->routeName];
+        $options = $route['options'];
 
-        if ($config->routeFilters !== []) {
-            $options['filter'] = implode('|', $config->routeFilters);
+        if ($route['name'] !== null) {
+            $options['as'] = $route['name'];
+        }
+
+        if ($route['filters'] !== null && $route['filters'] !== []) {
+            $options['filter'] = is_array($route['filters'])
+                ? implode('|', $route['filters'])
+                : $route['filters'];
         }
 
         $routes->get(
-            $route,
-            '\\' . SseController::class . '::stream',
+            trim($route['path'], " /\t\n\r\0\x0B"),
+            '\\' . $route['controller'] . '::' . $route['method'],
             $options,
         );
     }

@@ -7,25 +7,30 @@ namespace Config;
 use Maniaba\CodeIgniterSse\Authorization\NullUserResolver;
 use Maniaba\CodeIgniterSse\Authorization\PublicChannelAuthorizer;
 use Maniaba\CodeIgniterSse\Config\Sse as BaseSse;
+use Maniaba\CodeIgniterSse\HTTP\SseController;
 
 class Sse extends BaseSse
 {
     /**
-     * Automatic package route:
+     * Automatic package route.
      *
      * GET /sse?channels=public.news
-     */
-    public bool $routeEnabled = true;
-    public string $route      = 'sse';
-
-    /**
-     * Add application auth/rate-limit filters for private streams.
      *
-     * @var list<string>
+     * @var array<string, mixed>
      */
-    public array $routeFilters = [
-        // 'session',
-        // 'throttle:sse',
+    public array $route = [
+        'enabled'    => true,
+        'path'       => 'sse',
+        'name'       => 'sse.stream',
+        'controller' => SseController::class,
+        'method'     => 'stream',
+        'filters'    => [
+            // 'session',
+            // 'throttle:sse',
+        ],
+        'options' => [
+            // 'priority' => 100,
+        ],
     ];
 
     /**

@@ -17,6 +17,7 @@ use Maniaba\CodeIgniterSse\Contracts\ChannelAuthorizerInterface;
 use Maniaba\CodeIgniterSse\Contracts\PublisherInterface;
 use Maniaba\CodeIgniterSse\Contracts\SubscriberInterface;
 use Maniaba\CodeIgniterSse\Contracts\UserResolverInterface;
+use Maniaba\CodeIgniterSse\HTTP\SseController;
 
 class Sse extends BaseConfig
 {
@@ -45,17 +46,32 @@ class Sse extends BaseConfig
     ];
 
     /**
-     * Register the package GET route automatically.
+     * @var array<string, mixed>
      */
-    public bool $routeEnabled = true;
-
-    public string $route     = 'sse';
-    public string $routeName = 'sse.stream';
+    private const DEFAULT_ROUTE = [
+        'enabled'    => true,
+        'path'       => 'sse',
+        'name'       => 'sse.stream',
+        'controller' => SseController::class,
+        'method'     => 'stream',
+        'filters'    => [],
+        'options'    => [],
+    ];
 
     /**
-     * @var list<string>
+     * Route configuration used by package route discovery.
+     *
+     * @var array{
+     *     enabled?: bool,
+     *     path?: string,
+     *     name?: string|null,
+     *     controller?: class-string,
+     *     method?: string,
+     *     filters?: list<string>|string|null,
+     *     options?: array<string, mixed>
+     * }
      */
-    public array $routeFilters = [];
+    public array $route = self::DEFAULT_ROUTE;
 
     public string $broker = 'redis';
 
@@ -145,8 +161,20 @@ class Sse extends BaseConfig
             );
         }
 
-        if ($this->routeEnabled && trim($this->route, " /\t\n\r\0\x0B") === '') {
+        $route = $this->route();
+
+        if ($route['enabled'] && trim($route['path'], " /\t\n\r\0\x0B") === '') {
             throw new InvalidArgumentException('The enabled SSE route must not be empty.');
+        }
+
+        if ($route['enabled'] && ! class_exists($route['controller'])) {
+            throw new InvalidArgumentException(
+                sprintf('SSE route controller "%s" does not exist.', $route['controller']),
+            );
+        }
+
+        if ($route['enabled'] && $route['method'] === '') {
+            throw new InvalidArgumentException('The enabled SSE route method must not be empty.');
         }
 
         if ($this->retryMilliseconds < 0) {
@@ -180,5 +208,70 @@ class Sse extends BaseConfig
     public function redis(): array
     {
         return array_replace_recursive(self::DEFAULT_REDIS, $this->redis);
+    }
+
+    /**
+     * @return array{
+     *     enabled: bool,
+     *     path: string,
+     *     name: string|null,
+     *     controller: string,
+     *     method: string,
+     *     filters: list<string>|string|null,
+     *     options: array<string, mixed>
+     * }
+     */
+    public function route(): array
+    {
+        $route = array_replace_recursive(self::DEFAULT_ROUTE, $this->route);
+
+        return [
+            'enabled'    => (bool) $route['enabled'],
+            'path'       => (string) $route['path'],
+            'name'       => is_string($route['name']) && $route['name'] !== '' ? $route['name'] : null,
+            'controller' => (string) $route['controller'],
+            'method'     => (string) $route['method'],
+            'filters'    => $this->normalizeRouteFilters($route['filters']),
+            'options'    => $this->normalizeRouteOptions($route['options']),
+        ];
+    }
+
+    /**
+     * @return list<string>|string|null
+     */
+    private function normalizeRouteFilters(mixed $filters): array|string|null
+    {
+        if ($filters === null || is_string($filters)) {
+            return $filters;
+        }
+
+        if (! is_array($filters)) {
+            return null;
+        }
+
+        return array_values(array_filter(
+            array_map(static fn (mixed $filter): string => is_string($filter) ? trim($filter) : '', $filters),
+            static fn (string $filter): bool => $filter !== '',
+        ));
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function normalizeRouteOptions(mixed $options): array
+    {
+        if (! is_array($options)) {
+            return [];
+        }
+
+        $normalized = [];
+
+        foreach ($options as $name => $value) {
+            if (is_string($name)) {
+                $normalized[$name] = $value;
+            }
+        }
+
+        return $normalized;
     }
 }

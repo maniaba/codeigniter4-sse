@@ -12,7 +12,7 @@ php spark routes
 Confirm:
 
 - Composer package discovery is enabled in `Config\Modules`;
-- `routeEnabled` is `true`;
+- `route['enabled']` is `true`;
 - `route` does not conflict with an earlier application route;
 - the request URL includes the application's configured base path.
 
