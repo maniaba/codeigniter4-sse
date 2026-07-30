@@ -151,7 +151,7 @@ live.on('order.updated', (message) => {
 
 The complete shape is:
 
-```javascript
+```text
 {
     id: '019...',
     event: 'order.updated',
@@ -273,7 +273,7 @@ const live = new SseClient({
 
 The hook receives:
 
-```javascript
+```text
 {
     reason,
     event,
