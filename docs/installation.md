@@ -100,7 +100,21 @@ distinct `channelPrefix` for each application and test suite.
 
 ## Install the browser client
 
-The installer publishes the source ES module from:
+Applications with a frontend build can install the browser client from npm:
+
+```bash
+npm install @maniaba/codeigniter4-sse-browser
+```
+
+Then import it from the package:
+
+```javascript
+import { SseClient } from '@maniaba/codeigniter4-sse-browser';
+```
+
+The package includes TypeScript declarations.
+
+Without npm, the installer publishes the source ES module from:
 
 ```text
 vendor/maniaba/codeigniter4-sse/resources/js/sse-client.js

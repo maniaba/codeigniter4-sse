@@ -1,8 +1,58 @@
 {
   "name": "@maniaba/codeigniter4-sse-browser",
-  "private": true,
+  "version": "1.0.0",
+  "description": "Dependency-free browser EventSource client for maniaba/codeigniter4-sse.",
+  "license": "MIT",
+  "author": {
+    "name": "Amel Junuzović",
+    "email": "maniaba@outlook.com",
+    "url": "https://github.com/maniaba"
+  },
+  "homepage": "https://github.com/maniaba/codeigniter4-sse#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/maniaba/codeigniter4-sse.git"
+  },
+  "bugs": {
+    "url": "https://github.com/maniaba/codeigniter4-sse/issues"
+  },
+  "keywords": [
+    "codeigniter",
+    "eventsource",
+    "server-sent-events",
+    "sse"
+  ],
   "type": "module",
+  "main": "./resources/js/sse-client.js",
+  "module": "./resources/js/sse-client.js",
+  "browser": "./resources/js/sse-client.js",
+  "types": "./resources/js/sse-client.d.ts",
+  "exports": {
+    ".": {
+      "types": "./resources/js/sse-client.d.ts",
+      "import": "./resources/js/sse-client.js",
+      "default": "./resources/js/sse-client.js"
+    },
+    "./sse-client.js": {
+      "types": "./resources/js/sse-client.d.ts",
+      "import": "./resources/js/sse-client.js",
+      "default": "./resources/js/sse-client.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "resources/js/sse-client.js",
+    "resources/js/sse-client.d.ts",
+    "README.md",
+    "LICENSE.md",
+    "CHANGELOG.md"
+  ],
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
+    "pack:dry-run": "npm pack --dry-run",
     "test": "node --test tests/Browser/*.test.mjs"
   }
 }

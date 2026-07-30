@@ -20,7 +20,41 @@ automatically.
 
 ## Import
 
-Copy the module to a public asset path or include it in the frontend build:
+Install the browser client from npm when the application already has a frontend
+build:
+
+```bash
+npm install @maniaba/codeigniter4-sse-browser
+```
+
+Then import it through the package export:
+
+```javascript
+import {
+    SseClient,
+    SseClientStatus,
+} from '@maniaba/codeigniter4-sse-browser';
+```
+
+The module also provides a default export:
+
+```javascript
+import SseClient from '@maniaba/codeigniter4-sse-browser';
+```
+
+TypeScript projects can import the public types:
+
+```typescript
+import {
+    SseClient,
+    type SseClientOptions,
+    type SseMessage,
+    type SseStatusEvent,
+} from '@maniaba/codeigniter4-sse-browser';
+```
+
+Without npm, copy the module to a public asset path or include it directly from
+published package assets:
 
 ```javascript
 import {
@@ -29,7 +63,7 @@ import {
 } from '/vendor/codeigniter4-sse/sse-client.js';
 ```
 
-The module also provides a default export:
+The direct asset module also provides a default export:
 
 ```javascript
 import SseClient from '/vendor/codeigniter4-sse/sse-client.js';
@@ -43,17 +77,6 @@ resources/js/sse-client.d.ts
 
 When `php spark sse:install` publishes browser assets, it copies both
 `sse-client.js` and `sse-client.d.ts`.
-
-TypeScript projects can import the public types:
-
-```typescript
-import {
-    SseClient,
-    type SseClientOptions,
-    type SseMessage,
-    type SseStatusEvent,
-} from '/vendor/codeigniter4-sse/sse-client.js';
-```
 
 ## Constructor
 
