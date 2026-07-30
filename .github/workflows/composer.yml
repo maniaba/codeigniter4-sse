@@ -1,0 +1,61 @@
+name: Composer
+
+on:
+  pull_request:
+    branches:
+      - develop
+    paths:
+      - 'composer.*'
+      - '.github/workflows/composer.yml'
+  push:
+    branches:
+      - develop
+    paths:
+      - 'composer.*'
+      - '.github/workflows/composer.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Composer Validate and Audit
+    runs-on: ubuntu-latest
+    if: (! contains(github.event.head_commit.message, '[ci skip]'))
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          tools: composer
+          coverage: none
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Get composer cache directory
+        run: echo "COMPOSER_CACHE_FILES_DIR=$(composer config cache-files-dir)" >> "$GITHUB_ENV"
+
+      - name: Cache composer dependencies
+        uses: actions/cache@v6
+        with:
+          path: ${{ env.COMPOSER_CACHE_FILES_DIR }}
+          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.json') }}-${{ hashFiles('**/composer.lock') }}
+          restore-keys: ${{ runner.os }}-composer-
+
+      - name: Install dependencies
+        run: |
+          if [ -f composer.lock ]; then
+            composer install --no-progress --no-interaction --prefer-dist --optimize-autoloader
+          else
+            composer update --no-progress --no-interaction --prefer-dist --optimize-autoloader
+          fi
+
+      - name: Validate composer metadata
+        run: composer validate --strict
+
+      - name: Audit dependencies
+        run: composer audit

@@ -1,0 +1,65 @@
+name: CodeIgniter 4.8
+
+on:
+  pull_request:
+    branches:
+      - develop
+    paths:
+      - '**.php'
+      - 'composer.*'
+      - 'phpunit*'
+      - '.github/workflows/codeigniter-48.yml'
+  push:
+    branches:
+      - develop
+    paths:
+      - '**.php'
+      - 'composer.*'
+      - 'phpunit*'
+      - '.github/workflows/codeigniter-48.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  main:
+    name: CI 4.8 Compatibility
+    runs-on: ubuntu-latest
+    if: (! contains(github.event.head_commit.message, '[ci skip]'))
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          tools: composer
+          extensions: json, mbstring, xml
+          coverage: none
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Get composer cache directory
+        run: echo "COMPOSER_CACHE_FILES_DIR=$(composer config cache-files-dir)" >> "$GITHUB_ENV"
+
+      - name: Cache composer dependencies
+        uses: actions/cache@v6
+        with:
+          path: ${{ env.COMPOSER_CACHE_FILES_DIR }}
+          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.json') }}-${{ hashFiles('**/composer.lock') }}
+          restore-keys: ${{ runner.os }}-composer-
+
+      - name: Install dependencies
+        run: composer update --no-progress --no-interaction --prefer-dist --optimize-autoloader
+
+      - name: Overlay the unpublished CodeIgniter 4.8 system
+        run: |
+          git clone --depth 1 --branch 4.8 https://github.com/codeigniter4/CodeIgniter4.git build/codeigniter4-4.8
+          rsync -a --delete build/codeigniter4-4.8/system/ vendor/codeigniter4/framework/system/
+
+      - name: Test with PHPUnit
+        run: composer test
+        env:
+          TERM: xterm-256color

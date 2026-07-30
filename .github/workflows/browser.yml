@@ -1,0 +1,40 @@
+name: Browser Client
+
+on:
+  pull_request:
+    branches:
+      - develop
+    paths:
+      - 'resources/js/**'
+      - 'tests/Browser/**'
+      - 'package*.json'
+      - '.github/workflows/browser.yml'
+  push:
+    branches:
+      - develop
+    paths:
+      - 'resources/js/**'
+      - 'tests/Browser/**'
+      - 'package*.json'
+      - '.github/workflows/browser.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Node Browser Client Tests
+    runs-on: ubuntu-latest
+    if: (! contains(github.event.head_commit.message, '[ci skip]'))
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+
+      - name: Test browser client
+        run: npm test

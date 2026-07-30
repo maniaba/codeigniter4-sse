@@ -1,0 +1,79 @@
+{
+    "name": "maniaba/codeigniter4-sse",
+    "description": "Redis-backed Server-Sent Events for CodeIgniter 4 with a native CI 4.8 bridge",
+    "license": "MIT",
+    "type": "library",
+    "keywords": [
+        "codeigniter",
+        "codeigniter4",
+        "eventsource",
+        "redis",
+        "server-sent-events",
+        "sse"
+    ],
+    "authors": [
+        {
+            "name": "Amel Junuzović",
+            "email": "maniaba@outlook.com",
+            "homepage": "https://github.com/maniaba",
+            "role": "Developer"
+        }
+    ],
+    "homepage": "https://github.com/maniaba/codeigniter4-sse",
+    "support": {
+        "issues": "https://github.com/maniaba/codeigniter4-sse/issues",
+        "source": "https://github.com/maniaba/codeigniter4-sse"
+    },
+    "require": {
+        "php": "^8.2",
+        "ext-json": "*",
+        "codeigniter4/framework": "^4.7"
+    },
+    "require-dev": {
+        "codeigniter/coding-standard": "^1.5",
+        "nexusphp/cs-config": "^3.6",
+        "phpstan/phpstan": "^2.1",
+        "phpunit/phpunit": "^11.5",
+        "rector/rector": "^2.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Maniaba\\CodeIgniterSse\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "analyze": [
+            "Composer\\Config::disableProcessTimeout",
+            "@phpstan",
+            "@rector"
+        ],
+        "check-composer": "composer validate --strict",
+        "cs": "php-cs-fixer fix --ansi --verbose --dry-run --diff",
+        "cs-fix": "php-cs-fixer fix --ansi --verbose --diff",
+        "ci": [
+            "Composer\\Config::disableProcessTimeout",
+            "@check-composer",
+            "@cs",
+            "composer audit",
+            "@analyze",
+            "@test",
+            "@test-browser"
+        ],
+        "phpstan": "phpstan analyze --configuration=phpstan.neon.dist",
+        "rector": "rector process --dry-run",
+        "rector-fix": "rector process",
+        "style": "@cs-fix",
+        "test": "phpunit --configuration=phpunit.xml.dist",
+        "test-browser": "node --test tests/Browser/*.test.mjs"
+    },
+    "config": {
+        "sort-packages": true
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}

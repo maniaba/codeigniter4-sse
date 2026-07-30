@@ -1,0 +1,56 @@
+site_name: CodeIgniter SSE
+site_description: Redis-backed Server-Sent Events for CodeIgniter 4.
+site_url: https://maniaba.github.io/codeigniter4-sse/
+repo_url: https://github.com/maniaba/codeigniter4-sse
+edit_uri: edit/develop/docs/
+
+theme:
+  name: material
+  icon:
+    repo: fontawesome/brands/github
+  features:
+    - content.code.copy
+    - navigation.footer
+    - navigation.instant
+    - navigation.top
+    - search.highlight
+    - search.suggest
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: deep orange
+      accent: deep orange
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: deep orange
+      accent: deep orange
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - pymdownx.highlight
+  - pymdownx.superfences
+  - tables
+
+plugins:
+  - search
+
+nav:
+  - Home: index.md
+  - Installation: installation.md
+  - Quick start: quick-start.md
+  - Configuration: configuration.md
+  - Architecture: architecture.md
+  - Channels and authorization: channels-and-authorization.md
+  - Browser client: browser-client.md
+  - Streaming and deployment: deployment.md
+  - Testing: testing.md
+  - CodeIgniter 4.8 migration: codeigniter-4.8.md
+  - Troubleshooting: troubleshooting.md
+
