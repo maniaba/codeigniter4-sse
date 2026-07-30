@@ -13,7 +13,6 @@ use Maniaba\CodeIgniterSse\Broker\Redis\RedisConnectionFactory;
 use Maniaba\CodeIgniterSse\Broker\Redis\RedisPublisher;
 use Maniaba\CodeIgniterSse\Config\Services;
 use Maniaba\CodeIgniterSse\Config\Sse;
-use Maniaba\CodeIgniterSse\Contracts\ChannelAuthorizerInterface;
 use Maniaba\CodeIgniterSse\Contracts\EventInterface;
 use Maniaba\CodeIgniterSse\Contracts\PublisherInterface;
 use Maniaba\CodeIgniterSse\Contracts\SubscriberInterface;
@@ -21,6 +20,7 @@ use Maniaba\CodeIgniterSse\Factory\AuthorizationFactory;
 use Maniaba\CodeIgniterSse\Factory\BrokerFactory;
 use Maniaba\CodeIgniterSse\Sse as SseManager;
 use ReflectionProperty;
+use Tests\Config\Fixtures\ConfiguredChannelAuthorizer;
 
 /**
  * @internal
@@ -183,29 +183,17 @@ final class ServicesTest extends CIUnitTestCase
         }
     }
 
-    public function testAuthorizationFactoryCanUseConfiguredFactory(): void
+    public function testAuthorizationFactoryCanUseConfiguredClass(): void
     {
-        $authorizer = new class () implements ChannelAuthorizerInterface {
-            /**
-             * @var list<string>
-             */
-            public array $channels = [];
-
-            public function authorize(?object $user, string $channel): bool
-            {
-                $this->channels[] = $channel;
-
-                return true;
-            }
-        };
+        ConfiguredChannelAuthorizer::$channels = [];
 
         $config                    = new Sse();
-        $config->channelAuthorizer = static fn (): ChannelAuthorizerInterface => $authorizer;
+        $config->channelAuthorizer = ConfiguredChannelAuthorizer::class;
 
         $channels = (new AuthorizationFactory())->channelAuthorization($config)
             ->authorizeAll(null, ['users.42']);
 
         $this->assertSame(['users.42'], $channels);
-        $this->assertSame(['users.42'], $authorizer->channels);
+        $this->assertSame(['users.42'], ConfiguredChannelAuthorizer::$channels);
     }
 }

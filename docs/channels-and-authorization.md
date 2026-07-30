@@ -74,6 +74,21 @@ The resolver may use CodeIgniter Shield, a session, JWT claims, or an
 application-specific auth service. It must return the authenticated subject or
 `null`; it must not trust a user ID from the `channels` query parameter.
 
+For CodeIgniter Shield, use the packaged resolver. It uses Shield's `auth`
+helper and returns `auth()->user()`:
+
+```php
+namespace Config;
+
+use Maniaba\CodeIgniterSse\Authorization\ShieldUserResolver;
+use Maniaba\CodeIgniterSse\Config\Sse as BaseSse;
+
+final class Sse extends BaseSse
+{
+    public string $userResolver = ShieldUserResolver::class;
+}
+```
+
 Resolve authentication before the long-lived stream starts. If the
 authentication layer opens a locking PHP session, release the session lock
 after resolving the user so the SSE connection does not block the user's
@@ -134,11 +149,11 @@ final class Sse extends BaseSse
 }
 ```
 
-## Dependency injection
+## Dependencies
 
-The config class resolver instantiates selected classes without constructor
-arguments. If an authorizer or user resolver has dependencies, provide a factory
-closure in `Config\Sse`:
+The config stores class names. Keep these adapters small and constructor-free.
+When an adapter needs application services, resolve them inside the adapter
+method:
 
 ```php
 use App\Sse\PolicyChannelAuthorizer;
@@ -146,20 +161,31 @@ use Maniaba\CodeIgniterSse\Config\Sse as BaseSse;
 
 final class Sse extends BaseSse
 {
-    public function __construct()
-    {
-        parent::__construct();
+    public string $channelAuthorizer = PolicyChannelAuthorizer::class;
+}
+```
 
-        $this->channelAuthorizer = static fn (): PolicyChannelAuthorizer => new PolicyChannelAuthorizer(
-            service('orderPolicy'),
-            service('tenantMemberships'),
-        );
+```php
+namespace App\Sse;
+
+use Maniaba\CodeIgniterSse\Contracts\ChannelAuthorizerInterface;
+
+final class PolicyChannelAuthorizer implements ChannelAuthorizerInterface
+{
+    public function authorize(?object $user, string $channel): bool
+    {
+        $orderPolicy = service('orderPolicy');
+        $memberships = service('tenantMemberships');
+
+        // Apply application rules here.
+        return $orderPolicy->allows($user, $channel)
+            || $memberships->allows($user, $channel);
     }
 }
 ```
 
-Apply the same pattern to `$userResolver` if that adapter has constructor
-dependencies.
+This keeps package internals out of CodeIgniter's global service registry while
+still letting the application integrate its own dependencies.
 
 Keep database queries bounded: authorization runs before the stream starts,
 but a request can contain up to `maxChannelsPerConnection` channels.

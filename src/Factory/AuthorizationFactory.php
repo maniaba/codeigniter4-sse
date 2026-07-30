@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Maniaba\CodeIgniterSse\Factory;
 
-use Closure;
 use LogicException;
 use Maniaba\CodeIgniterSse\Authorization\ChannelAuthorization;
 use Maniaba\CodeIgniterSse\Config\Sse;
@@ -40,18 +39,10 @@ final class AuthorizationFactory
         return $resolver;
     }
 
-    private function make(mixed $definition): object
+    private function make(string $class): object
     {
-        if ($definition instanceof Closure) {
-            return $definition();
-        }
-
-        if (is_callable($definition) && ! is_string($definition)) {
-            return $definition();
-        }
-
-        if (is_string($definition) && class_exists($definition)) {
-            return new $definition();
+        if (class_exists($class)) {
+            return new $class();
         }
 
         throw new LogicException('The configured authorization definition is invalid.');

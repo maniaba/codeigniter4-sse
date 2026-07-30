@@ -281,6 +281,12 @@ public string $channelAuthorizer = \App\Sse\ChannelAuthorizer::class;
 public string $userResolver = \App\Sse\UserResolver::class;
 ```
 
+Applications using CodeIgniter Shield can use the packaged resolver:
+
+```php
+public string $userResolver = \Maniaba\CodeIgniterSse\Authorization\ShieldUserResolver::class;
+```
+
 Both classes must implement their package contracts. See
 [Channels and authorization](channels-and-authorization.md).
 

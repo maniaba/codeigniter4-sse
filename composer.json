@@ -24,6 +24,9 @@
         "issues": "https://github.com/maniaba/codeigniter4-sse/issues",
         "source": "https://github.com/maniaba/codeigniter4-sse"
     },
+    "suggest": {
+        "codeigniter4/shield": "Required when using ShieldUserResolver for CodeIgniter Shield authentication."
+    },
     "require": {
         "php": "^8.2",
         "ext-json": "*",
