@@ -5,8 +5,7 @@ declare(strict_types=1);
 namespace Maniaba\CodeIgniterSse\Stream;
 
 /**
- * Formats fields using the same wire representation as CodeIgniter 4.8's
- * SSEResponse.
+ * Formats fields for the Server-Sent Events wire protocol.
  *
  * Portions are derived from the CodeIgniter 4 framework.
  *

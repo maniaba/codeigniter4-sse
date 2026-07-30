@@ -20,10 +20,8 @@ Browser EventSource / SseClient
 ```
 
 The public API is independent of Redis and of the concrete HTTP streaming
-implementation. When CodeIgniter's native `eventStream()` API is available
-(planned for CI4 4.8), the package uses it automatically. CodeIgniter 4.7
-uses the compatibility response with the same application API, so upgrading the
-framework does not require application changes.
+implementation. Application code publishes events through package services and
+does not need to manage Redis subscriptions or SSE frame emission directly.
 
 ## Requirements
 
@@ -191,13 +189,13 @@ application must use its own `channelPrefix`.
 
 ## Why there is no external SSE runtime dependency
 
-The package emits the SSE wire format itself and uses CodeIgniter 4.8's native
-SSE facilities when available. `eliashaeussler/sse` is intentionally not a
-dependency: its GPL-3.0-or-later license is unsuitable for this MIT package as
-a required dependency, and its PSR-7 response path is not a real-time emitter.
+The package emits the SSE wire format itself. `eliashaeussler/sse` is
+intentionally not a dependency: its GPL-3.0-or-later license is unsuitable for
+this MIT package as a required dependency, and its PSR-7 response path is not a
+real-time emitter.
 
-Keeping the encoder behind the package stream contract also makes the legacy
-and native CodeIgniter response paths transparent to application code.
+Keeping the encoder behind the package stream contract keeps response details
+transparent to application code.
 
 ## Documentation
 
@@ -209,7 +207,6 @@ and native CodeIgniter response paths transparent to application code.
 - [Browser client](docs/browser-client.md)
 - [Streaming and deployment](docs/deployment.md)
 - [Testing](docs/testing.md)
-- [CodeIgniter 4.8 migration](docs/codeigniter-4.8.md)
 - [Troubleshooting](docs/troubleshooting.md)
 
 ## Testing

@@ -104,8 +104,8 @@ messages. This is required to:
 - enforce maximum connection lifetime;
 - stop cleanly on read timeout or transport failure.
 
-CodeIgniter 4.8 provides a native `SSEResponse` path. Older supported versions
-use the package's compatibility response and the same stream contracts.
+The HTTP layer is hidden behind stream contracts so application code does not
+depend on a specific response implementation.
 
 ## Pub/Sub trade-offs
 
@@ -131,6 +131,7 @@ The SSE wire format is small and is hidden behind a stream interface.
 
 - it is GPL-3.0-or-later while this package is MIT;
 - its PSR-7 response does not provide live emission;
-- coupling the core to one emitter would defeat the native CI4 4.8 bridge.
+- coupling the core to one emitter would make future framework integration
+  harder.
 
 An application does not need to know which response adapter is active.

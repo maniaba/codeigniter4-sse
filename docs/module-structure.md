@@ -52,10 +52,7 @@ authorizes every channel, and starts the stream.
 `HTTP\SseResponseFactory` selects the output implementation at runtime:
 
 ```text
-CodeIgniter 4.8 native eventStream()
-    └── CodeIgniterSseOutput
-
-CodeIgniter 4.7 compatibility path
+Current package streaming response
     └── LegacySseResponse
 ```
 

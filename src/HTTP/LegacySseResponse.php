@@ -10,7 +10,7 @@ use Maniaba\CodeIgniterSse\Contracts\SseOutputInterface;
 use Maniaba\CodeIgniterSse\Stream\SseEncoder;
 
 /**
- * SSE response fallback for CodeIgniter versions without native SSEResponse.
+ * SSE response fallback for CodeIgniter applications.
  *
  * Extending DownloadResponse is intentional: CodeIgniter 4.7 treats
  * download responses as non-buffered and therefore skip response body

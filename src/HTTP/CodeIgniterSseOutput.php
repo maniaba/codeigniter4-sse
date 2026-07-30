@@ -10,8 +10,8 @@ use Maniaba\CodeIgniterSse\Contracts\SseOutputInterface;
 use UnexpectedValueException;
 
 /**
- * Adapts CodeIgniter 4.8's native SSEResponse without statically referencing
- * that class on older framework versions.
+ * Adapts a native CodeIgniter SSE response without statically referencing its
+ * concrete class.
  */
 final class CodeIgniterSseOutput implements SseOutputInterface
 {

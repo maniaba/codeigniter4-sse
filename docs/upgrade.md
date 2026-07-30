@@ -11,10 +11,6 @@ The current package line targets:
 - CodeIgniter 4.7 or newer;
 - Redis Pub/Sub for live delivery without replay.
 
-CodeIgniter 4.8 native SSE support is detected at runtime. Existing
-applications should not need controller changes when upgrading from CI4 4.7 to
-CI4 4.8.
-
 ## Stable API surface
 
 These APIs should be treated as the main compatibility surface:

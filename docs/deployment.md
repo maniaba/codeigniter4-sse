@@ -17,10 +17,8 @@ X-Accel-Buffering: no
 
 Cross-origin responses additionally receive the configured CORS headers.
 `Connection: keep-alive` applies to HTTP/1.x and is not emitted for HTTP/2.
-Never cache the endpoint. The CI4 4.7 compatibility response includes
-`no-transform`. The current native CI4 4.8 development response owns its exact
-`Cache-Control` header and emits `no-cache`; proxy/CDN transformation must
-therefore still be disabled explicitly for a deployment that uses that path.
+Never cache the endpoint and keep `no-transform` in place so proxies and CDNs
+do not buffer or modify the stream.
 
 ## Heartbeats and connection lifetime
 

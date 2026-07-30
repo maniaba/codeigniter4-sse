@@ -25,8 +25,7 @@ Browser EventSource
 - Redis Pub/Sub over an internal RESP2 stream client;
 - logical channel validation, limits, and server-side authorization;
 - heartbeats, disconnect detection, and maximum connection lifetime;
-- a native CodeIgniter 4.8 SSE bridge;
-- a transparent response fallback for CodeIgniter 4.7;
+- an SSE response adapter for current CodeIgniter applications;
 - a dependency-free browser ES module.
 
 ## Requirements

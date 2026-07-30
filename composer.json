@@ -1,6 +1,6 @@
 {
     "name": "maniaba/codeigniter4-sse",
-    "description": "Redis-backed Server-Sent Events for CodeIgniter 4 with a native CI 4.8 bridge",
+    "description": "Redis-backed Server-Sent Events for CodeIgniter 4",
     "license": "MIT",
     "type": "library",
     "keywords": [
