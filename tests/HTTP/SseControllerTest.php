@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace Tests\HTTP;
 
+use CodeIgniter\Cookie\Cookie;
 use CodeIgniter\HTTP\RequestInterface;
 use CodeIgniter\HTTP\ResponseInterface;
 use CodeIgniter\Superglobals;
 use CodeIgniter\Test\CIUnitTestCase;
+use Maniaba\CodeIgniterSse\Config\Sse;
 use Maniaba\CodeIgniterSse\Event\EventFactory;
 use Maniaba\CodeIgniterSse\Event\JsonEventSerializer;
 use Maniaba\CodeIgniterSse\HTTP\SseController;
@@ -79,6 +81,71 @@ final class SseControllerTest extends CIUnitTestCase
             $this->assertStringContainsString("event: sse.connected\n", $output);
             $this->assertStringContainsString("id: connected-id\n", $output);
             $this->assertStringContainsString('"channels":["public.news"]', $output);
+        } finally {
+            $superglobals->setGetArray($previousGet);
+        }
+    }
+
+    public function testMercureRouteAuthorizesChannelsWithoutOpeningAPhpStream(): void
+    {
+        $config          = new Sse();
+        $config->broker  = 'mercure';
+        $config->mercure = [
+            'hubUrl'        => 'http://mercure/.well-known/mercure',
+            'publicHubUrl'  => 'https://example.test/.well-known/mercure',
+            'topicPrefix'   => 'urn:example:sse:',
+            'publisherKey'  => 'publisher-test-secret',
+            'subscriberKey' => 'subscriber-test-secret',
+            'cookie'        => [
+                'name'     => 'mercureAuthorization',
+                'secure'   => true,
+                'httpOnly' => true,
+                'sameSite' => 'Lax',
+            ],
+        ];
+        $request  = single_service('request');
+        $response = single_service('response');
+        $logger   = service('logger');
+
+        $this->assertInstanceOf(RequestInterface::class, $request);
+        $this->assertInstanceOf(ResponseInterface::class, $response);
+        $this->assertInstanceOf(LoggerInterface::class, $logger);
+
+        $superglobals = service('superglobals');
+        $this->assertInstanceOf(Superglobals::class, $superglobals);
+        $previousGet = $superglobals->getGetArray();
+        $superglobals->setGetArray(['channels' => 'public.news,public.status']);
+        $request->removeHeader('Origin');
+        $request->removeHeader('Accept');
+
+        try {
+            $controller = new SseController(config: $config);
+            $controller->initController($request, $response, $logger);
+            $result = $controller->stream();
+            $body   = $result->getBody();
+
+            $this->assertSame(200, $result->getStatusCode());
+            $this->assertStringStartsWith('application/json', $result->getHeaderLine('Content-Type'));
+            $this->assertStringContainsString('private', $result->getHeaderLine('Cache-Control'));
+            $this->assertStringContainsString('no-store', $result->getHeaderLine('Cache-Control'));
+            $this->assertSame(
+                '<https://example.test/.well-known/mercure>; rel="mercure"',
+                $result->getHeaderLine('Link'),
+            );
+            $this->assertIsString($body);
+            $decoded = json_decode($body, true, 512, JSON_THROW_ON_ERROR);
+            $this->assertSame('mercure', $decoded['transport']);
+            $this->assertSame(
+                ['urn:example:sse:public.news', 'urn:example:sse:public.status'],
+                $decoded['topics'],
+            );
+            $this->assertIsInt($decoded['expiresAt']);
+
+            $cookie = $result->getCookie('mercureAuthorization');
+            $this->assertInstanceOf(Cookie::class, $cookie);
+            $this->assertTrue($cookie->isSecure());
+            $this->assertTrue($cookie->isHTTPOnly());
+            $this->assertSame('Lax', $cookie->getSameSite());
         } finally {
             $superglobals->setGetArray($previousGet);
         }

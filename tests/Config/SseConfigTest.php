@@ -63,5 +63,33 @@ final class SseConfigTest extends TestCase
                 $config->withCredentials = true;
             },
         ];
+
+        yield 'mercure patterns' => [
+            static function (Sse $config): void {
+                $config->broker                    = 'mercure';
+                $config->allowPatternSubscriptions = true;
+                $config->mercure                   = [
+                    'publisherKey'  => 'publisher-test-secret',
+                    'subscriberKey' => 'subscriber-test-secret',
+                ];
+            },
+        ];
+
+        yield 'missing mercure keys' => [
+            static function (Sse $config): void {
+                $config->broker = 'mercure';
+            },
+        ];
+
+        yield 'private mercure without subscriber authorization' => [
+            static function (Sse $config): void {
+                $config->broker  = 'mercure';
+                $config->mercure = [
+                    'private'              => true,
+                    'authorizeSubscribers' => false,
+                    'publisherKey'         => 'publisher-test-secret',
+                ];
+            },
+        ];
     }
 }

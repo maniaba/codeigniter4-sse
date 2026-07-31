@@ -7,6 +7,7 @@ and browser behavior separate.
 src/
 ├── Authorization/
 ├── Broker/
+│   ├── Mercure/
 │   └── Redis/
 ├── Commands/
 ├── Config/
@@ -41,13 +42,18 @@ For typed integrations, depend on:
 Publisher and subscriber connections are separate because Redis subscriptions
 are blocking.
 
+`Broker\Mercure` contains the HTTP publisher, topic mapper, JWT issuer, and
+Hub configuration. Mercure has no PHP subscriber because browsers subscribe
+directly to the Hub.
+
 `InMemoryBroker` is for tests and one-process examples. `NullBroker` is useful
 when applications want the API enabled without delivering live events.
 
 ## HTTP layer
 
 `HTTP\SseController` parses the channel request, resolves the current user,
-authorizes every channel, and starts the stream.
+and authorizes every channel. It either starts the Redis-backed PHP stream or
+returns Mercure bootstrap data and an HttpOnly subscriber cookie.
 
 `HTTP\SseResponseFactory` selects the output implementation at runtime:
 

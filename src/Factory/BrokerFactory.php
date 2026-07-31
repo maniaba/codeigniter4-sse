@@ -6,6 +6,8 @@ namespace Maniaba\CodeIgniterSse\Factory;
 
 use Closure;
 use LogicException;
+use Maniaba\CodeIgniterSse\Broker\Mercure\MercureConfig;
+use Maniaba\CodeIgniterSse\Broker\Mercure\MercurePublisher;
 use Maniaba\CodeIgniterSse\Broker\Redis\RedisConfig;
 use Maniaba\CodeIgniterSse\Broker\Redis\RedisConnectionFactory;
 use Maniaba\CodeIgniterSse\Broker\Redis\RedisPublisher;
@@ -27,6 +29,7 @@ final class BrokerFactory
     public function __construct(
         private readonly ?SerializerInterface $serializer = null,
         private readonly ?RedisConfigFactory $redisConfigs = null,
+        private readonly ?MercureConfigFactory $mercureConfigs = null,
         private readonly ?bool $enableToolbarTracing = null,
     ) {
     }
@@ -62,8 +65,10 @@ final class BrokerFactory
         }
 
         if (($definition['shared'] ?? false) === true) {
-            $sharedKey = $definition['publisher'] === $definition['subscriber'] ? 'broker' : $role;
-            $cacheKey  = spl_object_id($config) . ':' . $config->broker . ':' . $sharedKey;
+            $publisher  = $definition['publisher'] ?? null;
+            $subscriber = $definition['subscriber'] ?? null;
+            $sharedKey  = $publisher !== null && $publisher === $subscriber ? 'broker' : $role;
+            $cacheKey   = spl_object_id($config) . ':' . $config->broker . ':' . $sharedKey;
 
             if (! isset(self::$shared[$cacheKey])) {
                 self::$shared[$cacheKey] = $this->make($config, $definition[$role] ?? null, $role);
@@ -114,6 +119,13 @@ final class BrokerFactory
             );
         }
 
+        if (is_a($class, MercurePublisher::class, true)) {
+            return new $class(
+                $this->mercureConfig($config),
+                $this->serializer(),
+            );
+        }
+
         return new $class();
     }
 
@@ -125,6 +137,11 @@ final class BrokerFactory
     private function redisConfig(Sse $config): RedisConfig
     {
         return ($this->redisConfigs ?? new RedisConfigFactory())->create($config);
+    }
+
+    private function mercureConfig(Sse $config): MercureConfig
+    {
+        return ($this->mercureConfigs ?? new MercureConfigFactory())->create($config);
     }
 
     private function redisConnectionFactory(Sse $config): RedisConnectionFactory

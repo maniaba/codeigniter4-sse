@@ -1,7 +1,7 @@
 # Architecture
 
 The package separates event publication, message transport, HTTP streaming,
-and browser behavior.
+and browser behavior. Redis uses the built-in PHP stream:
 
 ```text
 Application service / controller / worker
@@ -24,6 +24,25 @@ Application service / controller / worker
              ▼
       Browser EventSource
 ```
+
+Mercure moves the stream to a dedicated Hub:
+
+```text
+Application service / controller / worker
+             │
+             ▼
+        PublisherInterface
+             │ HTTP POST
+             ▼
+         Mercure Hub ◄──────── Browser EventSource
+             ▲
+             │ topic-scoped subscriber JWT
+             │
+   Short CodeIgniter authorization route
+```
+
+Both paths use the same event envelope, channel authorizer, browser event
+handlers, and `sse()->publish(...)` API.
 
 ## Public application boundary
 
@@ -83,6 +102,16 @@ Authorization happens against the logical name before that mapping. A browser
 cannot use the HTTP query to subscribe to arbitrary Redis infrastructure
 channels.
 
+The Mercure adapter maps the same logical name to an absolute topic:
+
+```text
+users.42 → urn:storefront:sse:users.42
+```
+
+The CodeIgniter route returns only topics that passed application
+authorization. A subscriber JWT repeats those exact topics so the Hub can
+enforce private delivery independently.
+
 ## Publisher and subscriber connections
 
 Redis Pub/Sub switches a subscribed connection into subscription mode.
@@ -123,6 +152,10 @@ refetch current state over normal HTTP.
 A future Redis Streams adapter can add retention and replay without changing
 the application publisher boundary, but its delivery contract will be
 different and must be documented explicitly.
+
+Mercure can replay retained Hub history through native `Last-Event-ID`
+reconnects. Retention belongs to the Hub transport configuration and does not
+turn application events into a business queue.
 
 ## Why the encoder is internal
 

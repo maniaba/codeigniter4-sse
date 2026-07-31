@@ -29,6 +29,8 @@ export type SseQuery =
 
 export type SseChannelInput = string | readonly string[];
 
+export type SseTransport = 'eventsource' | 'mercure';
+
 /**
  * Parsed message delivered to named event handlers and global message handlers.
  */
@@ -103,7 +105,8 @@ export type SseStatusHandler = (event: SseStatusEvent) => void;
 export type SseFallbackReason =
     | 'unsupported'
     | 'construction-error'
-    | 'connection-error';
+    | 'connection-error'
+    | 'authorization-error';
 
 export interface SseFallbackContext {
     readonly reason: SseFallbackReason;
@@ -133,6 +136,11 @@ export type SseEventSourceFactory = (
     options: EventSourceInit,
 ) => SseEventSourceLike;
 
+export type SseFetchFactory = (
+    input: RequestInfo | URL,
+    init?: RequestInit,
+) => Response | PromiseLike<Response>;
+
 export interface SseClientOptions {
     /**
      * Absolute or browser-relative SSE endpoint.
@@ -155,6 +163,12 @@ export interface SseClientOptions {
     readonly withCredentials?: boolean;
 
     /**
+     * `eventsource` connects directly to endpoint. `mercure` first calls
+     * endpoint for authorization and then connects directly to the returned Hub.
+     */
+    readonly transport?: SseTransport;
+
+    /**
      * Optional application fallback for unsupported browsers or connection errors.
      */
     readonly fallback?: SseFallback | null;
@@ -163,6 +177,11 @@ export interface SseClientOptions {
      * Optional EventSource factory, mainly useful for tests.
      */
     readonly eventSourceFactory?: SseEventSourceFactory | null;
+
+    /**
+     * Optional Fetch-compatible factory used by the Mercure authorization step.
+     */
+    readonly fetchFactory?: SseFetchFactory | null;
 }
 
 export declare class SseClient {
@@ -172,6 +191,7 @@ export declare class SseClient {
     readonly channels: string[];
     readonly query: SseQuery;
     readonly withCredentials: boolean;
+    readonly transport: SseTransport;
 
     /**
      * Current lifecycle status.
@@ -250,7 +270,9 @@ export declare class SseClient {
     unsubscribe(channels: SseChannelInput): this;
 
     /**
-     * Open the EventSource connection. Repeated calls are idempotent while active.
+     * Open the EventSource connection. With Mercure, authorization completes
+     * asynchronously before EventSource is opened. Repeated calls are idempotent
+     * while active.
      */
     connect(): this;
 

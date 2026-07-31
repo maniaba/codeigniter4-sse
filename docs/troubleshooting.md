@@ -83,6 +83,61 @@ Then verify:
 The package does not use PhpRedis, so installing that extension does not fix a
 TCP, TLS, ACL, or application configuration problem.
 
+## Mercure publish fails
+
+The Debug Toolbar and thrown `MercurePublishException` include the Hub status.
+Typical causes are:
+
+- `401`: publisher key or JWT does not match the Hub;
+- `403`: `publisherTopicSelectors` does not include the mapped topic;
+- `400`: invalid Hub form field or an outdated Hub;
+- connection failure: `hubUrl` is not reachable from the PHP runtime;
+- TLS failure: CA bundle or hostname verification is incorrect.
+
+In Docker, PHP normally publishes to a service URL such as:
+
+```text
+http://mercure/.well-known/mercure
+```
+
+The browser must receive a separate `publicHubUrl`, such as:
+
+```text
+https://app.example.com/.well-known/mercure
+```
+
+Confirm that the Hub publisher key equals `sse.mercure.publisherKey`. Use
+Mercure 0.24.2 or newer in the 0.x line.
+
+## Mercure authorization succeeds but EventSource returns 401
+
+Verify:
+
+- the Hub subscriber key equals `sse.mercure.subscriberKey`;
+- Hub `cookie_name` matches `mercure.cookie.name`;
+- the cookie path includes `/.well-known/mercure`;
+- `Secure` is disabled only for local plain HTTP;
+- cookie domain covers both the CodeIgniter response host and Hub host;
+- `withCredentials` is enabled;
+- Hub CORS lists the exact application origin.
+
+Inspect the authorization request in browser developer tools. The JSON must
+contain the expected topics and the response must set the subscriber cookie.
+The cookie is HttpOnly, so it will not appear through `document.cookie`.
+
+## Mercure client reports authorization-error
+
+The browser client could not complete the short CodeIgniter bootstrap request.
+Inspect its HTTP status:
+
+- `400` means the channel list is invalid;
+- `403` means channel policy or application CORS denied the request;
+- `5xx` usually means Mercure signing configuration is incomplete;
+- an invalid JSON shape means a proxy or custom controller replaced the
+  package response.
+
+This error occurs before EventSource connects to the Hub.
+
 ## The connection opens but no events arrive
 
 Check:

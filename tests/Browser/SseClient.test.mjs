@@ -189,3 +189,125 @@ test('subscribes and unsubscribes channels by reconnecting active sources', () =
         SseClientStatus.CLOSED,
     ]);
 });
+
+test('authorizes Mercure channels and opens EventSource directly on the Hub', async () => {
+    const source = new FakeEventSource();
+    const fetchCalls = [];
+    let receivedHubUrl;
+    let receivedOptions;
+
+    const client = new SseClient({
+        endpoint: 'https://app.example.test/sse',
+        transport: 'mercure',
+        channels: ['users.42', 'projects.7'],
+        fetchFactory: async (url, options) => {
+            fetchCalls.push({ url, options });
+
+            return {
+                ok: true,
+                status: 200,
+                json: async () => ({
+                    transport: 'mercure',
+                    hub: 'https://hub.example.test/.well-known/mercure?custom=1',
+                    topics: [
+                        'urn:example:sse:users.42',
+                        'urn:example:sse:projects.7',
+                    ],
+                    expiresAt: null,
+                }),
+            };
+        },
+        eventSourceFactory: (url, options) => {
+            receivedHubUrl = url;
+            receivedOptions = options;
+
+            return source;
+        },
+    });
+
+    client.connect();
+    client.connect();
+    await new Promise((resolve) => setImmediate(resolve));
+
+    assert.equal(fetchCalls.length, 1);
+    assert.equal(
+        new URL(fetchCalls[0].url).searchParams.get('channels'),
+        'users.42,projects.7',
+    );
+    assert.equal(fetchCalls[0].options.credentials, 'include');
+    assert.equal(fetchCalls[0].options.headers.Accept, 'application/json');
+
+    const hubUrl = new URL(receivedHubUrl);
+    assert.equal(hubUrl.searchParams.get('custom'), '1');
+    assert.deepEqual(
+        hubUrl.searchParams.getAll('topic'),
+        [
+            'urn:example:sse:users.42',
+            'urn:example:sse:projects.7',
+        ],
+    );
+    assert.deepEqual(receivedOptions, { withCredentials: true });
+
+    source.readyState = 1;
+    source.dispatch('open', { type: 'open' });
+    assert.equal(client.status, SseClientStatus.OPEN);
+
+    client.close();
+});
+
+test('reports Mercure authorization failures without opening EventSource', async () => {
+    let eventSourceCalls = 0;
+    const fallbackReasons = [];
+    const client = new SseClient({
+        endpoint: 'https://app.example.test/sse',
+        transport: 'mercure',
+        channels: ['users.42'],
+        fetchFactory: async () => ({
+            ok: false,
+            status: 403,
+            json: async () => ({}),
+        }),
+        eventSourceFactory: () => {
+            eventSourceCalls++;
+
+            return new FakeEventSource();
+        },
+        fallback: ({ reason }) => fallbackReasons.push(reason),
+    });
+
+    client.connect();
+    await new Promise((resolve) => setImmediate(resolve));
+
+    assert.equal(eventSourceCalls, 0);
+    assert.equal(client.status, SseClientStatus.CLOSED);
+    assert.deepEqual(fallbackReasons, ['authorization-error']);
+});
+
+test('keeps Mercure EventSource construction errors distinct from authorization', async () => {
+    const fallbackReasons = [];
+    const client = new SseClient({
+        endpoint: 'https://app.example.test/sse',
+        transport: 'mercure',
+        channels: ['users.42'],
+        fetchFactory: async () => ({
+            ok: true,
+            status: 200,
+            json: async () => ({
+                transport: 'mercure',
+                hub: 'https://hub.example.test/.well-known/mercure',
+                topics: ['urn:example:sse:users.42'],
+                expiresAt: null,
+            }),
+        }),
+        eventSourceFactory: () => {
+            throw new Error('EventSource construction failed.');
+        },
+        fallback: ({ reason }) => fallbackReasons.push(reason),
+    });
+
+    client.connect();
+    await new Promise((resolve) => setImmediate(resolve));
+
+    assert.equal(client.status, SseClientStatus.CLOSED);
+    assert.deepEqual(fallbackReasons, ['construction-error']);
+});

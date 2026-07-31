@@ -19,6 +19,7 @@
   "keywords": [
     "codeigniter",
     "eventsource",
+    "mercure",
     "server-sent-events",
     "sse"
   ],

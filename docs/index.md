@@ -1,21 +1,13 @@
 # CodeIgniter SSE
 
-CodeIgniter SSE adds Redis-backed Server-Sent Events to CodeIgniter 4
-applications without coupling application code to Redis sockets or HTTP
-streaming details.
+CodeIgniter SSE adds Redis and Mercure Server-Sent Events to CodeIgniter 4
+applications without coupling application code to broker sockets, Hub HTTP
+requests, or streaming details.
 
 ```text
-Application
-   ↓ sse()->publish()
-Publisher contract
-   ↓
-Redis Pub/Sub
-   ↓
-Subscriber contract
-   ↓
-CodeIgniter SSE response
-   ↓
-Browser EventSource
+                         ┌─ Redis Pub/Sub ── PHP SSE response ─┐
+Application publisher ──┤                                    ├─ EventSource
+                         └─ Mercure Hub ──────────────────────┘
 ```
 
 ## What it provides
@@ -23,6 +15,7 @@ Browser EventSource
 - a small `sse()->publish()` API;
 - versioned JSON event envelopes with stable event IDs;
 - Redis Pub/Sub over an internal RESP2 stream client;
+- Mercure publishing, topic JWT authorization, and direct Hub streaming;
 - logical channel validation, limits, and server-side authorization;
 - heartbeats, disconnect detection, and maximum connection lifetime;
 - an SSE response adapter for current CodeIgniter applications;
@@ -32,7 +25,7 @@ Browser EventSource
 
 - PHP 8.2 or newer with `ext-json`;
 - CodeIgniter 4.7 or newer;
-- a Redis server reachable over TCP or TLS.
+- Redis for the Redis adapter, or a Mercure Hub and `ext-curl`.
 
 PhpRedis and Predis are not required.
 
@@ -79,6 +72,11 @@ events and cannot replay messages missed while a browser is disconnected.
 Business-critical state must remain in a database or another durable system;
 an SSE event should normally tell the browser what changed, not become the
 only record of the change.
+
+Mercure can retain events and replay them through `Last-Event-ID` according to
+Hub history configuration. It also keeps long-lived streams outside PHP.
+Publishing code remains identical; start with [Mercure Hub](mercure.md) when
+that deployment model is preferred.
 
 ## License
 
