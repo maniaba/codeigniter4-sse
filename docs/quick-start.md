@@ -1,7 +1,9 @@
 # Quick start
 
 This example publishes a user notification and updates the page without a full
-reload.
+reload. It uses the default Redis adapter. For the dedicated Hub deployment,
+follow [Mercure Hub](mercure.md); publishing and channel policy code remain the
+same.
 
 ## 1. Configure Redis
 

@@ -8,6 +8,7 @@ use CodeIgniter\CLI\BaseCommand;
 use CodeIgniter\CLI\CLI;
 use Maniaba\CodeIgniterSse\Config\Sse;
 use Maniaba\CodeIgniterSse\Factory\HealthCheckerFactory;
+use Maniaba\CodeIgniterSse\Factory\MercureConfigFactory;
 
 final class HealthCheckCommand extends BaseCommand
 {
@@ -22,6 +23,30 @@ final class HealthCheckCommand extends BaseCommand
     public function run(array $params): int
     {
         $config = Sse::discover();
+
+        if ($config->streamTransport() === 'mercure') {
+            $mercure = (new MercureConfigFactory())->create($config);
+
+            if (! function_exists('curl_version')) {
+                CLI::error('The Mercure publisher requires the PHP cURL extension.');
+
+                return EXIT_ERROR;
+            }
+
+            CLI::write(
+                sprintf(
+                    '[OK] Mercure SSE configuration is valid for %s.',
+                    $mercure->hubUrl,
+                ),
+                'green',
+            );
+            CLI::write(
+                '[INFO] Hub readiness is exposed through the Mercure Caddy admin API and is not queried by this command.',
+                'yellow',
+            );
+
+            return EXIT_SUCCESS;
+        }
 
         if (strtolower($config->broker) !== 'redis') {
             CLI::write(

@@ -80,6 +80,18 @@ It exposes Redis on host port `16379`. Enable the live integration test:
 SSE_REDIS_INTEGRATION=1 composer test
 ```
 
+Run the Mercure publisher/subscriber integration test against the development
+Hub:
+
+```bash
+docker compose up -d mercure
+SSE_MERCURE_INTEGRATION=1 composer test -- --group integration
+```
+
+The test issues a private topic JWT, opens a real Hub subscription, publishes
+through `MercurePublisher`, and verifies the versioned event envelope received
+over SSE.
+
 For an externally managed test Redis, override the host and port:
 
 ```bash

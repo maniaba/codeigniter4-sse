@@ -1,12 +1,13 @@
 {
     "name": "maniaba/codeigniter4-sse",
-    "description": "Redis-backed Server-Sent Events for CodeIgniter 4",
+    "description": "Redis and Mercure Server-Sent Events for CodeIgniter 4",
     "license": "MIT",
     "type": "library",
     "keywords": [
         "codeigniter",
         "codeigniter4",
         "eventsource",
+        "mercure",
         "redis",
         "server-sent-events",
         "sse"
@@ -25,7 +26,8 @@
         "source": "https://github.com/maniaba/codeigniter4-sse"
     },
     "suggest": {
-        "codeigniter4/shield": "Required when using ShieldUserResolver for CodeIgniter Shield authentication."
+        "codeigniter4/shield": "Required when using ShieldUserResolver for CodeIgniter Shield authentication.",
+        "ext-curl": "Required when using the built-in Mercure HTTP publisher."
     },
     "require": {
         "php": "^8.2",

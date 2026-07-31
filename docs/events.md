@@ -96,6 +96,14 @@ live.on('order.updated', ({ data }) => {
 });
 ```
 
+Redis serializes this envelope into Pub/Sub and the PHP stream encoder emits
+its ID and event name. Mercure sends the same JSON as update `data`, the event
+ID as Mercure `id`, and the event name as Mercure `type`. Browser handlers
+therefore receive the same normalized message through either adapter.
+
+Redis Pub/Sub does not retain the ID for replay. A Mercure Hub with history
+enabled can use it during native `Last-Event-ID` recovery.
+
 ## Naming
 
 Use domain event names as the default:

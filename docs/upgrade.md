@@ -9,7 +9,9 @@ The current package line targets:
 
 - PHP 8.2 or newer;
 - CodeIgniter 4.7 or newer;
-- Redis Pub/Sub for live delivery without replay.
+- Redis Pub/Sub for live delivery without replay;
+- Mercure 0.x Hub protocol for direct Hub streaming and retained-history
+  replay when configured.
 
 ## Stable API surface
 

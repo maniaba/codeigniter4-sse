@@ -133,6 +133,11 @@ filters reject unauthenticated requests early; concurrency limits prevent one
 user or reconnect loop from consuming an unbounded number of PHP workers.
 Neither replaces per-channel authorization.
 
+With Mercure, the same route filters and authorizer protect the short
+bootstrap request. The resulting subscriber JWT contains only approved
+Mercure topics. The long-lived Hub connection does not occupy a PHP worker,
+but rate limiting still protects token issuance and reconnect churn.
+
 For zero-argument implementations, select both classes in the package config:
 
 ```php
@@ -235,6 +240,11 @@ For a cross-origin frontend, configure:
 
 Avoid bearer tokens in the SSE URL. URLs are commonly retained in browser
 history, access logs, reverse-proxy logs, and monitoring systems.
+
+The Mercure transport follows this rule by returning authorization in an
+HttpOnly cookie. The browser client fetches the CodeIgniter route first and
+then opens EventSource directly against the Hub. See
+[Mercure Hub](mercure.md).
 
 The SSE endpoint is a read-only `GET` and must not perform state-changing
 actions. Keep normal CSRF protection on application writes; do not move a CSRF

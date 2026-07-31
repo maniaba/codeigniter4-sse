@@ -14,6 +14,8 @@ use Maniaba\CodeIgniterSse\Exception\InvalidOriginException;
 use Maniaba\CodeIgniterSse\Exception\UnauthorizedChannelException;
 use Maniaba\CodeIgniterSse\Factory\AuthorizationFactory;
 use Maniaba\CodeIgniterSse\Factory\ConnectionManagerFactory;
+use Maniaba\CodeIgniterSse\Factory\MercureConfigFactory;
+use Maniaba\CodeIgniterSse\Factory\MercureSubscriptionFactory;
 use Maniaba\CodeIgniterSse\Stream\SseConnectionManager;
 
 final class SseController extends ResourceController
@@ -23,12 +25,14 @@ final class SseController extends ResourceController
         private readonly ?SseResponseFactory $responseFactory = null,
         private readonly ?AuthorizationFactory $authorizations = null,
         private readonly ?ConnectionManagerFactory $connectionManagers = null,
+        private readonly ?MercureSubscriptionFactory $mercureSubscriptions = null,
+        private readonly ?SseConfig $config = null,
     ) {
     }
 
     public function stream(): ResponseInterface
     {
-        $config = SseConfig::discover();
+        $config = $this->config ?? SseConfig::discover();
         $origin = $this->request->getHeaderLine('Origin');
         $cors   = new CorsPolicy($config->allowedOrigins, $config->withCredentials);
 
@@ -36,6 +40,10 @@ final class SseController extends ResourceController
             $cors->assertAllowed($origin);
         } catch (InvalidOriginException $exception) {
             return $this->error(403, 'origin_forbidden', $exception->getMessage());
+        }
+
+        if ($config->streamTransport() === 'mercure') {
+            return $cors->apply($this->mercure($config), $origin);
         }
 
         if ($config->requireAcceptHeader && ! $this->acceptsEventStream()) {
@@ -50,16 +58,7 @@ final class SseController extends ResourceController
         }
 
         try {
-            $channels = (new ChannelRequestParser(
-                $config->maxChannelsPerConnection,
-                $config->allowPatternSubscriptions,
-            ))->parse($this->request->getGet('channels'));
-
-            $authorizations = $this->authorizations ?? new AuthorizationFactory();
-            $userResolver   = $authorizations->userResolver($config);
-            $authorization  = $authorizations->channelAuthorization($config);
-
-            $channels = $authorization->authorizeAll($userResolver->resolve(), $channels);
+            $channels = $this->authorizeChannels($config);
         } catch (InvalidChannelException|InvalidChannelRequestException $exception) {
             return $cors->apply(
                 $this->error(400, 'invalid_channels', $exception->getMessage()),
@@ -84,6 +83,70 @@ final class SseController extends ResourceController
         $response->setHeader('X-Content-Type-Options', 'nosniff');
 
         return $cors->apply($response, $origin);
+    }
+
+    private function mercure(SseConfig $config): ResponseInterface
+    {
+        try {
+            $channels = $this->authorizeChannels($config);
+        } catch (InvalidChannelException|InvalidChannelRequestException $exception) {
+            return $this->error(400, 'invalid_channels', $exception->getMessage());
+        } catch (UnauthorizedChannelException $exception) {
+            return $this->error(403, 'channel_forbidden', $exception->getMessage());
+        }
+
+        $subscription = ($this->mercureSubscriptions ?? new MercureSubscriptionFactory())
+            ->create($config, $channels);
+        $mercure  = (new MercureConfigFactory())->create($config);
+        $response = $this->response
+            ->setStatusCode(200)
+            ->setJSON([
+                'transport' => 'mercure',
+                'hub'       => $subscription->hubUrl,
+                'topics'    => $subscription->topics,
+                'expiresAt' => $subscription->expiresAt,
+            ])
+            ->setHeader('Cache-Control', 'private, no-store')
+            ->setHeader('Link', sprintf('<%s>; rel="mercure"', $subscription->hubUrl))
+            ->setHeader('X-Content-Type-Options', 'nosniff');
+
+        if ($subscription->token !== null) {
+            $response->setCookie(
+                name: $mercure->cookieName,
+                value: $subscription->token,
+                expire: $mercure->subscriberTokenTtl,
+                domain: $mercure->cookieDomain,
+                path: $mercure->cookiePath,
+                secure: $mercure->cookieSecure,
+                httponly: $mercure->cookieHttpOnly,
+                samesite: $mercure->cookieSameSite,
+            );
+        } else {
+            $response->deleteCookie(
+                $mercure->cookieName,
+                $mercure->cookieDomain,
+                $mercure->cookiePath,
+            );
+        }
+
+        return $response;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function authorizeChannels(SseConfig $config): array
+    {
+        $channels = (new ChannelRequestParser(
+            $config->maxChannelsPerConnection,
+            $config->allowPatternSubscriptions,
+        ))->parse($this->request->getGet('channels'));
+
+        $authorizations = $this->authorizations ?? new AuthorizationFactory();
+        $userResolver   = $authorizations->userResolver($config);
+        $authorization  = $authorizations->channelAuthorization($config);
+
+        return $authorization->authorizeAll($userResolver->resolve(), $channels);
     }
 
     private function acceptsEventStream(): bool

@@ -16,6 +16,9 @@ class Sse extends BaseSse
      *
      * GET /sse?channels=public.news
      *
+     * Redis returns the SSE stream. Mercure returns short-lived Hub bootstrap
+     * authorization for the browser client.
+     *
      * @var array<string, mixed>
      */
     public array $route = [
@@ -34,7 +37,7 @@ class Sse extends BaseSse
     ];
 
     /**
-     * Built-in brokers: redis, memory, null.
+     * Built-in brokers: redis, mercure, memory, null.
      */
     public string $broker = 'redis';
 
@@ -139,5 +142,42 @@ class Sse extends BaseSse
         'reconnectDelayMilliseconds' => 250,
         'clientName'                 => null,
         'streamContext'              => [],
+    ];
+
+    /**
+     * Mercure Hub adapter options.
+     *
+     * The server-side URL can use the Docker service name while publicHubUrl
+     * must be reachable by the browser. Keep private updates enabled unless
+     * every configured channel is intentionally public.
+     *
+     * @var array<string, mixed>
+     */
+    public array $mercure = [
+        'hubUrl'                  => 'http://127.0.0.1:3000/.well-known/mercure',
+        'publicHubUrl'            => 'http://127.0.0.1:3000/.well-known/mercure',
+        'topicPrefix'             => 'urn:codeigniter4-sse:',
+        'private'                 => true,
+        'authorizeSubscribers'    => true,
+        'publisherJwt'            => null,
+        'publisherKey'            => null,
+        'subscriberKey'           => null,
+        'publisherAlgorithm'      => 'HS256',
+        'subscriberAlgorithm'     => 'HS256',
+        'publisherTokenTtl'       => 300,
+        'subscriberTokenTtl'      => 3600,
+        'publisherTopicSelectors' => ['*'],
+        'connectTimeout'          => 2.5,
+        'timeout'                 => 5.0,
+        'verifyTls'               => true,
+        'maxPayloadBytes'         => 1_048_576,
+        'cookie'                  => [
+            'name'     => 'mercureAuthorization',
+            'domain'   => '',
+            'path'     => '/.well-known/mercure',
+            'secure'   => true,
+            'httpOnly' => true,
+            'sameSite' => 'Lax',
+        ],
     ];
 }

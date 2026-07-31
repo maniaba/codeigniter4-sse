@@ -7,11 +7,14 @@ Before installing the package, verify:
 - PHP 8.2 or newer;
 - the PHP JSON extension;
 - CodeIgniter 4.7 or newer;
-- a Redis server reachable from the PHP runtime;
+- Redis for the Redis adapter, or a Mercure Hub for the Mercure adapter;
 - Composer package discovery enabled in the application.
 
 The Redis adapter speaks RESP2 over PHP stream sockets. No PhpRedis extension
 or third-party Redis client is needed.
+
+The Mercure publisher uses CodeIgniter's CURLRequest client and therefore
+requires `ext-curl`. See [Mercure Hub](mercure.md) when using that adapter.
 
 ## Install with Composer
 
@@ -97,6 +100,20 @@ connection without starting an HTTP stream.
 
 Redis Pub/Sub channels are not isolated by selected database. Always use a
 distinct `channelPrefix` for each application and test suite.
+
+## Configure Mercure
+
+Mercure is an alternative to Redis plus the PHP stream endpoint. It keeps
+`sse()->publish(...)`, but browsers hold their EventSource connection directly
+against the Hub:
+
+```php
+public string $broker = 'mercure';
+```
+
+Configure Hub URLs, publisher/subscriber keys, topic prefix, and cookie
+attributes before publishing. The complete development and production setup is
+documented under [Mercure Hub](mercure.md).
 
 ## Install the browser client
 

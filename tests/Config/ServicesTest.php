@@ -7,6 +7,7 @@ namespace Tests\Config;
 use CodeIgniter\Config\Services as FrameworkServices;
 use CodeIgniter\Test\CIUnitTestCase;
 use Maniaba\CodeIgniterSse\Broker\InMemoryBroker;
+use Maniaba\CodeIgniterSse\Broker\Mercure\MercurePublisher;
 use Maniaba\CodeIgniterSse\Broker\NullBroker;
 use Maniaba\CodeIgniterSse\Broker\Redis\RedisConfig;
 use Maniaba\CodeIgniterSse\Broker\Redis\RedisConnectionFactory;
@@ -112,6 +113,20 @@ final class ServicesTest extends CIUnitTestCase
 
         $this->assertInstanceOf(RedisConfig::class, $factoryConfig);
         $this->assertSame('explicit.redis.internal', $factoryConfig->host);
+    }
+
+    public function testMercurePublisherUsesTheConfiguredBrokerAdapter(): void
+    {
+        $config          = new Sse();
+        $config->broker  = 'mercure';
+        $config->mercure = [
+            'publisherKey'  => 'publisher-test-secret',
+            'subscriberKey' => 'subscriber-test-secret',
+        ];
+
+        $publisher = Services::ssePublisher($config, false);
+
+        $this->assertInstanceOf(MercurePublisher::class, $publisher);
     }
 
     public function testCustomBrokerCanBeConfiguredWithFactories(): void

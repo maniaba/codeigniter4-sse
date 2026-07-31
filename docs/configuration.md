@@ -37,7 +37,7 @@ final class Sse extends BaseSse
 | `route['method']` | `stream` | Controller method used by the route. |
 | `route['filters']` | `[]` | CI4 filter aliases applied to the route. |
 | `route['options']` | `[]` | Additional CI4 route options. |
-| `requireAcceptHeader` | `true` | Require `Accept: text/event-stream`. |
+| `requireAcceptHeader` | `true` | Require `Accept: text/event-stream` for the PHP stream transport. |
 
 Example:
 
@@ -84,7 +84,9 @@ $routes->get(
 
 `SseRoutes::register()` honors `route['enabled']`, so it is intended for automatic
 package discovery rather than bypassing a disabled route. Keep the request
-method `GET`; browser `EventSource` cannot issue a custom POST request.
+method `GET`. With Redis it is the event stream; with Mercure it is a short
+authorization/bootstrap request used before the browser connects directly to
+the Hub.
 
 ## Stream behavior
 
@@ -156,7 +158,7 @@ final class Sse extends BaseSse
 | Property | Default | Purpose |
 |---|---:|---|
 | `broker` | `redis` | Active key from `brokers`. |
-| `brokers` | built-in Redis, memory, null definitions | Publisher/subscriber class or factory map. |
+| `brokers` | built-in Redis, Mercure, memory, null definitions | Publisher/subscriber class or factory map. |
 | `channelPrefix` | `app:sse:` | Prefix added to logical Redis channels. |
 | `allowPatternSubscriptions` | `false` | Permit Redis-style pattern requests. |
 
@@ -165,6 +167,11 @@ message between separate HTTP requests or workers. `null` is a message sink:
 it discards published events but an enabled SSE route still keeps each stream
 open until disconnect or maximum lifetime. Set `route['enabled'] = false` to
 disable the HTTP endpoint.
+
+`mercure` has a publisher but no PHP subscriber. Its broker definition uses
+`transport = mercure`, so the package route issues subscriber authorization
+instead of creating `SseConnectionManager`. See [Mercure Hub](mercure.md) for
+the complete configuration.
 
 Do not use an empty shared prefix when several applications publish to the
 same Redis instance.
@@ -187,6 +194,10 @@ final class Sse extends BaseSse
         'redis' => [
             'publisher'  => \Maniaba\CodeIgniterSse\Broker\Redis\RedisPublisher::class,
             'subscriber' => \Maniaba\CodeIgniterSse\Broker\Redis\RedisSubscriber::class,
+        ],
+        'mercure' => [
+            'publisher' => \Maniaba\CodeIgniterSse\Broker\Mercure\MercurePublisher::class,
+            'transport' => 'mercure',
         ],
         'memory' => [
             'publisher'  => \Maniaba\CodeIgniterSse\Broker\InMemoryBroker::class,
@@ -221,6 +232,44 @@ public array $brokers = [
     ],
 ];
 ```
+
+## Mercure
+
+Mercure options live in one array, parallel to Redis:
+
+```php
+public string $broker = 'mercure';
+
+public array $mercure = [
+    'hubUrl'       => 'http://mercure/.well-known/mercure',
+    'publicHubUrl' => 'https://app.example.com/.well-known/mercure',
+    'topicPrefix'  => 'urn:storefront:sse:',
+    'private'      => true,
+
+    'publisherKey'  => null,
+    'subscriberKey' => null,
+
+    'cookie' => [
+        'name'     => 'mercureAuthorization',
+        'domain'   => '',
+        'path'     => '/.well-known/mercure',
+        'secure'   => true,
+        'httpOnly' => true,
+        'sameSite' => 'Lax',
+    ],
+];
+```
+
+Nested `.env` overrides are supported:
+
+```dotenv
+sse.mercure.publisherKey = replace-with-the-hub-publisher-key
+sse.mercure.subscriberKey = replace-with-the-hub-subscriber-key
+```
+
+Keep Hub signing keys out of source control. The package validates Mercure
+configuration when that broker is selected. The full key reference and
+deployment guidance are in [Mercure Hub](mercure.md).
 
 ## Redis connection
 

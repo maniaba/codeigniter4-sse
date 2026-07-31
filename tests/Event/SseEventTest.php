@@ -46,4 +46,11 @@ final class SseEventTest extends TestCase
 
         new SseEvent("order\nupdated");
     }
+
+    public function testNullByteInEventIdIsRejected(): void
+    {
+        $this->expectException(InvalidEventException::class);
+
+        new SseEvent('profile.updated', id: "event\0injected");
+    }
 }

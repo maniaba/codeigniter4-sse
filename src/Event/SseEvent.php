@@ -31,7 +31,7 @@ final readonly class SseEvent implements EventInterface
 
         $id ??= (new UuidV7Generator())->generate();
 
-        if ($id === '' || strlen($id) > 128 || strpbrk($id, "\r\n") !== false) {
+        if ($id === '' || strlen($id) > 128 || strpbrk($id, "\r\n\0") !== false) {
             throw new InvalidEventException('Event IDs must be non-empty, single-line strings up to 128 bytes.');
         }
 

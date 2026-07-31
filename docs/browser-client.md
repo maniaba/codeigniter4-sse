@@ -11,6 +11,7 @@ It provides:
 - safe JSON parsing;
 - channel and custom query parameters;
 - credential configuration;
+- direct Mercure Hub transport with cookie authorization;
 - explicit `connect()` and `close()`;
 - a hook for an application-defined fallback.
 
@@ -89,6 +90,7 @@ const live = new SseClient({
         source: 'orders-page',
     },
     withCredentials: true,
+    transport: 'eventsource',
     fallback: null,
 });
 ```
@@ -99,14 +101,39 @@ const live = new SseClient({
 | `channels` | `[]` | Unique logical channel names, sent comma-separated. |
 | `query` | `{}` | Object or `URLSearchParams` merged into the endpoint. |
 | `withCredentials` | `true` | Passed to the native `EventSource` constructor. |
+| `transport` | `eventsource` | Use `eventsource` for the PHP stream or `mercure` for Hub bootstrap. |
 | `fallback` | `null` | Optional outage/unsupported-browser hook. |
 | `eventSourceFactory` | native | Test seam for supplying an EventSource-compatible object. |
+| `fetchFactory` | native | Test seam for the Mercure authorization request. |
 
 Array query values are appended as repeated parameters. `null` and `undefined`
 object values are omitted. The `channels` option wins over an existing
 `channels` value in the endpoint or query object.
 
 Do not use query parameters for bearer tokens or secrets.
+
+## Mercure transport
+
+When Mercure is the configured broker, `endpoint` is the short CodeIgniter
+authorization route rather than the Hub stream itself:
+
+```javascript
+const live = new SseClient({
+    endpoint: '/sse',
+    transport: 'mercure',
+    channels: ['users.42'],
+    withCredentials: true,
+});
+```
+
+`connect()` fetches authorized Hub topics, receives the subscriber JWT through
+an HttpOnly cookie, then opens EventSource directly against the returned Hub
+URL. The authorization request is asynchronous; observe `status` when the UI
+needs to know when the Hub connection reaches `open`.
+
+The client refreshes a time-limited Mercure authorization before it expires.
+Channel changes request a new token scoped to the new topic list. See
+[Mercure Hub](mercure.md) for server, cookie, CORS, and reverse-proxy setup.
 
 ## Channels
 
@@ -337,8 +364,10 @@ The hook receives:
 }
 ```
 
-Reasons are `unsupported`, `construction-error`, and `connection-error`. The
-hook runs once per reconnect cycle; a successful native `open` resets it.
+Reasons are `unsupported`, `construction-error`, `connection-error`, and
+`authorization-error`. The last value means the Mercure bootstrap request
+failed or returned invalid data. The hook runs once per reconnect cycle; a
+successful native `open` resets it.
 Browsers report the server's expected finite-lifetime rotation through the
 same native `error` event as a network outage, so `connection-error` alone
 must not immediately start polling. Debounce an outage fallback and cancel it

@@ -1,5 +1,5 @@
 site_name: CodeIgniter SSE
-site_description: Redis-backed Server-Sent Events for CodeIgniter 4.
+site_description: Redis and Mercure Server-Sent Events for CodeIgniter 4.
 site_url: https://maniaba.github.io/codeigniter4-sse/
 site_dir: build/site
 repo_url: https://github.com/maniaba/codeigniter4-sse
@@ -88,6 +88,7 @@ nav:
       - Channels and authorization: channels-and-authorization.md
   - Usage:
       - Browser client: browser-client.md
+      - Mercure Hub: mercure.md
       - Streaming and deployment: deployment.md
   - Architecture:
       - Overview: architecture.md

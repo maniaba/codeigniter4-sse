@@ -4,19 +4,14 @@
 [![CodeIgniter](https://img.shields.io/badge/CodeIgniter-4.7%2B-DD4814.svg)](https://codeigniter.com/)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE.md)
 
-`maniaba/codeigniter4-sse` adds Redis-backed Server-Sent Events to
+`maniaba/codeigniter4-sse` adds Redis and Mercure Server-Sent Events to
 CodeIgniter 4 applications. Application code publishes semantic events through
-a CI4 service; the package authorizes logical channels, subscribes to Redis,
-and streams the events to the browser.
+one CI4 API while the selected adapter handles delivery and streaming.
 
 ```text
-CodeIgniter application
-    ↓ sse()->publish()
-Redis Pub/Sub
-    ↓
-GET /sse?channels=...
-    ↓
-Browser EventSource / SseClient
+                         ┌─ Redis Pub/Sub ── PHP SSE response ─┐
+CodeIgniter application ┤                                    ├─ Browser
+    sse()->publish()     └─ Mercure Hub ──────────────────────┘
 ```
 
 The public API is independent of Redis and of the concrete HTTP streaming
@@ -27,8 +22,8 @@ does not need to manage Redis subscriptions or SSE frame emission directly.
 
 - PHP 8.2 or newer
 - CodeIgniter 4.7 or newer
-- Redis server
-- outbound TCP or TLS connectivity from PHP to Redis
+- Redis server for the Redis adapter, or a Mercure Hub
+- `ext-curl` when using Mercure
 
 ## Installation
 
@@ -102,8 +97,8 @@ live.connect();
 ```
 
 The browser's native `EventSource` automatically reconnects when a connection
-ends. The server intentionally limits connection lifetime so PHP workers are
-released periodically.
+ends. With Redis, the package intentionally limits the PHP stream lifetime.
+With Mercure, the browser streams directly from the Hub.
 
 ## Channel security
 
@@ -187,6 +182,28 @@ not be lost. Redis Streams and `Last-Event-ID` replay are outside the Pub/Sub
 contract. Redis Pub/Sub is not isolated by numbered Redis databases, so every
 application must use its own `channelPrefix`.
 
+Mercure is available when long-lived streams should not occupy PHP workers:
+
+```php
+public string $broker = 'mercure';
+```
+
+Publishing remains unchanged. The `/sse` route becomes a short channel
+authorization request that sets a topic-scoped HttpOnly JWT cookie, and the
+browser client connects directly to the Hub:
+
+```javascript
+const live = new SseClient({
+    endpoint: '/sse',
+    transport: 'mercure',
+    channels: [`users.${currentUserId}`],
+});
+```
+
+Mercure can replay retained Hub history through `Last-Event-ID`. See
+[Mercure Hub](docs/mercure.md) for Docker, signing keys, authorization,
+cookies, CORS, and reverse-proxy configuration.
+
 
 ## Documentation
 
@@ -196,6 +213,7 @@ application must use its own `channelPrefix`.
 - [Architecture](docs/architecture.md)
 - [Channels and authorization](docs/channels-and-authorization.md)
 - [Browser client](docs/browser-client.md)
+- [Mercure Hub](docs/mercure.md)
 - [Streaming and deployment](docs/deployment.md)
 - [Testing](docs/testing.md)
 - [Troubleshooting](docs/troubleshooting.md)
