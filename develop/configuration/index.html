@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Redis-backed Server-Sent Events for CodeIgniter 4.">
+        <meta name="description" content="Redis and Mercure Server-Sent Events for CodeIgniter 4.">
       
       
       
@@ -521,6 +521,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#mercure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mercure
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#redis-connection" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -687,6 +698,34 @@
     
   
     Browser client
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../mercure/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Mercure Hub
   
 
     
@@ -1105,6 +1144,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#mercure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mercure
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#redis-connection" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1261,7 +1311,7 @@ final class Sse extends BaseSse
 <tr>
 <td><code>requireAcceptHeader</code></td>
 <td style="text-align: right;"><code>true</code></td>
-<td>Require <code>Accept: text/event-stream</code>.</td>
+<td>Require <code>Accept: text/event-stream</code> for the PHP stream transport.</td>
 </tr>
 </tbody>
 </table>
@@ -1299,7 +1349,9 @@ route explicitly:</p>
 );</code></pre>
 <p><code>SseRoutes::register()</code> honors <code>route['enabled']</code>, so it is intended for automatic
 package discovery rather than bypassing a disabled route. Keep the request
-method <code>GET</code>; browser <code>EventSource</code> cannot issue a custom POST request.</p>
+method <code>GET</code>. With Redis it is the event stream; with Mercure it is a short
+authorization/bootstrap request used before the browser connects directly to
+the Hub.</p>
 <h2 id="stream-behavior">Stream behavior</h2>
 <table>
 <thead>
@@ -1416,7 +1468,7 @@ other sensitive fields.</p>
 </tr>
 <tr>
 <td><code>brokers</code></td>
-<td style="text-align: right;">built-in Redis, memory, null definitions</td>
+<td style="text-align: right;">built-in Redis, Mercure, memory, null definitions</td>
 <td>Publisher/subscriber class or factory map.</td>
 </tr>
 <tr>
@@ -1436,6 +1488,10 @@ message between separate HTTP requests or workers. <code>null</code> is a messag
 it discards published events but an enabled SSE route still keeps each stream
 open until disconnect or maximum lifetime. Set <code>route['enabled'] = false</code> to
 disable the HTTP endpoint.</p>
+<p><code>mercure</code> has a publisher but no PHP subscriber. Its broker definition uses
+<code>transport = mercure</code>, so the package route issues subscriber authorization
+instead of creating <code>SseConnectionManager</code>. See <a href="../mercure/">Mercure Hub</a> for
+the complete configuration.</p>
 <p>Do not use an empty shared prefix when several applications publish to the
 same Redis instance.</p>
 <p>Redis Pub/Sub is global across numbered Redis databases. <code>redis['database']</code>
@@ -1453,6 +1509,10 @@ final class Sse extends BaseSse
         'redis' =&gt; [
             'publisher'  =&gt; \Maniaba\CodeIgniterSse\Broker\Redis\RedisPublisher::class,
             'subscriber' =&gt; \Maniaba\CodeIgniterSse\Broker\Redis\RedisSubscriber::class,
+        ],
+        'mercure' =&gt; [
+            'publisher' =&gt; \Maniaba\CodeIgniterSse\Broker\Mercure\MercurePublisher::class,
+            'transport' =&gt; 'mercure',
         ],
         'memory' =&gt; [
             'publisher'  =&gt; \Maniaba\CodeIgniterSse\Broker\InMemoryBroker::class,
@@ -1482,6 +1542,34 @@ closures:</p>
         'subscriber' =&gt; static fn (): SubscriberInterface =&gt; service('customSseSubscriber'),
     ],
 ];</code></pre>
+<h2 id="mercure">Mercure</h2>
+<p>Mercure options live in one array, parallel to Redis:</p>
+<pre class="highlight"><code class="language-php">public string $broker = 'mercure';
+
+public array $mercure = [
+    'hubUrl'       =&gt; 'http://mercure/.well-known/mercure',
+    'publicHubUrl' =&gt; 'https://app.example.com/.well-known/mercure',
+    'topicPrefix'  =&gt; 'urn:storefront:sse:',
+    'private'      =&gt; true,
+
+    'publisherKey'  =&gt; null,
+    'subscriberKey' =&gt; null,
+
+    'cookie' =&gt; [
+        'name'     =&gt; 'mercureAuthorization',
+        'domain'   =&gt; '',
+        'path'     =&gt; '/.well-known/mercure',
+        'secure'   =&gt; true,
+        'httpOnly' =&gt; true,
+        'sameSite' =&gt; 'Lax',
+    ],
+];</code></pre>
+<p>Nested <code>.env</code> overrides are supported:</p>
+<pre class="highlight"><code class="language-dotenv">sse.mercure.publisherKey = replace-with-the-hub-publisher-key
+sse.mercure.subscriberKey = replace-with-the-hub-subscriber-key</code></pre>
+<p>Keep Hub signing keys out of source control. The package validates Mercure
+configuration when that broker is selected. The full key reference and
+deployment guidance are in <a href="../mercure/">Mercure Hub</a>.</p>
 <h2 id="redis-connection">Redis connection</h2>
 <p>All Redis options live under one config property:</p>
 <pre class="highlight"><code class="language-php">public array $redis = [

@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Redis-backed Server-Sent Events for CodeIgniter 4.">
+        <meta name="description" content="Redis and Mercure Server-Sent Events for CodeIgniter 4.">
       
       
       
@@ -533,6 +533,34 @@
     
   
     Browser client
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../mercure/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Mercure Hub
   
 
     
@@ -1201,6 +1229,13 @@ does not need delivery.</p>
 <pre class="highlight"><code class="language-bash">docker compose up -d redis</code></pre>
 <p>It exposes Redis on host port <code>16379</code>. Enable the live integration test:</p>
 <pre class="highlight"><code class="language-bash">SSE_REDIS_INTEGRATION=1 composer test</code></pre>
+<p>Run the Mercure publisher/subscriber integration test against the development
+Hub:</p>
+<pre class="highlight"><code class="language-bash">docker compose up -d mercure
+SSE_MERCURE_INTEGRATION=1 composer test -- --group integration</code></pre>
+<p>The test issues a private topic JWT, opens a real Hub subscription, publishes
+through <code>MercurePublisher</code>, and verifies the versioned event envelope received
+over SSE.</p>
 <p>For an externally managed test Redis, override the host and port:</p>
 <pre class="highlight"><code class="language-bash">SSE_REDIS_INTEGRATION=1 \
 SSE_REDIS_HOST=127.0.0.1 \

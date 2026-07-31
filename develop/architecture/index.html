@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Redis-backed Server-Sent Events for CodeIgniter 4.">
+        <meta name="description" content="Redis and Mercure Server-Sent Events for CodeIgniter 4.">
       
       
       
@@ -533,6 +533,34 @@
     
   
     Browser client
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../mercure/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Mercure Hub
   
 
     
@@ -1136,7 +1164,7 @@
 
 <h1 id="architecture">Architecture</h1>
 <p>The package separates event publication, message transport, HTTP streaming,
-and browser behavior.</p>
+and browser behavior. Redis uses the built-in PHP stream:</p>
 <pre class="highlight"><code class="language-text">Application service / controller / worker
              │
              ▼
@@ -1156,6 +1184,20 @@ and browser behavior.</p>
              │
              ▼
       Browser EventSource</code></pre>
+<p>Mercure moves the stream to a dedicated Hub:</p>
+<pre class="highlight"><code class="language-text">Application service / controller / worker
+             │
+             ▼
+        PublisherInterface
+             │ HTTP POST
+             ▼
+         Mercure Hub ◄──────── Browser EventSource
+             ▲
+             │ topic-scoped subscriber JWT
+             │
+   Short CodeIgniter authorization route</code></pre>
+<p>Both paths use the same event envelope, channel authorizer, browser event
+handlers, and <code>sse()-&gt;publish(...)</code> API.</p>
 <h2 id="public-application-boundary">Public application boundary</h2>
 <p>Normal application code uses the high-level service:</p>
 <pre class="highlight"><code class="language-php">sse()-&gt;publish($channel, $eventName, $data);</code></pre>
@@ -1191,6 +1233,11 @@ myapp:sse:orders.918</code></pre>
 <p>Authorization happens against the logical name before that mapping. A browser
 cannot use the HTTP query to subscribe to arbitrary Redis infrastructure
 channels.</p>
+<p>The Mercure adapter maps the same logical name to an absolute topic:</p>
+<pre class="highlight"><code class="language-text">users.42 → urn:storefront:sse:users.42</code></pre>
+<p>The CodeIgniter route returns only topics that passed application
+authorization. A subscriber JWT repeats those exact topics so the Hub can
+enforce private delivery independently.</p>
 <h2 id="publisher-and-subscriber-connections">Publisher and subscriber connections</h2>
 <p>Redis Pub/Sub switches a subscribed connection into subscription mode.
 Publisher and subscriber operations therefore use separate stream
@@ -1224,6 +1271,9 @@ refetch current state over normal HTTP.</p>
 <p>A future Redis Streams adapter can add retention and replay without changing
 the application publisher boundary, but its delivery contract will be
 different and must be documented explicitly.</p>
+<p>Mercure can replay retained Hub history through native <code>Last-Event-ID</code>
+reconnects. Retention belongs to the Hub transport configuration and does not
+turn application events into a business queue.</p>
 <h2 id="why-the-encoder-is-internal">Why the encoder is internal</h2>
 <p>The SSE wire format is small and is hidden behind a stream interface.
 <code>eliashaeussler/sse</code> is not an installed dependency because:</p>

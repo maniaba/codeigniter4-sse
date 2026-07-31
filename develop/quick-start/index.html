@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Redis-backed Server-Sent Events for CodeIgniter 4.">
+        <meta name="description" content="Redis and Mercure Server-Sent Events for CodeIgniter 4.">
       
       
       
@@ -666,6 +666,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../mercure/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Mercure Hub
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../deployment/" class="md-nav__link">
         
   
@@ -1112,7 +1140,9 @@
 
 <h1 id="quick-start">Quick start</h1>
 <p>This example publishes a user notification and updates the page without a full
-reload.</p>
+reload. It uses the default Redis adapter. For the dedicated Hub deployment,
+follow <a href="../mercure/">Mercure Hub</a>; publishing and channel policy code remain the
+same.</p>
 <h2 id="1-configure-redis">1. Configure Redis</h2>
 <p>Add the development connection to <code>app/Config/Sse.php</code>:</p>
 <pre class="highlight"><code class="language-php">public string $channelPrefix = 'example:sse:';

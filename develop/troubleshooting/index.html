@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Redis-backed Server-Sent Events for CodeIgniter 4.">
+        <meta name="description" content="Redis and Mercure Server-Sent Events for CodeIgniter 4.">
       
       
       
@@ -553,6 +553,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../mercure/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Mercure Hub
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../deployment/" class="md-nav__link">
         
   
@@ -866,6 +894,39 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#mercure-publish-fails" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mercure publish fails
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mercure-authorization-succeeds-but-eventsource-returns-401" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mercure authorization succeeds but EventSource returns 401
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mercure-client-reports-authorization-error" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mercure client reports authorization-error
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#the-connection-opens-but-no-events-arrive" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1152,6 +1213,39 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#mercure-publish-fails" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mercure publish fails
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mercure-authorization-succeeds-but-eventsource-returns-401" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mercure authorization succeeds but EventSource returns 401
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mercure-client-reports-authorization-error" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mercure client reports authorization-error
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#the-connection-opens-but-no-events-arrive" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1317,6 +1411,47 @@ authorizer that permits every channel.</p>
 </ul>
 <p>The package does not use PhpRedis, so installing that extension does not fix a
 TCP, TLS, ACL, or application configuration problem.</p>
+<h2 id="mercure-publish-fails">Mercure publish fails</h2>
+<p>The Debug Toolbar and thrown <code>MercurePublishException</code> include the Hub status.
+Typical causes are:</p>
+<ul>
+<li><code>401</code>: publisher key or JWT does not match the Hub;</li>
+<li><code>403</code>: <code>publisherTopicSelectors</code> does not include the mapped topic;</li>
+<li><code>400</code>: invalid Hub form field or an outdated Hub;</li>
+<li>connection failure: <code>hubUrl</code> is not reachable from the PHP runtime;</li>
+<li>TLS failure: CA bundle or hostname verification is incorrect.</li>
+</ul>
+<p>In Docker, PHP normally publishes to a service URL such as:</p>
+<pre class="highlight"><code class="language-text">http://mercure/.well-known/mercure</code></pre>
+<p>The browser must receive a separate <code>publicHubUrl</code>, such as:</p>
+<pre class="highlight"><code class="language-text">https://app.example.com/.well-known/mercure</code></pre>
+<p>Confirm that the Hub publisher key equals <code>sse.mercure.publisherKey</code>. Use
+Mercure 0.24.2 or newer in the 0.x line.</p>
+<h2 id="mercure-authorization-succeeds-but-eventsource-returns-401">Mercure authorization succeeds but EventSource returns 401</h2>
+<p>Verify:</p>
+<ul>
+<li>the Hub subscriber key equals <code>sse.mercure.subscriberKey</code>;</li>
+<li>Hub <code>cookie_name</code> matches <code>mercure.cookie.name</code>;</li>
+<li>the cookie path includes <code>/.well-known/mercure</code>;</li>
+<li><code>Secure</code> is disabled only for local plain HTTP;</li>
+<li>cookie domain covers both the CodeIgniter response host and Hub host;</li>
+<li><code>withCredentials</code> is enabled;</li>
+<li>Hub CORS lists the exact application origin.</li>
+</ul>
+<p>Inspect the authorization request in browser developer tools. The JSON must
+contain the expected topics and the response must set the subscriber cookie.
+The cookie is HttpOnly, so it will not appear through <code>document.cookie</code>.</p>
+<h2 id="mercure-client-reports-authorization-error">Mercure client reports authorization-error</h2>
+<p>The browser client could not complete the short CodeIgniter bootstrap request.
+Inspect its HTTP status:</p>
+<ul>
+<li><code>400</code> means the channel list is invalid;</li>
+<li><code>403</code> means channel policy or application CORS denied the request;</li>
+<li><code>5xx</code> usually means Mercure signing configuration is incomplete;</li>
+<li>an invalid JSON shape means a proxy or custom controller replaced the
+  package response.</li>
+</ul>
+<p>This error occurs before EventSource connects to the Hub.</p>
 <h2 id="the-connection-opens-but-no-events-arrive">The connection opens but no events arrive</h2>
 <p>Check:</p>
 <ol>

@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Redis-backed Server-Sent Events for CodeIgniter 4.">
+        <meta name="description" content="Redis and Mercure Server-Sent Events for CodeIgniter 4.">
       
       
       
@@ -533,6 +533,34 @@
     
   
     Browser client
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../mercure/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Mercure Hub
   
 
     
@@ -1140,6 +1168,12 @@ service('ssePublisher')-&gt;publish(
 <pre class="highlight"><code class="language-javascript">live.on('order.updated', ({ data }) =&gt; {
     updateOrderRow(data.orderId, data.status);
 });</code></pre>
+<p>Redis serializes this envelope into Pub/Sub and the PHP stream encoder emits
+its ID and event name. Mercure sends the same JSON as update <code>data</code>, the event
+ID as Mercure <code>id</code>, and the event name as Mercure <code>type</code>. Browser handlers
+therefore receive the same normalized message through either adapter.</p>
+<p>Redis Pub/Sub does not retain the ID for replay. A Mercure Hub with history
+enabled can use it during native <code>Last-Event-ID</code> recovery.</p>
 <h2 id="naming">Naming</h2>
 <p>Use domain event names as the default:</p>
 <pre class="highlight"><code class="language-text">notification.created

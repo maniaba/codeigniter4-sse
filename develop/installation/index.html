@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Redis-backed Server-Sent Events for CodeIgniter 4.">
+        <meta name="description" content="Redis and Mercure Server-Sent Events for CodeIgniter 4.">
       
       
       
@@ -407,6 +407,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#configure-mercure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configure Mercure
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#install-the-browser-client" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -646,6 +657,34 @@
     
   
     Browser client
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../mercure/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Mercure Hub
   
 
     
@@ -1053,6 +1092,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#configure-mercure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configure Mercure
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#install-the-browser-client" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1117,11 +1167,13 @@
 <li>PHP 8.2 or newer;</li>
 <li>the PHP JSON extension;</li>
 <li>CodeIgniter 4.7 or newer;</li>
-<li>a Redis server reachable from the PHP runtime;</li>
+<li>Redis for the Redis adapter, or a Mercure Hub for the Mercure adapter;</li>
 <li>Composer package discovery enabled in the application.</li>
 </ul>
 <p>The Redis adapter speaks RESP2 over PHP stream sockets. No PhpRedis extension
 or third-party Redis client is needed.</p>
+<p>The Mercure publisher uses CodeIgniter's CURLRequest client and therefore
+requires <code>ext-curl</code>. See <a href="../mercure/">Mercure Hub</a> when using that adapter.</p>
 <h2 id="install-with-composer">Install with Composer</h2>
 <pre class="highlight"><code class="language-bash">composer require maniaba/codeigniter4-sse</code></pre>
 <p>CodeIgniter discovers the package namespace, services, routes, and Spark
@@ -1166,6 +1218,14 @@ php spark sse:health-check</code></pre>
 connection without starting an HTTP stream.</p>
 <p>Redis Pub/Sub channels are not isolated by selected database. Always use a
 distinct <code>channelPrefix</code> for each application and test suite.</p>
+<h2 id="configure-mercure">Configure Mercure</h2>
+<p>Mercure is an alternative to Redis plus the PHP stream endpoint. It keeps
+<code>sse()-&gt;publish(...)</code>, but browsers hold their EventSource connection directly
+against the Hub:</p>
+<pre class="highlight"><code class="language-php">public string $broker = 'mercure';</code></pre>
+<p>Configure Hub URLs, publisher/subscriber keys, topic prefix, and cookie
+attributes before publishing. The complete development and production setup is
+documented under <a href="../mercure/">Mercure Hub</a>.</p>
 <h2 id="install-the-browser-client">Install the browser client</h2>
 <p>Applications with a frontend build can install the browser client from npm:</p>
 <pre class="highlight"><code class="language-bash">npm install @maniaba/codeigniter4-sse-browser</code></pre>

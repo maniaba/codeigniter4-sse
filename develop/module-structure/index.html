@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Redis-backed Server-Sent Events for CodeIgniter 4.">
+        <meta name="description" content="Redis and Mercure Server-Sent Events for CodeIgniter 4.">
       
       
       
@@ -531,6 +531,34 @@
     
   
     Browser client
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../mercure/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Mercure Hub
   
 
     
@@ -1092,6 +1120,7 @@ and browser behavior separate.</p>
 <pre class="highlight"><code class="language-text">src/
 ├── Authorization/
 ├── Broker/
+│   ├── Mercure/
 │   └── Redis/
 ├── Commands/
 ├── Config/
@@ -1117,11 +1146,15 @@ and browser behavior separate.</p>
 <p><code>Broker\Redis</code> contains the Pub/Sub implementation and the RESP socket client.
 Publisher and subscriber connections are separate because Redis subscriptions
 are blocking.</p>
+<p><code>Broker\Mercure</code> contains the HTTP publisher, topic mapper, JWT issuer, and
+Hub configuration. Mercure has no PHP subscriber because browsers subscribe
+directly to the Hub.</p>
 <p><code>InMemoryBroker</code> is for tests and one-process examples. <code>NullBroker</code> is useful
 when applications want the API enabled without delivering live events.</p>
 <h2 id="http-layer">HTTP layer</h2>
 <p><code>HTTP\SseController</code> parses the channel request, resolves the current user,
-authorizes every channel, and starts the stream.</p>
+and authorizes every channel. It either starts the Redis-backed PHP stream or
+returns Mercure bootstrap data and an HttpOnly subscriber cookie.</p>
 <p><code>HTTP\SseResponseFactory</code> selects the output implementation at runtime:</p>
 <pre class="highlight"><code class="language-text">Current package streaming response
     └── LegacySseResponse</code></pre>

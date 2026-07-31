@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Redis-backed Server-Sent Events for CodeIgniter 4.">
+        <meta name="description" content="Redis and Mercure Server-Sent Events for CodeIgniter 4.">
       
       
       
@@ -16,7 +16,7 @@
         <link rel="prev" href="../channels-and-authorization/">
       
       
-        <link rel="next" href="../deployment/">
+        <link rel="next" href="../mercure/">
       
       
         
@@ -609,6 +609,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#mercure-transport" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mercure transport
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#channels" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -711,6 +722,34 @@
   
 </nav>
       
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../mercure/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Mercure Hub
+  
+
+    
+  </span>
+  
+  
+
+      </a>
     </li>
   
 
@@ -1099,6 +1138,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#mercure-transport" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mercure transport
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#channels" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1233,6 +1283,7 @@ browser <code>EventSource</code>.</p>
 <li>safe JSON parsing;</li>
 <li>channel and custom query parameters;</li>
 <li>credential configuration;</li>
+<li>direct Mercure Hub transport with cookie authorization;</li>
 <li>explicit <code>connect()</code> and <code>close()</code>;</li>
 <li>a hook for an application-defined fallback.</li>
 </ul>
@@ -1278,6 +1329,7 @@ published package assets:</p>
         source: 'orders-page',
     },
     withCredentials: true,
+    transport: 'eventsource',
     fallback: null,
 });</code></pre>
 <table>
@@ -1310,6 +1362,11 @@ published package assets:</p>
 <td>Passed to the native <code>EventSource</code> constructor.</td>
 </tr>
 <tr>
+<td><code>transport</code></td>
+<td><code>eventsource</code></td>
+<td>Use <code>eventsource</code> for the PHP stream or <code>mercure</code> for Hub bootstrap.</td>
+</tr>
+<tr>
 <td><code>fallback</code></td>
 <td><code>null</code></td>
 <td>Optional outage/unsupported-browser hook.</td>
@@ -1319,12 +1376,33 @@ published package assets:</p>
 <td>native</td>
 <td>Test seam for supplying an EventSource-compatible object.</td>
 </tr>
+<tr>
+<td><code>fetchFactory</code></td>
+<td>native</td>
+<td>Test seam for the Mercure authorization request.</td>
+</tr>
 </tbody>
 </table>
 <p>Array query values are appended as repeated parameters. <code>null</code> and <code>undefined</code>
 object values are omitted. The <code>channels</code> option wins over an existing
 <code>channels</code> value in the endpoint or query object.</p>
 <p>Do not use query parameters for bearer tokens or secrets.</p>
+<h2 id="mercure-transport">Mercure transport</h2>
+<p>When Mercure is the configured broker, <code>endpoint</code> is the short CodeIgniter
+authorization route rather than the Hub stream itself:</p>
+<pre class="highlight"><code class="language-javascript">const live = new SseClient({
+    endpoint: '/sse',
+    transport: 'mercure',
+    channels: ['users.42'],
+    withCredentials: true,
+});</code></pre>
+<p><code>connect()</code> fetches authorized Hub topics, receives the subscriber JWT through
+an HttpOnly cookie, then opens EventSource directly against the returned Hub
+URL. The authorization request is asynchronous; observe <code>status</code> when the UI
+needs to know when the Hub connection reaches <code>open</code>.</p>
+<p>The client refreshes a time-limited Mercure authorization before it expires.
+Channel changes request a new token scoped to the new topic list. See
+<a href="../mercure/">Mercure Hub</a> for server, cookie, CORS, and reverse-proxy setup.</p>
 <h2 id="channels">Channels</h2>
 <p>Initial channels are passed to the constructor:</p>
 <pre class="highlight"><code class="language-javascript">const live = new SseClient({
@@ -1481,8 +1559,10 @@ fallback when EventSource is unavailable or a connection reports an error:</p>
     url,
     client,
 }</code></pre>
-<p>Reasons are <code>unsupported</code>, <code>construction-error</code>, and <code>connection-error</code>. The
-hook runs once per reconnect cycle; a successful native <code>open</code> resets it.
+<p>Reasons are <code>unsupported</code>, <code>construction-error</code>, <code>connection-error</code>, and
+<code>authorization-error</code>. The last value means the Mercure bootstrap request
+failed or returned invalid data. The hook runs once per reconnect cycle; a
+successful native <code>open</code> resets it.
 Browsers report the server's expected finite-lifetime rotation through the
 same native <code>error</code> event as a network outage, so <code>connection-error</code> alone
 must not immediately start polling. Debounce an outage fallback and cancel it
@@ -1552,13 +1632,13 @@ throws a clear error.</p>
         
         
           
-          <a href="../deployment/" class="md-footer__link md-footer__link--next" aria-label="Next: Streaming and deployment">
+          <a href="../mercure/" class="md-footer__link md-footer__link--next" aria-label="Next: Mercure Hub">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                Streaming and deployment
+                Mercure Hub
               </div>
             </div>
             <div class="md-footer__button md-icon">
