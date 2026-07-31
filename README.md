@@ -187,15 +187,6 @@ not be lost. Redis Streams and `Last-Event-ID` replay are outside the Pub/Sub
 contract. Redis Pub/Sub is not isolated by numbered Redis databases, so every
 application must use its own `channelPrefix`.
 
-## Why there is no external SSE runtime dependency
-
-The package emits the SSE wire format itself. `eliashaeussler/sse` is
-intentionally not a dependency: its GPL-3.0-or-later license is unsuitable for
-this MIT package as a required dependency, and its PSR-7 response path is not a
-real-time emitter.
-
-Keeping the encoder behind the package stream contract keeps response details
-transparent to application code.
 
 ## Documentation
 
