@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Maniaba\CodeIgniterSse\Broker\Redis;
 
-use Maniaba\CodeIgniterSse\Broker\Config\AbstractBrokerConfigFactory;
+use Maniaba\CodeIgniterSse\Broker\AbstractBrokerConfigFactory;
 use Maniaba\CodeIgniterSse\Config\Sse;
 
 final class RedisConfigFactory extends AbstractBrokerConfigFactory

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Maniaba\CodeIgniterSse\Broker;
+namespace Maniaba\CodeIgniterSse\Broker\InMemory;
 
 use Maniaba\CodeIgniterSse\Contracts\BrokerInterface;
 use Maniaba\CodeIgniterSse\Contracts\EventInterface;

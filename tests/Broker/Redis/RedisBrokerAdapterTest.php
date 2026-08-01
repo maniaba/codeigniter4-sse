@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Tests\Broker\Redis;
 
-use Maniaba\CodeIgniterSse\Broker\HealthCheckResult;
 use Maniaba\CodeIgniterSse\Broker\Redis\Exception\RedisConnectionException;
 use Maniaba\CodeIgniterSse\Broker\Redis\RedisBrokerAdapter;
 use Maniaba\CodeIgniterSse\Broker\Redis\RedisBrokerAdapterFactory;
@@ -18,6 +17,7 @@ use Maniaba\CodeIgniterSse\Endpoint\LocalSseSubscriptionEndpoint;
 use Maniaba\CodeIgniterSse\Event\EventFactory;
 use Maniaba\CodeIgniterSse\Event\JsonEventSerializer;
 use Maniaba\CodeIgniterSse\Factory\BrokerBuildContext;
+use Maniaba\CodeIgniterSse\Health\HealthCheckResult;
 use PHPUnit\Framework\TestCase;
 use Support\Tests\Adapter\BasicSubscriptionEndpoint;
 use Support\Tests\Broker\Redis\Fixtures\FakeRedisConnection;

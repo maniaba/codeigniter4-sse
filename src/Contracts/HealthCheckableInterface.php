@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Maniaba\CodeIgniterSse\Contracts;
 
-use Maniaba\CodeIgniterSse\Broker\HealthCheckResult;
+use Maniaba\CodeIgniterSse\Health\HealthCheckResult;
 
 interface HealthCheckableInterface
 {

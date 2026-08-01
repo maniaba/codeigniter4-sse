@@ -7,8 +7,11 @@ and browser behavior separate.
 src/
 ├── Authorization/
 ├── Broker/
-│   ├── Config/
+│   ├── AbstractBrokerConfigFactory.php
+│   ├── InMemory/
+│   ├── Local/
 │   ├── Mercure/
+│   ├── Null/
 │   └── Redis/
 ├── Commands/
 ├── Config/
@@ -16,6 +19,8 @@ src/
 ├── Endpoint/
 ├── Event/
 ├── Exception/
+├── Factory/
+├── Health/
 ├── HTTP/
 ├── Stream/
 └── Support/
@@ -51,8 +56,11 @@ are blocking.
 Hub configuration and subscription endpoint. Mercure has no PHP subscriber
 because browsers subscribe directly to the Hub.
 
-`InMemoryBroker` is for tests and one-process examples. `NullBroker` is useful
-when applications want the API enabled without delivering live events.
+`Broker\InMemory` is for tests and one-process examples. `Broker\Null` is
+useful when applications want the API enabled without delivering live events.
+`Broker\Local` contains the reusable local adapter used by PHP-stream brokers.
+`Broker\AbstractBrokerConfigFactory` is a shared helper for broker-specific
+config factories; it is a file rather than a broker folder.
 
 Custom broker implementations should live in their own folder and enter the
 package through `BrokerAdapterInterface` or `BrokerAdapterFactoryInterface`.

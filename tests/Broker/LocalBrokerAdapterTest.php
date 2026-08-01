@@ -5,12 +5,12 @@ declare(strict_types=1);
 namespace Tests\Broker;
 
 use LogicException;
-use Maniaba\CodeIgniterSse\Broker\InMemoryBroker;
-use Maniaba\CodeIgniterSse\Broker\InMemoryBrokerAdapterFactory;
-use Maniaba\CodeIgniterSse\Broker\LocalBrokerAdapter;
-use Maniaba\CodeIgniterSse\Broker\LocalBrokerAdapterFactory;
-use Maniaba\CodeIgniterSse\Broker\NullBroker;
-use Maniaba\CodeIgniterSse\Broker\NullBrokerAdapterFactory;
+use Maniaba\CodeIgniterSse\Broker\InMemory\InMemoryBroker;
+use Maniaba\CodeIgniterSse\Broker\InMemory\InMemoryBrokerAdapterFactory;
+use Maniaba\CodeIgniterSse\Broker\Local\LocalBrokerAdapter;
+use Maniaba\CodeIgniterSse\Broker\Local\LocalBrokerAdapterFactory;
+use Maniaba\CodeIgniterSse\Broker\Null\NullBroker;
+use Maniaba\CodeIgniterSse\Broker\Null\NullBrokerAdapterFactory;
 use Maniaba\CodeIgniterSse\Config\Sse;
 use Maniaba\CodeIgniterSse\Contracts\SubscriberAwareBrokerAdapterInterface;
 use Maniaba\CodeIgniterSse\Endpoint\LocalSseSubscriptionEndpoint;

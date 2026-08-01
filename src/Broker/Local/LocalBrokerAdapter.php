@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Maniaba\CodeIgniterSse\Broker;
+namespace Maniaba\CodeIgniterSse\Broker\Local;
 
 use Maniaba\CodeIgniterSse\Contracts\PublisherInterface;
 use Maniaba\CodeIgniterSse\Contracts\SubscriberAwareBrokerAdapterInterface;

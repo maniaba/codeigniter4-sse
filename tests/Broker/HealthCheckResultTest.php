@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Tests\Broker;
 
 use InvalidArgumentException;
-use Maniaba\CodeIgniterSse\Broker\HealthCheckResult;
+use Maniaba\CodeIgniterSse\Health\HealthCheckResult;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
 use RuntimeException;

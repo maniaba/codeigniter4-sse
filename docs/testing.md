@@ -55,7 +55,7 @@ Pattern subscription contract, when supported
 `InMemoryBroker` is useful for one-process unit tests:
 
 ```php
-use Maniaba\CodeIgniterSse\Broker\InMemoryBroker;
+use Maniaba\CodeIgniterSse\Broker\InMemory\InMemoryBroker;
 
 $broker = new InMemoryBroker();
 ```

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Maniaba\CodeIgniterSse\Broker;
+namespace Maniaba\CodeIgniterSse\Broker\Local;
 
 use LogicException;
 use Maniaba\CodeIgniterSse\Config\Sse;

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Maniaba\CodeIgniterSse\Broker\Config;
+namespace Maniaba\CodeIgniterSse\Broker;
 
 abstract class AbstractBrokerConfigFactory
 {

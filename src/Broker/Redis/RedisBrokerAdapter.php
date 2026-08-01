@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace Maniaba\CodeIgniterSse\Broker\Redis;
 
-use Maniaba\CodeIgniterSse\Broker\HealthCheckResult;
 use Maniaba\CodeIgniterSse\Contracts\HealthCheckableInterface;
 use Maniaba\CodeIgniterSse\Contracts\PublisherInterface;
 use Maniaba\CodeIgniterSse\Contracts\SubscriberAwareBrokerAdapterInterface;
 use Maniaba\CodeIgniterSse\Contracts\SubscriberInterface;
 use Maniaba\CodeIgniterSse\Contracts\SubscriptionEndpointInterface;
+use Maniaba\CodeIgniterSse\Health\HealthCheckResult;
 
 final readonly class RedisBrokerAdapter implements SubscriberAwareBrokerAdapterInterface, HealthCheckableInterface
 {

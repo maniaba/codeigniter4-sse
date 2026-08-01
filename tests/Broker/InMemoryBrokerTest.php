@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Broker;
 
-use Maniaba\CodeIgniterSse\Broker\InMemoryBroker;
+use Maniaba\CodeIgniterSse\Broker\InMemory\InMemoryBroker;
 use Maniaba\CodeIgniterSse\Event\SseEvent;
 use PHPUnit\Framework\TestCase;
 

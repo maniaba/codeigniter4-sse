@@ -6,10 +6,10 @@ namespace Maniaba\CodeIgniterSse\Commands;
 
 use CodeIgniter\CLI\BaseCommand;
 use CodeIgniter\CLI\CLI;
-use Maniaba\CodeIgniterSse\Broker\HealthCheckResult;
 use Maniaba\CodeIgniterSse\Config\Sse;
 use Maniaba\CodeIgniterSse\Contracts\BrokerAdapterInterface;
 use Maniaba\CodeIgniterSse\Contracts\HealthCheckableInterface;
+use Maniaba\CodeIgniterSse\Health\HealthCheckResult;
 
 final class HealthCheckCommand extends BaseCommand
 {

@@ -135,7 +135,7 @@ For non-trivial options, mirror the built-in Redis and Mercure adapters: put a
 small config object and config factory in the broker folder.
 
 ```php
-use Maniaba\CodeIgniterSse\Broker\Config\AbstractBrokerConfigFactory;
+use Maniaba\CodeIgniterSse\Broker\AbstractBrokerConfigFactory;
 use Maniaba\CodeIgniterSse\Config\Sse;
 
 final class AcmeConfigFactory extends AbstractBrokerConfigFactory
@@ -272,7 +272,7 @@ adapter must also implement `SubscriberAwareBrokerAdapterInterface`. The
 factory can reuse the built-in local endpoint:
 
 ```php
-use Maniaba\CodeIgniterSse\Broker\LocalBrokerAdapter;
+use Maniaba\CodeIgniterSse\Broker\Local\LocalBrokerAdapter;
 use Maniaba\CodeIgniterSse\Config\Sse;
 use Maniaba\CodeIgniterSse\Contracts\BrokerAdapterFactoryInterface;
 use Maniaba\CodeIgniterSse\Contracts\BrokerAdapterInterface;

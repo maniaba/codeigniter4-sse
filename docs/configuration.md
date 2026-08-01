@@ -194,9 +194,9 @@ troubleshooting.
 
 ```php
 use App\Sse\CustomBrokerAdapterFactory;
-use Maniaba\CodeIgniterSse\Broker\InMemoryBrokerAdapterFactory;
+use Maniaba\CodeIgniterSse\Broker\InMemory\InMemoryBrokerAdapterFactory;
 use Maniaba\CodeIgniterSse\Broker\Mercure\MercureBrokerAdapterFactory;
-use Maniaba\CodeIgniterSse\Broker\NullBrokerAdapterFactory;
+use Maniaba\CodeIgniterSse\Broker\Null\NullBrokerAdapterFactory;
 use Maniaba\CodeIgniterSse\Broker\Redis\RedisBrokerAdapterFactory;
 
 final class Sse extends BaseSse
