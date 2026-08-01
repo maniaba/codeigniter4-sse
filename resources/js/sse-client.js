@@ -1,10 +1,17 @@
 /**
  * Small EventSource wrapper for maniaba/codeigniter4-sse.
  *
- * The browser owns reconnect timing. This client does not create a competing
- * retry loop; it reports the reconnecting status while the native EventSource
- * follows the server's `retry` hint.
+ * Broker-specific connection resolution lives in adapters. The client owns
+ * lifecycle, message normalization, channel changes, and EventSource handlers.
  */
+
+import { DirectSseAdapter } from './adapters/direct-sse-adapter.js';
+
+export { DirectSseAdapter } from './adapters/direct-sse-adapter.js';
+export { InMemorySseAdapter } from './adapters/in-memory-sse-adapter.js';
+export { LocalSseAdapter } from './adapters/local-sse-adapter.js';
+export { MercureSseAdapter } from './adapters/mercure-sse-adapter.js';
+export { RedisSseAdapter } from './adapters/redis-sse-adapter.js';
 
 export const SseClientStatus = Object.freeze({
     IDLE: 'idle',
@@ -36,13 +43,12 @@ const RESERVED_NATIVE_EVENTS = new Set(['open', 'error']);
 /**
  * @typedef {Object} SseClientOptions
  * @property {string} endpoint
+ * @property {Object|null} [adapter]
  * @property {string[]} [channels]
  * @property {Object|URLSearchParams} [query]
  * @property {boolean} [withCredentials]
- * @property {'eventsource'|'mercure'} [transport]
  * @property {Function|null} [fallback]
  * @property {Function|null} [eventSourceFactory]
- * @property {Function|null} [fetchFactory]
  */
 
 export class SseClient {
@@ -51,13 +57,12 @@ export class SseClient {
      */
     constructor({
         endpoint,
+        adapter = new DirectSseAdapter(),
         channels = [],
         query = {},
         withCredentials = true,
-        transport = 'eventsource',
         fallback = null,
         eventSourceFactory = null,
-        fetchFactory = null,
     } = {}) {
         const queryIsUrlSearchParams = (
             typeof globalThis !== 'undefined'
@@ -78,14 +83,16 @@ export class SseClient {
             );
         }
 
-        if (fallback !== null && typeof fallback !== 'function') {
-            throw new TypeError('SseClient fallback must be a function or null.');
+        if (
+            adapter === null
+            || typeof adapter !== 'object'
+            || typeof adapter.resolve !== 'function'
+        ) {
+            throw new TypeError('SseClient adapter must provide a resolve() method.');
         }
 
-        if (!['eventsource', 'mercure'].includes(transport)) {
-            throw new TypeError(
-                'SseClient transport must be "eventsource" or "mercure".',
-            );
+        if (fallback !== null && typeof fallback !== 'function') {
+            throw new TypeError('SseClient fallback must be a function or null.');
         }
 
         if (
@@ -97,22 +104,15 @@ export class SseClient {
             );
         }
 
-        if (fetchFactory !== null && typeof fetchFactory !== 'function') {
-            throw new TypeError(
-                'SseClient fetchFactory must be a function or null.',
-            );
-        }
-
         this.endpoint = endpoint.trim();
+        this.adapter = adapter;
         this.channels = this._normalizeChannels(channels);
         this.query = query;
         this.withCredentials = Boolean(withCredentials);
-        this.transport = transport;
 
         this._queryIsUrlSearchParams = queryIsUrlSearchParams;
         this._fallback = fallback;
         this._eventSourceFactory = eventSourceFactory;
-        this._fetchFactory = fetchFactory;
         this._listeners = new Map();
         this._nativeMessageHandlers = new Map();
         this._source = null;
@@ -297,7 +297,8 @@ export class SseClient {
     /**
      * Open the EventSource connection.
      *
-     * Repeated calls while a source is active are idempotent.
+     * Repeated calls while a source or adapter resolution is active are
+     * idempotent.
      *
      * @returns {SseClient}
      */
@@ -306,7 +307,32 @@ export class SseClient {
             return this;
         }
 
-        if (this._source !== null) {
+        this._startConnection();
+
+        return this;
+    }
+
+    /**
+     * Close the active source. Registered handlers remain available for a
+     * later connect() call.
+     *
+     * @returns {SseClient}
+     */
+    close() {
+        this._manuallyClosed = true;
+        this._connectionGeneration++;
+        this._cancelAdapter();
+        this._teardownSource();
+        this._setStatus(SseClientStatus.CLOSED, { reason: 'manual' });
+
+        return this;
+    }
+
+    _startConnection(preserveSource = false) {
+        this._cancelAdapter();
+        this._clearRefreshTimer();
+
+        if (this._source !== null && !preserveSource) {
             this._teardownSource();
         }
 
@@ -335,21 +361,159 @@ export class SseClient {
                 );
             }
 
-            return this;
+            return;
         }
 
-        this._currentUrl = this._buildUrl();
-        this._setStatus(SseClientStatus.CONNECTING);
+        const endpointUrl = this._buildUrl();
+        this._currentUrl = endpointUrl;
+        this._setStatus(preserveSource
+            ? SseClientStatus.RECONNECTING
+            : SseClientStatus.CONNECTING);
 
-        if (this.transport === 'mercure') {
-            this._connectMercure(factory, generation);
+        let resolution;
 
-            return this;
+        try {
+            resolution = this.adapter.resolve({
+                url: endpointUrl,
+                channels: [...this.channels],
+                withCredentials: this.withCredentials,
+                client: this,
+            });
+        } catch (error) {
+            this._handleAdapterError(error, generation, preserveSource, true);
+
+            return;
         }
 
-        this._openSource(factory, this._currentUrl);
+        if (resolution !== null && typeof resolution?.then === 'function') {
+            resolution
+                .then((connection) => {
+                    this._openAdapterConnection(
+                        connection,
+                        factory,
+                        generation,
+                        preserveSource,
+                        false,
+                    );
+                })
+                .catch((error) => {
+                    this._handleAdapterError(
+                        error,
+                        generation,
+                        preserveSource,
+                        false,
+                    );
+                });
 
-        return this;
+            return;
+        }
+
+        this._openAdapterConnection(
+            resolution,
+            factory,
+            generation,
+            preserveSource,
+            true,
+        );
+    }
+
+    /**
+     * @param {*} connection
+     * @param {Function} factory
+     * @param {number} generation
+     * @param {boolean} preserveSource
+     * @param {boolean} throwOnUnhandled
+     */
+    _openAdapterConnection(
+        connection,
+        factory,
+        generation,
+        preserveSource,
+        throwOnUnhandled,
+    ) {
+        if (
+            generation !== this._connectionGeneration
+            || this._manuallyClosed
+        ) {
+            return;
+        }
+
+        let normalized;
+
+        try {
+            normalized = this._normalizeConnection(connection);
+        } catch (error) {
+            this._handleAdapterError(
+                error,
+                generation,
+                preserveSource,
+                throwOnUnhandled,
+            );
+
+            return;
+        }
+
+        if (preserveSource && this._source !== null) {
+            this._teardownSource();
+        }
+
+        this._currentUrl = normalized.url;
+        const opened = this._openSource(
+            factory,
+            normalized.url,
+            throwOnUnhandled,
+        );
+
+        if (opened) {
+            this._scheduleRefresh(normalized.expiresAt, generation);
+        }
+    }
+
+    /**
+     * @param {*} connection
+     * @returns {{url: string, expiresAt: number|null}}
+     */
+    _normalizeConnection(connection) {
+        const url = connection?.url;
+        const expiresAt = connection?.expiresAt ?? null;
+
+        if (
+            connection === null
+            || typeof connection !== 'object'
+            || typeof url !== 'string'
+            || url.trim() === ''
+            || (
+                expiresAt !== null
+                && (
+                    !Number.isSafeInteger(expiresAt)
+                    || expiresAt <= Math.floor(Date.now() / 1000)
+                )
+            )
+        ) {
+            throw new TypeError('The SSE adapter returned invalid connection data.');
+        }
+
+        let streamUrl;
+
+        try {
+            streamUrl = new URL(url);
+        } catch (error) {
+            throw new TypeError(
+                'The SSE adapter returned an invalid stream URL.',
+                { cause: error },
+            );
+        }
+
+        if (streamUrl.protocol !== 'http:' && streamUrl.protocol !== 'https:') {
+            throw new TypeError('The SSE stream URL must use HTTP or HTTPS.');
+        }
+
+        streamUrl.hash = '';
+
+        return {
+            url: streamUrl.toString(),
+            expiresAt,
+        };
     }
 
     /**
@@ -444,21 +608,6 @@ export class SseClient {
     }
 
     /**
-     * Close the active source. Registered handlers remain available for a
-     * later connect() call.
-     *
-     * @returns {SseClient}
-     */
-    close() {
-        this._manuallyClosed = true;
-        this._connectionGeneration++;
-        this._teardownSource();
-        this._setStatus(SseClientStatus.CLOSED, { reason: 'manual' });
-
-        return this;
-    }
-
-    /**
      * @returns {Function|null}
      */
     _resolveEventSourceFactory() {
@@ -477,177 +626,63 @@ export class SseClient {
     }
 
     /**
-     * @returns {Function|null}
-     */
-    _resolveFetchFactory() {
-        if (this._fetchFactory !== null) {
-            return this._fetchFactory;
-        }
-
-        if (
-            typeof globalThis === 'undefined'
-            || typeof globalThis.fetch !== 'function'
-        ) {
-            return null;
-        }
-
-        return globalThis.fetch.bind(globalThis);
-    }
-
-    /**
-     * @param {Function} eventSourceFactory
+     * @param {*} error
      * @param {number} generation
+     * @param {boolean} preserveSource
+     * @param {boolean} throwOnUnhandled
      */
-    _connectMercure(eventSourceFactory, generation) {
-        const fetchFactory = this._resolveFetchFactory();
-
-        if (fetchFactory === null) {
-            this._handleMercureAuthorizationError(
-                new Error('Fetch is required by the Mercure transport.'),
-                generation,
-            );
-
+    _handleAdapterError(error, generation, preserveSource, throwOnUnhandled) {
+        if (
+            generation !== this._connectionGeneration
+            || this._manuallyClosed
+        ) {
             return;
         }
 
-        Promise.resolve(fetchFactory(this._currentUrl, {
-            method: 'GET',
-            headers: {
-                Accept: 'application/json',
-            },
-            credentials: this.withCredentials ? 'include' : 'same-origin',
-            cache: 'no-store',
-        }))
-            .then(async (response) => {
-                if (
-                    response === null
-                    || typeof response !== 'object'
-                    || typeof response.json !== 'function'
-                ) {
-                    throw new TypeError(
-                        'The Mercure authorization endpoint returned an invalid response.',
-                    );
-                }
+        if (preserveSource && this._source !== null) {
+            this._teardownSource();
+        } else {
+            this._source = null;
+        }
 
-                if (response.ok !== true) {
-                    throw new Error(
-                        `Mercure authorization failed with HTTP ${response.status ?? 0}.`,
-                    );
-                }
+        this._setStatus(SseClientStatus.CLOSED, {
+            reason: 'adapter-error',
+            error,
+        });
 
-                return response.json();
-            })
-            .then((bootstrap) => {
-                if (
-                    generation !== this._connectionGeneration
-                    || this._manuallyClosed
-                ) {
-                    return;
-                }
-
-                const authorization = this._normalizeMercureBootstrap(bootstrap);
-                const hubUrl = this._buildMercureHubUrl(
-                    authorization.hub,
-                    authorization.topics,
-                );
-
-                this._currentUrl = hubUrl;
-                const opened = this._openSource(
-                    eventSourceFactory,
-                    hubUrl,
-                    false,
-                );
-
-                if (opened) {
-                    this._scheduleMercureRefresh(
-                        authorization.expiresAt,
-                        generation,
-                    );
-                }
-            })
-            .catch((error) => {
-                this._handleMercureAuthorizationError(error, generation);
-            });
-    }
-
-    /**
-     * @param {*} bootstrap
-     * @returns {{hub: string, topics: string[], expiresAt: number|null}}
-     */
-    _normalizeMercureBootstrap(bootstrap) {
         if (
-            bootstrap === null
-            || typeof bootstrap !== 'object'
-            || bootstrap.transport !== 'mercure'
-            || typeof bootstrap.hub !== 'string'
-            || bootstrap.hub.trim() === ''
-            || !Array.isArray(bootstrap.topics)
-            || bootstrap.topics.length === 0
-            || bootstrap.topics.some((topic) => (
-                typeof topic !== 'string' || topic.trim() === ''
-            ))
-            || (
-                bootstrap.expiresAt !== null
-                && bootstrap.expiresAt !== undefined
-                && !Number.isInteger(bootstrap.expiresAt)
-            )
+            generation !== this._connectionGeneration
+            || this._manuallyClosed
         ) {
-            throw new TypeError(
-                'The Mercure authorization endpoint returned invalid bootstrap data.',
-            );
+            return;
         }
 
-        return {
-            hub: bootstrap.hub.trim(),
-            topics: [...new Set(
-                bootstrap.topics.map((topic) => topic.trim()),
-            )],
-            expiresAt: Number.isInteger(bootstrap.expiresAt)
-                ? bootstrap.expiresAt
-                : null,
-        };
-    }
+        const handled = this._invokeFallback('adapter-error', null, error);
 
-    /**
-     * @param {string} hub
-     * @param {string[]} topics
-     * @returns {string}
-     */
-    _buildMercureHubUrl(hub, topics) {
-        let url;
-
-        try {
-            url = new URL(hub);
-        } catch (error) {
-            throw new TypeError(
-                'The Mercure Hub URL must be absolute.',
-                { cause: error },
-            );
+        if (!handled && throwOnUnhandled) {
+            throw error;
         }
 
-        url.searchParams.delete('topic');
-
-        for (const topic of topics) {
-            url.searchParams.append('topic', topic);
+        if (!handled) {
+            this._reportHandlerError(error);
         }
-
-        url.hash = '';
-
-        return url.toString();
     }
 
     /**
      * @param {number|null} expiresAt
      * @param {number} generation
      */
-    _scheduleMercureRefresh(expiresAt, generation) {
+    _scheduleRefresh(expiresAt, generation) {
         this._clearRefreshTimer();
 
         if (expiresAt === null) {
             return;
         }
 
-        const delay = Math.max(1000, (expiresAt * 1000) - Date.now() - 30000);
+        const delay = Math.min(
+            2_147_483_647,
+            Math.max(1000, (expiresAt * 1000) - Date.now() - 30000),
+        );
 
         this._refreshTimer = setTimeout(() => {
             if (
@@ -657,40 +692,10 @@ export class SseClient {
                 return;
             }
 
-            this._teardownSource();
-            this.connect();
+            this._startConnection(true);
         }, delay);
 
         this._refreshTimer?.unref?.();
-    }
-
-    /**
-     * @param {*} error
-     * @param {number} generation
-     */
-    _handleMercureAuthorizationError(error, generation) {
-        if (
-            generation !== this._connectionGeneration
-            || this._manuallyClosed
-        ) {
-            return;
-        }
-
-        this._source = null;
-        this._setStatus(SseClientStatus.CLOSED, {
-            reason: 'authorization-error',
-            error,
-        });
-
-        const handled = this._invokeFallback(
-            'authorization-error',
-            null,
-            error,
-        );
-
-        if (!handled) {
-            this._reportHandlerError(error);
-        }
     }
 
     /**
@@ -700,10 +705,7 @@ export class SseClient {
         return (
             (
                 this._source !== null
-                || (
-                    this.transport === 'mercure'
-                    && this._status === SseClientStatus.CONNECTING
-                )
+                || this._status === SseClientStatus.CONNECTING
             )
             && this._status !== SseClientStatus.CLOSED
             && this._status !== SseClientStatus.UNSUPPORTED
@@ -716,6 +718,7 @@ export class SseClient {
         }
 
         this._connectionGeneration++;
+        this._cancelAdapter();
         this._teardownSource();
 
         if (this.channels.length === 0) {
@@ -726,7 +729,7 @@ export class SseClient {
             return;
         }
 
-        this.connect();
+        this._startConnection();
     }
 
     /**
@@ -1059,6 +1062,12 @@ export class SseClient {
 
         clearTimeout(this._refreshTimer);
         this._refreshTimer = null;
+    }
+
+    _cancelAdapter() {
+        if (typeof this.adapter.cancel === 'function') {
+            this.adapter.cancel();
+        }
     }
 
     /**

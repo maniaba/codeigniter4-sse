@@ -7,8 +7,9 @@ namespace Maniaba\CodeIgniterSse\Commands;
 use CodeIgniter\CLI\BaseCommand;
 use CodeIgniter\CLI\CLI;
 use Maniaba\CodeIgniterSse\Config\Sse;
-use Maniaba\CodeIgniterSse\Factory\HealthCheckerFactory;
-use Maniaba\CodeIgniterSse\Factory\MercureConfigFactory;
+use Maniaba\CodeIgniterSse\Contracts\BrokerAdapterInterface;
+use Maniaba\CodeIgniterSse\Contracts\HealthCheckableInterface;
+use Maniaba\CodeIgniterSse\Health\HealthCheckResult;
 
 final class HealthCheckCommand extends BaseCommand
 {
@@ -22,56 +23,37 @@ final class HealthCheckCommand extends BaseCommand
      */
     public function run(array $params): int
     {
-        $config = Sse::discover();
+        $config  = Sse::discover();
+        $adapter = service('sseBrokerAdapter', $config, false);
 
-        if ($config->streamTransport() === 'mercure') {
-            $mercure = (new MercureConfigFactory())->create($config);
+        if (! $adapter instanceof BrokerAdapterInterface) {
+            CLI::error('The sseBrokerAdapter service must implement ' . BrokerAdapterInterface::class . '.');
 
-            if (! function_exists('curl_version')) {
-                CLI::error('The Mercure publisher requires the PHP cURL extension.');
+            return EXIT_ERROR;
+        }
 
-                return EXIT_ERROR;
-            }
-
+        if (! $adapter instanceof HealthCheckableInterface) {
             CLI::write(
-                sprintf(
-                    '[OK] Mercure SSE configuration is valid for %s.',
-                    $mercure->hubUrl,
-                ),
-                'green',
-            );
-            CLI::write(
-                '[INFO] Hub readiness is exposed through the Mercure Caddy admin API and is not queried by this command.',
+                sprintf('[SKIPPED] The "%s" SSE broker does not expose a health check.', $config->broker),
                 'yellow',
             );
 
             return EXIT_SUCCESS;
         }
 
-        if (strtolower($config->broker) !== 'redis') {
-            CLI::write(
-                sprintf('[OK] The "%s" SSE broker does not require a network health check.', $config->broker),
-                'green',
-            );
+        return $this->render($adapter->healthCheck());
+    }
 
-            return EXIT_SUCCESS;
-        }
+    private function render(HealthCheckResult $result): int
+    {
+        if ($result->status === HealthCheckResult::FAILED) {
+            CLI::error('[FAILED] ' . $result->summary);
 
-        $redis   = $config->redis();
-        $checker = (new HealthCheckerFactory())->create($config);
+            foreach ($result->details as $detail) {
+                CLI::error('[INFO] ' . $detail);
+            }
 
-        if (! $checker->check()) {
-            CLI::error(
-                sprintf(
-                    'Redis SSE health check failed for %s://%s:%d (database %d).',
-                    $redis['scheme'],
-                    $redis['host'],
-                    $redis['port'],
-                    $redis['database'],
-                ),
-            );
-
-            $error = $checker->lastError();
+            $error = $result->error;
 
             while ($error !== null) {
                 CLI::error($error::class . ': ' . $error->getMessage());
@@ -81,15 +63,14 @@ final class HealthCheckCommand extends BaseCommand
             return EXIT_ERROR;
         }
 
-        CLI::write(
-            sprintf(
-                '[OK] Redis SSE broker is reachable at %s://%s:%d.',
-                $redis['scheme'],
-                $redis['host'],
-                $redis['port'],
-            ),
-            'green',
-        );
+        $color = $result->status === HealthCheckResult::SKIPPED ? 'yellow' : 'green';
+        $label = $result->status === HealthCheckResult::SKIPPED ? 'SKIPPED' : 'OK';
+
+        CLI::write(sprintf('[%s] %s', $label, $result->summary), $color);
+
+        foreach ($result->details as $detail) {
+            CLI::write('[INFO] ' . $detail, 'yellow');
+        }
 
         return EXIT_SUCCESS;
     }

@@ -76,10 +76,14 @@ Accept: text/event-stream
 Use the included framework-independent ES module:
 
 ```javascript
-import { SseClient } from '/vendor/codeigniter4-sse/sse-client.js';
+import {
+    RedisSseAdapter,
+    SseClient,
+} from '/vendor/codeigniter4-sse/sse-client.js';
 
 const live = new SseClient({
     endpoint: '/sse',
+    adapter: new RedisSseAdapter(),
     channels: [`users.${currentUserId}`],
     withCredentials: true,
 });
@@ -95,6 +99,9 @@ live.on('status', ({ status }) => {
 
 live.connect();
 ```
+
+`SseClient` opens EventSource through the selected frontend adapter. When the
+server broker changes, update the adapter class in the browser client.
 
 The browser's native `EventSource` automatically reconnects when a connection
 ends. With Redis, the package intentionally limits the PHP stream lifetime.
@@ -193,12 +200,20 @@ authorization request that sets a topic-scoped HttpOnly JWT cookie, and the
 browser client connects directly to the Hub:
 
 ```javascript
+import {
+    MercureSseAdapter,
+    SseClient,
+} from '/vendor/codeigniter4-sse/sse-client.js';
+
 const live = new SseClient({
     endpoint: '/sse',
-    transport: 'mercure',
+    adapter: new MercureSseAdapter(),
     channels: [`users.${currentUserId}`],
 });
 ```
+
+Use the frontend adapter that matches the configured broker. Mercure's adapter
+authorizes through the package route and then opens EventSource on the Hub.
 
 Mercure can replay retained Hub history through `Last-Event-ID`. See
 [Mercure Hub](docs/mercure.md) for Docker, signing keys, authorization,

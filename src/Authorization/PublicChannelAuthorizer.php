@@ -6,7 +6,6 @@ namespace Maniaba\CodeIgniterSse\Authorization;
 
 use Maniaba\CodeIgniterSse\Contracts\ChannelAuthorizerInterface;
 use Maniaba\CodeIgniterSse\Support\Channel;
-use Maniaba\CodeIgniterSse\Support\ChannelPattern;
 
 /**
  * Secure default: anonymous access is allowed only to public.* channels.
@@ -17,7 +16,7 @@ final class PublicChannelAuthorizer implements ChannelAuthorizerInterface
     {
         $channel = strpbrk($channel, '*?[') === false
             ? Channel::from($channel)->value()
-            : (new ChannelPattern($channel))->value();
+            : trim($channel);
 
         return str_starts_with($channel, 'public.');
     }

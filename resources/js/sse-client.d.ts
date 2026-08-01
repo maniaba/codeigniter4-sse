@@ -29,7 +29,71 @@ export type SseQuery =
 
 export type SseChannelInput = string | readonly string[];
 
-export type SseTransport = 'eventsource' | 'mercure';
+export interface SseAdapterContext {
+    readonly url: string;
+    readonly channels: readonly string[];
+    readonly withCredentials: boolean;
+    readonly client: SseClient;
+}
+
+export interface SseAdapterConnection {
+    readonly url: string;
+    readonly expiresAt?: number | null;
+}
+
+export interface SseAdapter {
+    resolve(
+        context: SseAdapterContext,
+    ): SseAdapterConnection | PromiseLike<SseAdapterConnection>;
+    cancel?(): void;
+}
+
+export interface MercureSseAdapterOptions {
+    /**
+     * Optional Fetch-compatible factory, mainly useful for tests.
+     */
+    readonly fetchFactory?: SseFetchFactory | null;
+
+    /**
+     * Authorization request timeout in milliseconds.
+     */
+    readonly timeout?: number;
+}
+
+/**
+ * Direct EventSource adapter for PHP-streamed brokers.
+ */
+export declare class DirectSseAdapter implements SseAdapter {
+    resolve(context: SseAdapterContext): SseAdapterConnection;
+    cancel(): void;
+}
+
+/**
+ * Semantic alias for the package local broker.
+ */
+export declare class LocalSseAdapter extends DirectSseAdapter {
+}
+
+/**
+ * Semantic alias for Redis-backed PHP streaming.
+ */
+export declare class RedisSseAdapter extends DirectSseAdapter {
+}
+
+/**
+ * Semantic alias for the in-memory PHP stream broker.
+ */
+export declare class InMemorySseAdapter extends DirectSseAdapter {
+}
+
+/**
+ * Resolves the package Mercure authorization endpoint to a Hub EventSource URL.
+ */
+export declare class MercureSseAdapter implements SseAdapter {
+    constructor(options?: MercureSseAdapterOptions);
+    resolve(context: SseAdapterContext): Promise<SseAdapterConnection>;
+    cancel(): void;
+}
 
 /**
  * Parsed message delivered to named event handlers and global message handlers.
@@ -106,7 +170,7 @@ export type SseFallbackReason =
     | 'unsupported'
     | 'construction-error'
     | 'connection-error'
-    | 'authorization-error';
+    | 'adapter-error';
 
 export interface SseFallbackContext {
     readonly reason: SseFallbackReason;
@@ -148,6 +212,11 @@ export interface SseClientOptions {
     readonly endpoint: string;
 
     /**
+     * Broker adapter. Defaults to DirectSseAdapter.
+     */
+    readonly adapter?: SseAdapter | null;
+
+    /**
      * Logical channel names sent as the channels query parameter.
      */
     readonly channels?: readonly string[];
@@ -163,13 +232,7 @@ export interface SseClientOptions {
     readonly withCredentials?: boolean;
 
     /**
-     * `eventsource` connects directly to endpoint. `mercure` first calls
-     * endpoint for authorization and then connects directly to the returned Hub.
-     */
-    readonly transport?: SseTransport;
-
-    /**
-     * Optional application fallback for unsupported browsers or connection errors.
+     * Optional application fallback for adapter, connection, or browser errors.
      */
     readonly fallback?: SseFallback | null;
 
@@ -177,21 +240,16 @@ export interface SseClientOptions {
      * Optional EventSource factory, mainly useful for tests.
      */
     readonly eventSourceFactory?: SseEventSourceFactory | null;
-
-    /**
-     * Optional Fetch-compatible factory used by the Mercure authorization step.
-     */
-    readonly fetchFactory?: SseFetchFactory | null;
 }
 
 export declare class SseClient {
     constructor(options?: SseClientOptions);
 
     readonly endpoint: string;
+    readonly adapter: SseAdapter;
     readonly channels: string[];
     readonly query: SseQuery;
     readonly withCredentials: boolean;
-    readonly transport: SseTransport;
 
     /**
      * Current lifecycle status.
@@ -270,9 +328,8 @@ export declare class SseClient {
     unsubscribe(channels: SseChannelInput): this;
 
     /**
-     * Open the EventSource connection. With Mercure, authorization completes
-     * asynchronously before EventSource is opened. Repeated calls are idempotent
-     * while active.
+     * Open the EventSource connection. Repeated calls are idempotent while
+     * active.
      */
     connect(): this;
 

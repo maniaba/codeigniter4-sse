@@ -9,29 +9,64 @@ use CodeIgniter\HTTP\RequestInterface;
 use CodeIgniter\HTTP\ResponseInterface;
 use CodeIgniter\Superglobals;
 use CodeIgniter\Test\CIUnitTestCase;
+use Config\Services as FrameworkServices;
+use Maniaba\CodeIgniterSse\Broker\Mercure\MercureSubscriptionEndpoint;
 use Maniaba\CodeIgniterSse\Config\Sse;
+use Maniaba\CodeIgniterSse\Contracts\BrokerAdapterInterface;
+use Maniaba\CodeIgniterSse\Endpoint\LocalSseSubscriptionEndpoint;
 use Maniaba\CodeIgniterSse\Event\EventFactory;
-use Maniaba\CodeIgniterSse\Event\JsonEventSerializer;
 use Maniaba\CodeIgniterSse\HTTP\SseController;
 use Maniaba\CodeIgniterSse\HTTP\SseResponseFactory;
 use Maniaba\CodeIgniterSse\Stream\SseConnectionManager;
 use Psr\Log\LoggerInterface;
-use Tests\Support\FixedEventIdGenerator;
-use Tests\Support\RecordingSubscriber;
+use Support\Tests\Adapter\BasicBrokerAdapter;
+use Support\Tests\FixedEventIdGenerator;
+use Support\Tests\RecordingSubscriber;
 
 /**
  * @internal
  */
 final class SseControllerTest extends CIUnitTestCase
 {
-    public function testRequiresEventStreamAcceptHeader(): void
+    public function testRejectsUnsupportedAcceptHeader(): void
     {
-        $result = $this->controllerResponse(null, 'application/json');
+        $result = $this->controllerResponse(null, 'text/html');
         $body   = $result->getBody();
 
         $this->assertSame(406, $result->getStatusCode());
         $this->assertIsString($body);
         $this->assertStringContainsString('not_acceptable', $body);
+    }
+
+    public function testLocalRouteRejectsJsonAcceptHeader(): void
+    {
+        $manager = new SseConnectionManager(
+            new RecordingSubscriber(),
+            new EventFactory(new FixedEventIdGenerator('connected-id')),
+        );
+        $superglobals = service('superglobals');
+        $this->assertInstanceOf(Superglobals::class, $superglobals);
+        $previousGet = $superglobals->getGetArray();
+        $superglobals->setGetArray(['channels' => 'public.news']);
+
+        try {
+            $result = $this->controllerResponse(
+                null,
+                'application/json',
+                new BasicBrokerAdapter(
+                    endpoint: new LocalSseSubscriptionEndpoint($manager),
+                ),
+            );
+            $body = $result->getBody();
+
+            $this->assertSame(406, $result->getStatusCode());
+            $this->assertStringStartsWith('application/json', $result->getHeaderLine('Content-Type'));
+            $this->assertSame('Accept', $result->getHeaderLine('Vary'));
+            $this->assertIsString($body);
+            $this->assertStringContainsString('not_acceptable', $body);
+        } finally {
+            $superglobals->setGetArray($previousGet);
+        }
     }
 
     public function testRejectsUnknownOriginBeforeContentNegotiation(): void
@@ -48,7 +83,6 @@ final class SseControllerTest extends CIUnitTestCase
     {
         $manager = new SseConnectionManager(
             new RecordingSubscriber(),
-            new JsonEventSerializer(),
             new EventFactory(new FixedEventIdGenerator('connected-id')),
         );
         $factoryResponse = single_service('response');
@@ -63,8 +97,12 @@ final class SseControllerTest extends CIUnitTestCase
             $result = $this->controllerResponse(
                 null,
                 'text/event-stream',
-                $manager,
-                new SseResponseFactory($factoryResponse),
+                new BasicBrokerAdapter(
+                    endpoint: new LocalSseSubscriptionEndpoint(
+                        $manager,
+                        responseFactory: new SseResponseFactory($factoryResponse),
+                    ),
+                ),
             );
 
             ob_start();
@@ -119,7 +157,12 @@ final class SseControllerTest extends CIUnitTestCase
         $request->removeHeader('Accept');
 
         try {
-            $controller = new SseController(config: $config);
+            FrameworkServices::injectMock(
+                'sseBrokerAdapter',
+                new BasicBrokerAdapter(endpoint: new MercureSubscriptionEndpoint($config)),
+            );
+
+            $controller = new SseController();
             $controller->initController($request, $response, $logger);
             $result = $controller->stream();
             $body   = $result->getBody();
@@ -134,9 +177,15 @@ final class SseControllerTest extends CIUnitTestCase
             );
             $this->assertIsString($body);
             $decoded = json_decode($body, true, 512, JSON_THROW_ON_ERROR);
-            $this->assertSame('mercure', $decoded['transport']);
             $this->assertSame(
-                ['urn:example:sse:public.news', 'urn:example:sse:public.status'],
+                'https://example.test/.well-known/mercure',
+                $decoded['hub'],
+            );
+            $this->assertSame(
+                [
+                    'urn:example:sse:public.news',
+                    'urn:example:sse:public.status',
+                ],
                 $decoded['topics'],
             );
             $this->assertIsInt($decoded['expiresAt']);
@@ -148,14 +197,14 @@ final class SseControllerTest extends CIUnitTestCase
             $this->assertSame('Lax', $cookie->getSameSite());
         } finally {
             $superglobals->setGetArray($previousGet);
+            FrameworkServices::resetSingle('sseBrokerAdapter');
         }
     }
 
     private function controllerResponse(
         ?string $origin,
         ?string $accept,
-        ?SseConnectionManager $manager = null,
-        ?SseResponseFactory $responseFactory = null,
+        ?BrokerAdapterInterface $adapter = null,
     ): ResponseInterface {
         $request  = single_service('request');
         $response = single_service('response');
@@ -176,9 +225,19 @@ final class SseControllerTest extends CIUnitTestCase
             $request->setHeader('Accept', $accept);
         }
 
-        $controller = new SseController($manager, $responseFactory);
-        $controller->initController($request, $response, $logger);
+        if ($adapter !== null) {
+            FrameworkServices::injectMock('sseBrokerAdapter', $adapter);
+        }
 
-        return $controller->stream();
+        try {
+            $controller = new SseController();
+            $controller->initController($request, $response, $logger);
+
+            return $controller->stream();
+        } finally {
+            if ($adapter !== null) {
+                FrameworkServices::resetSingle('sseBrokerAdapter');
+            }
+        }
     }
 }

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Broker;
 
-use Maniaba\CodeIgniterSse\Broker\InMemoryBroker;
+use Maniaba\CodeIgniterSse\Broker\InMemory\InMemoryBroker;
 use Maniaba\CodeIgniterSse\Event\SseEvent;
 use PHPUnit\Framework\TestCase;
 
@@ -49,5 +49,33 @@ final class InMemoryBrokerTest extends TestCase
         );
 
         $this->assertSame(1, $idle);
+    }
+
+    public function testOpenSubscriptionReceivesMessagesPublishedAfterItStarts(): void
+    {
+        $broker    = new InMemoryBroker();
+        $received  = [];
+        $delivered = false;
+        $idle      = 0;
+
+        $broker->subscribe(
+            ['public.news'],
+            static function ($message) use (&$received, &$delivered): void {
+                $received[] = $message->id();
+                $delivered  = true;
+            },
+            static function () use (&$delivered): bool {
+                return $delivered;
+            },
+            static function () use ($broker, &$idle): void {
+                $idle++;
+
+                if ($idle === 1) {
+                    $broker->publish('public.news', new SseEvent('news.created', [], 'later'));
+                }
+            },
+        );
+
+        $this->assertSame(['later'], $received);
     }
 }

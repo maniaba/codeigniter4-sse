@@ -54,6 +54,23 @@ final class InstallCommand extends BaseCommand
             )) {
                 $failed = true;
             }
+
+            $adapterFiles = glob($root . '/resources/js/adapters/*.{js,d.ts}', GLOB_BRACE);
+
+            if ($adapterFiles === false) {
+                CLI::error('Unable to read browser adapter resources.');
+                $failed = true;
+            } else {
+                foreach ($adapterFiles as $adapterFile) {
+                    if (! $this->publish(
+                        $adapterFile,
+                        FCPATH . 'vendor/codeigniter4-sse/adapters/' . basename($adapterFile),
+                        $force,
+                    )) {
+                        $failed = true;
+                    }
+                }
+            }
         }
 
         return $failed ? EXIT_ERROR : EXIT_SUCCESS;

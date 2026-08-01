@@ -8,13 +8,13 @@ use DateTimeImmutable;
 use Maniaba\CodeIgniterSse\Contracts\SseOutputInterface;
 use Maniaba\CodeIgniterSse\Event\BrokerMessage;
 use Maniaba\CodeIgniterSse\Event\EventFactory;
-use Maniaba\CodeIgniterSse\Event\JsonEventSerializer;
 use Maniaba\CodeIgniterSse\Event\SseEvent;
 use Maniaba\CodeIgniterSse\Stream\SseConnectionManager;
+use Maniaba\CodeIgniterSse\Stream\SseConnectionOptions;
 use PHPUnit\Framework\TestCase;
-use Tests\Support\FixedEventIdGenerator;
-use Tests\Support\RecordingSseOutput;
-use Tests\Support\RecordingSubscriber;
+use Support\Tests\FixedEventIdGenerator;
+use Support\Tests\RecordingSseOutput;
+use Support\Tests\RecordingSubscriber;
 
 /**
  * @internal
@@ -36,7 +36,6 @@ final class SseConnectionManagerTest extends TestCase
         $output     = new RecordingSseOutput();
         $manager    = new SseConnectionManager(
             $subscriber,
-            new JsonEventSerializer(),
             new EventFactory(new FixedEventIdGenerator('connected-event')),
         );
 
@@ -94,9 +93,8 @@ final class SseConnectionManagerTest extends TestCase
         };
         $manager = new SseConnectionManager(
             $subscriber,
-            new JsonEventSerializer(),
             new EventFactory(new FixedEventIdGenerator()),
-            emitConnectedEvent: false,
+            new SseConnectionOptions(emitConnectedEvent: false),
         );
 
         $manager->stream($output, ['public.news']);
@@ -111,7 +109,6 @@ final class SseConnectionManagerTest extends TestCase
         $output->connected = false;
         $manager           = new SseConnectionManager(
             $subscriber,
-            new JsonEventSerializer(),
             new EventFactory(new FixedEventIdGenerator()),
         );
 

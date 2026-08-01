@@ -5,13 +5,13 @@ declare(strict_types=1);
 namespace Tests\Broker\Mercure;
 
 use Maniaba\CodeIgniterSse\Broker\Mercure\Exception\MercurePublishException;
+use Maniaba\CodeIgniterSse\Broker\Mercure\MercureConfigFactory;
 use Maniaba\CodeIgniterSse\Broker\Mercure\MercureHttpClientInterface;
 use Maniaba\CodeIgniterSse\Broker\Mercure\MercureHttpResponse;
 use Maniaba\CodeIgniterSse\Broker\Mercure\MercurePublisher;
 use Maniaba\CodeIgniterSse\Config\Sse;
 use Maniaba\CodeIgniterSse\Event\JsonEventSerializer;
 use Maniaba\CodeIgniterSse\Event\SseEvent;
-use Maniaba\CodeIgniterSse\Factory\MercureConfigFactory;
 use PHPUnit\Framework\TestCase;
 
 /**

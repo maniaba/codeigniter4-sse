@@ -14,16 +14,16 @@ on:
   workflow_dispatch:
     inputs:
       docs_version:
-        description: 'Docs version to publish, e.g. 1.1.0'
-        required: true
+        description: 'Docs version to publish, e.g. 1.1.0. Leave blank to publish develop.'
+        required: false
         type: string
       source_ref:
         description: 'Git ref to build from. Defaults to docs_version prefixed with v when available.'
         required: false
         type: string
       update_latest:
-        description: 'Also move latest alias/default redirect to this version'
-        required: true
+        description: 'Also move latest alias/default redirect to this version. Ignored when docs_version is blank.'
+        required: false
         default: false
         type: boolean
 
@@ -65,7 +65,7 @@ jobs:
           if [[ "$GITHUB_EVENT_NAME" == "push" ]]; then
             echo "checkout_ref=$GITHUB_SHA" >> "$GITHUB_OUTPUT"
             echo "docs_version=develop" >> "$GITHUB_OUTPUT"
-            echo "update_latest=false" >> "$GITHUB_OUTPUT"
+            echo "update_latest=auto" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
@@ -88,6 +88,18 @@ jobs:
               echo "update_latest=true" >> "$GITHUB_OUTPUT"
             fi
 
+            exit 0
+          fi
+
+          if [[ -z "$INPUT_DOCS_VERSION" ]]; then
+            source_ref="$INPUT_SOURCE_REF"
+            if [[ -z "$source_ref" ]]; then
+              source_ref="develop"
+            fi
+
+            echo "checkout_ref=$source_ref" >> "$GITHUB_OUTPUT"
+            echo "docs_version=develop" >> "$GITHUB_OUTPUT"
+            echo "update_latest=auto" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
@@ -141,7 +153,36 @@ jobs:
         run: |
           set -euo pipefail
 
-          if [[ "$UPDATE_LATEST" == "true" ]]; then
+          should_update_latest="$UPDATE_LATEST"
+
+          if [[ "$should_update_latest" == "auto" ]]; then
+            versions_file="$RUNNER_TEMP/docs-versions.json"
+
+            if git show origin/gh-pages:versions.json > "$versions_file" 2>/dev/null \
+              && python3 - "$versions_file" <<'PY'
+          import json
+          import re
+          import sys
+
+          with open(sys.argv[1], encoding='utf-8') as handle:
+              versions = json.load(handle)
+
+          stable_version = re.compile(r'^[0-9]+\.[0-9]+\.[0-9]+$')
+
+          for item in versions:
+              if stable_version.fullmatch(str(item.get('version', ''))):
+                  sys.exit(0)
+
+          sys.exit(1)
+          PY
+            then
+              should_update_latest=false
+            else
+              should_update_latest=true
+            fi
+          fi
+
+          if [[ "$should_update_latest" == "true" ]]; then
             mike deploy --push --update-aliases "$DOCS_VERSION" latest
             mike set-default --push latest
           else

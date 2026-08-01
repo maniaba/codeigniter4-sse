@@ -34,11 +34,6 @@ final class RedisHealthChecker
         }
     }
 
-    public function isHealthy(): bool
-    {
-        return $this->check();
-    }
-
     public function lastError(): ?Throwable
     {
         return $this->lastError;

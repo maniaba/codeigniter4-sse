@@ -8,8 +8,8 @@ use CodeIgniter\Config\Services as FrameworkServices;
 use CodeIgniter\Test\CIUnitTestCase;
 use Maniaba\CodeIgniterSse\Event\EventFactory;
 use Maniaba\CodeIgniterSse\Sse;
-use Tests\Support\FixedEventIdGenerator;
-use Tests\Support\RecordingPublisher;
+use Support\Tests\FixedEventIdGenerator;
+use Support\Tests\RecordingPublisher;
 
 /**
  * @internal

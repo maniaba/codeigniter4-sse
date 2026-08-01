@@ -9,16 +9,14 @@ use InvalidArgumentException;
 use LogicException;
 use Maniaba\CodeIgniterSse\Authorization\NullUserResolver;
 use Maniaba\CodeIgniterSse\Authorization\PublicChannelAuthorizer;
-use Maniaba\CodeIgniterSse\Broker\InMemoryBroker;
-use Maniaba\CodeIgniterSse\Broker\Mercure\MercurePublisher;
-use Maniaba\CodeIgniterSse\Broker\NullBroker;
-use Maniaba\CodeIgniterSse\Broker\Redis\RedisPublisher;
-use Maniaba\CodeIgniterSse\Broker\Redis\RedisSubscriber;
+use Maniaba\CodeIgniterSse\Broker\InMemory\InMemoryBrokerAdapterFactory;
+use Maniaba\CodeIgniterSse\Broker\Mercure\MercureBrokerAdapterFactory;
+use Maniaba\CodeIgniterSse\Broker\Null\NullBrokerAdapterFactory;
+use Maniaba\CodeIgniterSse\Broker\Redis\RedisBrokerAdapterFactory;
+use Maniaba\CodeIgniterSse\Contracts\BrokerAdapterFactoryInterface;
+use Maniaba\CodeIgniterSse\Contracts\BrokerAdapterInterface;
 use Maniaba\CodeIgniterSse\Contracts\ChannelAuthorizerInterface;
-use Maniaba\CodeIgniterSse\Contracts\PublisherInterface;
-use Maniaba\CodeIgniterSse\Contracts\SubscriberInterface;
 use Maniaba\CodeIgniterSse\Contracts\UserResolverInterface;
-use Maniaba\CodeIgniterSse\Factory\MercureConfigFactory;
 use Maniaba\CodeIgniterSse\HTTP\SseController;
 
 class Sse extends BaseConfig
@@ -43,6 +41,7 @@ class Sse extends BaseConfig
         'maxPayloadBytes'            => 1_048_576,
         'maxResponseElements'        => 1024,
         'maxResponseDepth'           => 8,
+        'allowPatternSubscriptions'  => false,
         'clientName'                 => null,
         'streamContext'              => [],
     ];
@@ -119,41 +118,35 @@ class Sse extends BaseConfig
 
     /**
      * @var array<string, array{
-     *     publisher: callable(self): PublisherInterface|class-string<PublisherInterface>,
-     *     subscriber?: callable(self): SubscriberInterface|class-string<SubscriberInterface>,
-     *     transport?: 'mercure'|'php',
+     *     factory?: BrokerAdapterFactoryInterface|callable(): BrokerAdapterFactoryInterface|class-string<BrokerAdapterFactoryInterface>,
+     *     adapter?: BrokerAdapterInterface|callable(self, mixed): BrokerAdapterInterface|class-string<BrokerAdapterInterface>,
      *     shared?: bool
      * }>
      */
     public array $brokers = [
         'redis' => [
-            'publisher'  => RedisPublisher::class,
-            'subscriber' => RedisSubscriber::class,
+            'factory' => RedisBrokerAdapterFactory::class,
         ],
         'mercure' => [
-            'publisher' => MercurePublisher::class,
-            'transport' => 'mercure',
+            'factory' => MercureBrokerAdapterFactory::class,
         ],
         'memory' => [
-            'publisher'  => InMemoryBroker::class,
-            'subscriber' => InMemoryBroker::class,
-            'shared'     => true,
+            'factory' => InMemoryBrokerAdapterFactory::class,
+            'shared'  => true,
         ],
         'null' => [
-            'publisher'  => NullBroker::class,
-            'subscriber' => NullBroker::class,
-            'shared'     => true,
+            'factory' => NullBrokerAdapterFactory::class,
+            'shared'  => true,
         ],
     ];
 
-    public string $channelPrefix           = 'app:sse:';
-    public int $retryMilliseconds          = 3000;
-    public int $heartbeatInterval          = 15;
-    public int $maxConnectionSeconds       = 300;
-    public int $maxChannelsPerConnection   = 20;
-    public bool $allowPatternSubscriptions = false;
-    public bool $emitConnectedEvent        = true;
-    public bool $requireAcceptHeader       = true;
+    public string $channelPrefix         = 'app:sse:';
+    public int $retryMilliseconds        = 3000;
+    public int $heartbeatInterval        = 15;
+    public int $maxConnectionSeconds     = 300;
+    public int $maxChannelsPerConnection = 20;
+    public bool $emitConnectedEvent      = true;
+    public bool $requireAcceptHeader     = true;
 
     /**
      * CodeIgniter Debug Toolbar publisher tracing.
@@ -275,16 +268,6 @@ class Sse extends BaseConfig
                 'SSE toolbar maxEvents must be between 1 and 1000.',
             );
         }
-
-        if ($this->streamTransport() === 'mercure') {
-            if ($this->allowPatternSubscriptions) {
-                throw new InvalidArgumentException(
-                    'Pattern subscriptions are not supported by the Mercure adapter.',
-                );
-            }
-
-            (new MercureConfigFactory())->create($this);
-        }
     }
 
     /**
@@ -301,16 +284,6 @@ class Sse extends BaseConfig
     public function mercure(): array
     {
         return array_replace_recursive(self::DEFAULT_MERCURE, $this->mercure);
-    }
-
-    /**
-     * @return 'mercure'|'php'
-     */
-    public function streamTransport(): string
-    {
-        $transport = $this->brokers[$this->broker]['transport'] ?? 'php';
-
-        return $transport === 'mercure' ? 'mercure' : 'php';
     }
 
     /**

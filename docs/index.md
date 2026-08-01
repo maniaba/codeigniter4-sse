@@ -16,6 +16,7 @@ Application publisher ──┤                                    ├─ EventS
 - versioned JSON event envelopes with stable event IDs;
 - Redis Pub/Sub over an internal RESP2 stream client;
 - Mercure publishing, topic JWT authorization, and direct Hub streaming;
+- custom broker adapters through stable package contracts;
 - logical channel validation, limits, and server-side authorization;
 - heartbeats, disconnect detection, and maximum connection lifetime;
 - an SSE response adapter for current CodeIgniter applications;
@@ -47,10 +48,14 @@ sse()->publish(
 Subscribe:
 
 ```javascript
-import { SseClient } from '/vendor/codeigniter4-sse/sse-client.js';
+import {
+    RedisSseAdapter,
+    SseClient,
+} from '/vendor/codeigniter4-sse/sse-client.js';
 
 const live = new SseClient({
     endpoint: '/sse',
+    adapter: new RedisSseAdapter(),
     channels: [`users.${currentUserId}`],
 });
 
@@ -61,9 +66,15 @@ live.on('notification.created', ({ data }) => {
 live.connect();
 ```
 
+Use the frontend adapter that matches the configured broker. Redis, local, and
+in-memory adapters connect directly to the package route; Mercure authorizes
+through the route and then connects to the Hub.
+
 Private channels are denied until the application supplies an authorizer. Start
 with the [Quick start](quick-start.md), then configure
 [channels and authorization](channels-and-authorization.md).
+If Redis or Mercure is not the right transport, see
+[Custom brokers](custom-brokers.md).
 
 ## Delivery model
 

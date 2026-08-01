@@ -2,6 +2,10 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
 import {
+    DirectSseAdapter,
+    InMemorySseAdapter,
+    MercureSseAdapter,
+    RedisSseAdapter,
     SseClient,
     SseClientStatus,
 } from '../../resources/js/sse-client.js';
@@ -35,7 +39,12 @@ class FakeEventSource {
     }
 }
 
-test('builds the URL, dispatches envelopes, reports status, and closes', () => {
+const nextTurn = () => new Promise((resolve) => setImmediate(resolve));
+const wait = (milliseconds) => new Promise((resolve) => {
+    setTimeout(resolve, milliseconds);
+});
+
+test('uses the direct adapter by default', () => {
     const source = new FakeEventSource();
     const statuses = [];
     const named = [];
@@ -61,6 +70,8 @@ test('builds the URL, dispatches envelopes, reports status, and closes', () => {
         .onMessage((message) => globalMessages.push(message))
         .connect();
 
+    assert.equal(client.adapter instanceof DirectSseAdapter, true);
+    assert.equal(Object.hasOwn(client, 'transport'), false);
     const url = new URL(receivedUrl);
     assert.equal(url.searchParams.get('channels'), 'users.42,orders.918');
     assert.equal(url.searchParams.get('tenant'), '7');
@@ -104,6 +115,20 @@ test('builds the URL, dispatches envelopes, reports status, and closes', () => {
     ]);
 });
 
+test('provides semantic direct adapters for built-in PHP stream brokers', () => {
+    const redis = new RedisSseAdapter();
+    const memory = new InMemorySseAdapter();
+
+    assert.deepEqual(
+        redis.resolve({ url: 'https://example.test/sse' }),
+        { url: 'https://example.test/sse', expiresAt: null },
+    );
+    assert.deepEqual(
+        memory.resolve({ url: 'https://example.test/sse' }),
+        { url: 'https://example.test/sse', expiresAt: null },
+    );
+});
+
 test('preserves invalid JSON and invokes unsupported fallback once', () => {
     const source = new FakeEventSource();
     const messages = [];
@@ -141,6 +166,7 @@ test('subscribes and unsubscribes channels by reconnecting active sources', () =
     const client = new SseClient({
         endpoint: 'https://example.test/sse',
         channels: ['public.news'],
+        adapter: new RedisSseAdapter(),
         eventSourceFactory: (url) => {
             const source = new FakeEventSource();
 
@@ -190,7 +216,7 @@ test('subscribes and unsubscribes channels by reconnecting active sources', () =
     ]);
 });
 
-test('authorizes Mercure channels and opens EventSource directly on the Hub', async () => {
+test('resolves Mercure authorization and opens EventSource directly on the Hub', async () => {
     const source = new FakeEventSource();
     const fetchCalls = [];
     let receivedHubUrl;
@@ -198,25 +224,25 @@ test('authorizes Mercure channels and opens EventSource directly on the Hub', as
 
     const client = new SseClient({
         endpoint: 'https://app.example.test/sse',
-        transport: 'mercure',
-        channels: ['users.42', 'projects.7'],
-        fetchFactory: async (url, options) => {
-            fetchCalls.push({ url, options });
+        adapter: new MercureSseAdapter({
+            fetchFactory: async (url, options) => {
+                fetchCalls.push({ url, options });
 
-            return {
-                ok: true,
-                status: 200,
-                json: async () => ({
-                    transport: 'mercure',
-                    hub: 'https://hub.example.test/.well-known/mercure?custom=1',
-                    topics: [
-                        'urn:example:sse:users.42',
-                        'urn:example:sse:projects.7',
-                    ],
-                    expiresAt: null,
-                }),
-            };
-        },
+                return {
+                    ok: true,
+                    status: 200,
+                    json: async () => ({
+                        hub: 'https://hub.example.test/.well-known/mercure?custom=1',
+                        topics: [
+                            'urn:example:sse:users.42',
+                            'urn:example:sse:projects.7',
+                        ],
+                        expiresAt: null,
+                    }),
+                };
+            },
+        }),
+        channels: ['users.42', 'projects.7'],
         eventSourceFactory: (url, options) => {
             receivedHubUrl = url;
             receivedOptions = options;
@@ -227,7 +253,7 @@ test('authorizes Mercure channels and opens EventSource directly on the Hub', as
 
     client.connect();
     client.connect();
-    await new Promise((resolve) => setImmediate(resolve));
+    await nextTurn();
 
     assert.equal(fetchCalls.length, 1);
     assert.equal(
@@ -255,17 +281,73 @@ test('authorizes Mercure channels and opens EventSource directly on the Hub', as
     client.close();
 });
 
-test('reports Mercure authorization failures without opening EventSource', async () => {
+test('aborts stale Mercure authorization when channels change', async () => {
+    const authorizationUrls = [];
+    const signals = [];
+    const sourceUrls = [];
+    const adapter = new MercureSseAdapter({
+        fetchFactory: async (url, { signal }) => {
+            authorizationUrls.push(url);
+            signals.push(signal);
+
+            if (authorizationUrls.length === 1) {
+                return new Promise((resolve, reject) => {
+                    signal.addEventListener('abort', () => {
+                        reject(new Error('aborted'));
+                    }, { once: true });
+                });
+            }
+
+            return {
+                ok: true,
+                status: 200,
+                json: async () => ({
+                    hub: 'https://hub.example.test/.well-known/mercure',
+                    topics: ['urn:example:sse:public.news', 'urn:example:sse:users.42'],
+                    expiresAt: null,
+                }),
+            };
+        },
+    });
+
+    const client = new SseClient({
+        endpoint: 'https://example.test/sse',
+        channels: ['public.news'],
+        adapter,
+        eventSourceFactory: (url) => {
+            sourceUrls.push(url);
+
+            return new FakeEventSource();
+        },
+    });
+
+    client.connect();
+    client.subscribe('users.42');
+    await nextTurn();
+
+    assert.equal(authorizationUrls.length, 2);
+    assert.equal(signals[0].aborted, true);
+    assert.equal(sourceUrls.length, 1);
+    assert.deepEqual(
+        new URL(sourceUrls[0]).searchParams.getAll('topic'),
+        ['urn:example:sse:public.news', 'urn:example:sse:users.42'],
+    );
+
+    client.close();
+});
+
+test('reports adapter failures without opening EventSource', async () => {
     let eventSourceCalls = 0;
     const fallbackReasons = [];
     const client = new SseClient({
         endpoint: 'https://app.example.test/sse',
-        transport: 'mercure',
         channels: ['users.42'],
-        fetchFactory: async () => ({
-            ok: false,
-            status: 403,
-            json: async () => ({}),
+        adapter: new MercureSseAdapter({
+            fetchFactory: async () => ({
+                ok: false,
+                status: 403,
+                json: async () => ({}),
+            }),
         }),
         eventSourceFactory: () => {
             eventSourceCalls++;
@@ -276,27 +358,69 @@ test('reports Mercure authorization failures without opening EventSource', async
     });
 
     client.connect();
-    await new Promise((resolve) => setImmediate(resolve));
+    await nextTurn();
 
     assert.equal(eventSourceCalls, 0);
     assert.equal(client.status, SseClientStatus.CLOSED);
-    assert.deepEqual(fallbackReasons, ['authorization-error']);
+    assert.deepEqual(fallbackReasons, ['adapter-error']);
 });
 
-test('keeps Mercure EventSource construction errors distinct from authorization', async () => {
+test('closes an expiring adapter connection before refreshing it', async () => {
+    let authorizationCalls = 0;
+    const sources = [];
+    const client = new SseClient({
+        endpoint: 'https://example.test/sse',
+        channels: ['public.news'],
+        adapter: new MercureSseAdapter({
+            fetchFactory: async () => {
+                authorizationCalls++;
+
+                return {
+                    ok: true,
+                    status: 200,
+                    json: async () => ({
+                        hub: 'https://hub.example.test/.well-known/mercure',
+                        topics: ['urn:example:sse:public.news'],
+                        expiresAt: Math.floor(Date.now() / 1000) + 30,
+                    }),
+                };
+            },
+        }),
+        eventSourceFactory: () => {
+            const source = new FakeEventSource();
+            sources.push(source);
+
+            return source;
+        },
+    });
+
+    client.connect();
+    await nextTurn();
+    await wait(1100);
+    await nextTurn();
+
+    assert.equal(authorizationCalls, 2);
+    assert.equal(sources.length, 2);
+    assert.equal(sources[0].closed, true);
+    assert.equal(client.status, SseClientStatus.RECONNECTING);
+
+    client.close();
+});
+
+test('keeps EventSource construction errors distinct from adapter errors', async () => {
     const fallbackReasons = [];
     const client = new SseClient({
         endpoint: 'https://app.example.test/sse',
-        transport: 'mercure',
         channels: ['users.42'],
-        fetchFactory: async () => ({
-            ok: true,
-            status: 200,
-            json: async () => ({
-                transport: 'mercure',
-                hub: 'https://hub.example.test/.well-known/mercure',
-                topics: ['urn:example:sse:users.42'],
-                expiresAt: null,
+        adapter: new MercureSseAdapter({
+            fetchFactory: async () => ({
+                ok: true,
+                status: 200,
+                json: async () => ({
+                    hub: 'https://hub.example.test/.well-known/mercure',
+                    topics: ['urn:example:sse:users.42'],
+                    expiresAt: null,
+                }),
             }),
         }),
         eventSourceFactory: () => {
@@ -306,7 +430,7 @@ test('keeps Mercure EventSource construction errors distinct from authorization'
     });
 
     client.connect();
-    await new Promise((resolve) => setImmediate(resolve));
+    await nextTurn();
 
     assert.equal(client.status, SseClientStatus.CLOSED);
     assert.deepEqual(fallbackReasons, ['construction-error']);

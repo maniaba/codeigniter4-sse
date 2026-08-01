@@ -7,8 +7,8 @@ namespace Tests\Broker\Redis;
 use Maniaba\CodeIgniterSse\Broker\Redis\Exception\RedisConnectionException;
 use Maniaba\CodeIgniterSse\Broker\Redis\RedisHealthChecker;
 use PHPUnit\Framework\TestCase;
-use Tests\Broker\Redis\Fixtures\FakeRedisConnection;
-use Tests\Broker\Redis\Fixtures\FakeRedisConnectionFactory;
+use Support\Tests\Broker\Redis\Fixtures\FakeRedisConnection;
+use Support\Tests\Broker\Redis\Fixtures\FakeRedisConnectionFactory;
 
 /**
  * @internal
@@ -31,7 +31,7 @@ final class RedisHealthCheckerTest extends TestCase
         $connection->connectFailure = new RedisConnectionException('offline');
         $checker                    = new RedisHealthChecker(new FakeRedisConnectionFactory([$connection]));
 
-        $this->assertFalse($checker->isHealthy());
+        $this->assertFalse($checker->check());
         $this->assertSame($connection->connectFailure, $checker->lastError());
         $this->assertSame(1, $connection->closeCalls);
     }

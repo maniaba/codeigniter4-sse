@@ -15,8 +15,8 @@ use Maniaba\CodeIgniterSse\Event\SseEvent;
 use Maniaba\CodeIgniterSse\Exception\InvalidChannelException;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
-use Tests\Broker\Redis\Fixtures\FakeRedisConnection;
-use Tests\Broker\Redis\Fixtures\FakeRedisConnectionFactory;
+use Support\Tests\Broker\Redis\Fixtures\FakeRedisConnection;
+use Support\Tests\Broker\Redis\Fixtures\FakeRedisConnectionFactory;
 
 /**
  * @internal
@@ -115,6 +115,31 @@ final class RedisSubscriberTest extends TestCase
         );
 
         $this->assertSame(['same-id'], $received);
+    }
+
+    public function testDoesNotDeduplicateTheSameEventIdAcrossDifferentChannels(): void
+    {
+        $connection           = new FakeRedisConnection();
+        $connection->messages = [
+            new RedisSubscriptionMessage('app:sse:public.one', $this->payload('public.one', 'same-id')),
+            new RedisSubscriptionMessage('app:sse:public.two', $this->payload('public.two', 'same-id')),
+        ];
+        $subscriber = new RedisSubscriber(
+            new RedisConfig(allowPatternSubscriptions: true, reconnectDelayMilliseconds: 0),
+            $this->serializer,
+            new FakeRedisConnectionFactory([$connection]),
+        );
+        $received = [];
+
+        $subscriber->subscribe(
+            ['public.*'],
+            static function ($message) use (&$received): void {
+                $received[] = $message->channel();
+            },
+            static fn (): bool => $connection->readCalls >= 2,
+        );
+
+        $this->assertSame(['public.one', 'public.two'], $received);
     }
 
     public function testReconnectsWithASeparateConnection(): void

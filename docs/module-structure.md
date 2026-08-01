@@ -7,13 +7,19 @@ and browser behavior separate.
 src/
 ├── Authorization/
 ├── Broker/
+│   ├── InMemory/
+│   ├── Local/
 │   ├── Mercure/
+│   ├── Null/
 │   └── Redis/
 ├── Commands/
 ├── Config/
 ├── Contracts/
+├── Endpoint/
 ├── Event/
 ├── Exception/
+├── Factory/
+├── Health/
 ├── HTTP/
 ├── Stream/
 └── Support/
@@ -31,6 +37,9 @@ For typed integrations, depend on:
 
 - `PublisherInterface`
 - `SubscriberInterface`
+- `BrokerAdapterInterface`
+- `BrokerAdapterFactoryInterface`
+- `SubscriptionEndpointInterface`
 - `ChannelAuthorizerInterface`
 - `UserResolverInterface`
 - `EventInterface`
@@ -43,17 +52,28 @@ Publisher and subscriber connections are separate because Redis subscriptions
 are blocking.
 
 `Broker\Mercure` contains the HTTP publisher, topic mapper, JWT issuer, and
-Hub configuration. Mercure has no PHP subscriber because browsers subscribe
-directly to the Hub.
+Hub configuration and subscription endpoint. Mercure has no PHP subscriber
+because browsers subscribe directly to the Hub.
 
-`InMemoryBroker` is for tests and one-process examples. `NullBroker` is useful
-when applications want the API enabled without delivering live events.
+`Broker\InMemory` is for tests and one-process examples. `Broker\Null` is
+useful when applications want the API enabled without delivering live events.
+`Broker\Local` contains the reusable local adapter used by PHP-stream brokers.
+
+Custom broker implementations should live in their own folder and enter the
+package through `BrokerAdapterInterface` or `BrokerAdapterFactoryInterface`.
+See [Custom brokers](custom-brokers.md).
 
 ## HTTP layer
 
 `HTTP\SseController` parses the channel request, resolves the current user,
-and authorizes every channel. It either starts the Redis-backed PHP stream or
-returns Mercure bootstrap data and an HttpOnly subscriber cookie.
+authorizes every channel, and delegates the response to the active broker
+adapter's subscription endpoint.
+
+`Endpoint\LocalSseSubscriptionEndpoint` is the generic PHP stream endpoint
+used by local subscriber-aware brokers. It also provides the short JSON
+descriptor that points the browser back to that stream. Broker-specific
+endpoints, such as Mercure's Hub authorization endpoint, live beside their broker
+implementation and return the same generic descriptor shape.
 
 `HTTP\SseResponseFactory` selects the output implementation at runtime:
 
@@ -66,12 +86,15 @@ Current package streaming response
 
 `SseConnectionManager` owns the long-running stream loop. It sends retry
 configuration, the optional connected event, broker events, idle heartbeats,
-and maximum-lifetime shutdown.
+and maximum-lifetime shutdown. `BrowserEventEncoder` keeps the JSON payload
+sent to browser EventSource clients separate from broker transport
+serialization.
 
 ## Browser asset
 
-`resources/js/sse-client.js` is a dependency-free wrapper around native
-`EventSource`. It is published to the host application by:
+`resources/js/sse-client.js` wraps native `EventSource`; the files under
+`resources/js/adapters/` handle broker-specific connection resolution. They
+are published to the host application by:
 
 ```bash
 php spark sse:install

@@ -13,8 +13,8 @@ Browser
     └─ EventSource ───────────────────► Mercure Hub
 ```
 
-The `/sse` CodeIgniter route is a short authorization/bootstrap request in
-this mode. It does not emit an event stream and does not reserve a PHP worker.
+The `/sse` CodeIgniter route is a short authorization request in this mode. It
+does not emit an event stream and does not reserve a PHP worker.
 The Hub owns heartbeats, reconnects, history, and the live SSE response.
 
 The adapter targets the stable Mercure 0.x protocol used by Mercure 0.24.2:
@@ -160,14 +160,17 @@ publisher decorator used for every broker.
 
 ## Browser client
 
-Set the client transport to `mercure`:
+Use `MercureSseAdapter` when the server broker is configured for Mercure:
 
 ```javascript
-import { SseClient } from '@maniaba/codeigniter4-sse-browser';
+import {
+    MercureSseAdapter,
+    SseClient,
+} from '@maniaba/codeigniter4-sse-browser';
 
 const live = new SseClient({
     endpoint: '/sse',
-    transport: 'mercure',
+    adapter: new MercureSseAdapter(),
     channels: [`users.${currentUserId}`],
     withCredentials: true,
 });
@@ -191,7 +194,6 @@ CodeIgniter validates and authorizes every channel, sets an HttpOnly
 
 ```json
 {
-  "transport": "mercure",
   "hub": "https://app.example.com/.well-known/mercure",
   "topics": ["urn:storefront:sse:users.42"],
   "expiresAt": 1785520800
@@ -203,6 +205,10 @@ client opens the Hub URL with one repeated `topic` parameter per authorized
 channel. It refreshes authorization and reconnects shortly before the token
 expires. Calling `subscribe()`, `unsubscribe()`, or `setChannels()` obtains a
 new token restricted to the new topic list.
+
+Use one `SseClient` per page and combine its channels. Mercure authorization is
+stored in one cookie, so separate clients on the same cookie scope can replace
+each other's exact-topic authorization during authorization or reconnect.
 
 ## Authorization rules
 
@@ -218,7 +224,7 @@ application policy:
 
 Keep `private = true` for user, tenant, order, and project data. Setting
 `private = false` publishes updates publicly at the Hub even if CodeIgniter
-protected the bootstrap route.
+protected the authorization route.
 
 For a completely public Hub, both of these must be intentional:
 
@@ -305,6 +311,6 @@ requires the configured HMAC subscriber key. Applications using an external
 OAuth/JWKS issuer should replace the authorization controller rather than
 exposing signing keys to the browser.
 
-The adapter currently maps exact logical channels. Keep
-`allowPatternSubscriptions = false`; Redis glob patterns are not accepted by
-the Mercure transport.
+The adapter currently maps exact logical channels. Redis glob patterns are not
+accepted by the Mercure transport; pattern selectors remain a Redis adapter
+option.

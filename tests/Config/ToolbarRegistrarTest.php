@@ -6,7 +6,7 @@ namespace Tests\Config;
 
 use CodeIgniter\Test\CIUnitTestCase;
 use Config\Toolbar;
-use Maniaba\CodeIgniterSse\Collectors\SseEvents;
+use Maniaba\CodeIgniterSse\Debug\Toolbar\SseEvents;
 
 /**
  * @internal

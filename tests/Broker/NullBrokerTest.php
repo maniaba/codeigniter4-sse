@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Broker;
 
-use Maniaba\CodeIgniterSse\Broker\NullBroker;
+use Maniaba\CodeIgniterSse\Broker\Null\NullBroker;
 use PHPUnit\Framework\TestCase;
 
 /**

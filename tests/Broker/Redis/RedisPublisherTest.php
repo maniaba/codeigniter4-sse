@@ -12,8 +12,8 @@ use Maniaba\CodeIgniterSse\Broker\Redis\RedisPublisher;
 use Maniaba\CodeIgniterSse\Contracts\SerializerInterface;
 use Maniaba\CodeIgniterSse\Event\SseEvent;
 use PHPUnit\Framework\TestCase;
-use Tests\Broker\Redis\Fixtures\FakeRedisConnection;
-use Tests\Broker\Redis\Fixtures\FakeRedisConnectionFactory;
+use Support\Tests\Broker\Redis\Fixtures\FakeRedisConnection;
+use Support\Tests\Broker\Redis\Fixtures\FakeRedisConnectionFactory;
 
 /**
  * @internal

@@ -133,9 +133,10 @@ filters reject unauthenticated requests early; concurrency limits prevent one
 user or reconnect loop from consuming an unbounded number of PHP workers.
 Neither replaces per-channel authorization.
 
-With Mercure, the same route filters and authorizer protect the short
-bootstrap request. The resulting subscriber JWT contains only approved
-Mercure topics. The long-lived Hub connection does not occupy a PHP worker,
+The same route filters and authorizer protect direct EventSource requests and
+Mercure authorization requests. With Redis, authorization happens before the
+PHP stream opens. With Mercure, the resulting subscriber JWT contains only
+approved topics. The long-lived Hub connection does not occupy a PHP worker,
 but rate limiting still protects token issuance and reconnect churn.
 
 For zero-argument implementations, select both classes in the package config:
@@ -203,7 +204,9 @@ one unindexed query per channel.
 Pattern subscriptions are disabled by default:
 
 ```php
-public bool $allowPatternSubscriptions = false;
+public array $redis = [
+    'allowPatternSubscriptions' => false,
+];
 ```
 
 Enabling them allows glob-style Redis subscription patterns. A pattern can
@@ -212,9 +215,9 @@ recognize and explicitly approve patterns. Never enable them for ordinary
 users merely because the corresponding exact channel would be allowed.
 
 Redis may report the same publication through overlapping exact and pattern
-subscriptions. The adapter suppresses recently seen event IDs using
-`redis['deduplicationCapacity']`; avoid unnecessary overlap so correctness does
-not depend on a bounded deduplication window.
+subscriptions. The adapter suppresses recently seen channel/event ID pairs
+using `redis['deduplicationCapacity']`; avoid unnecessary overlap so
+correctness does not depend on a bounded deduplication window.
 
 ## Browser authentication
 
@@ -224,8 +227,14 @@ provide a standard way to set arbitrary authorization headers.
 Prefer same-site secure session cookies:
 
 ```javascript
+import {
+    RedisSseAdapter,
+    SseClient,
+} from '/vendor/codeigniter4-sse/sse-client.js';
+
 new SseClient({
     endpoint: '/sse',
+    adapter: new RedisSseAdapter(),
     channels: ['users.42'],
     withCredentials: true,
 });

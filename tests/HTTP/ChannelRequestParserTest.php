@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\HTTP;
 
+use Maniaba\CodeIgniterSse\Broker\Redis\RedisChannelSelectorValidator;
+use Maniaba\CodeIgniterSse\Broker\Redis\RedisConfig;
 use Maniaba\CodeIgniterSse\Exception\InvalidChannelException;
 use Maniaba\CodeIgniterSse\Exception\InvalidChannelRequestException;
 use Maniaba\CodeIgniterSse\HTTP\ChannelRequestParser;
@@ -32,9 +34,20 @@ final class ChannelRequestParserTest extends TestCase
 
     public function testPatternsAreOptIn(): void
     {
+        $this->expectException(InvalidChannelException::class);
+
+        (new ChannelRequestParser())->parse('public.*');
+    }
+
+    public function testRedisValidatorCanAllowPatterns(): void
+    {
         $this->assertSame(
             ['public.*'],
-            (new ChannelRequestParser(20, true))->parse('public.*'),
+            (new ChannelRequestParser(
+                validator: new RedisChannelSelectorValidator(
+                    new RedisConfig(allowPatternSubscriptions: true),
+                ),
+            ))->parse('public.*'),
         );
     }
 
@@ -42,6 +55,10 @@ final class ChannelRequestParserTest extends TestCase
     {
         $this->expectException(InvalidChannelException::class);
 
-        (new ChannelRequestParser(20, true))->parse('public.*.');
+        (new ChannelRequestParser(
+            validator: new RedisChannelSelectorValidator(
+                new RedisConfig(allowPatternSubscriptions: true),
+            ),
+        ))->parse('public.*.');
     }
 }

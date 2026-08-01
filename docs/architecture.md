@@ -44,6 +44,11 @@ Application service / controller / worker
 Both paths use the same event envelope, channel authorizer, browser event
 handlers, and `sse()->publish(...)` API.
 
+The browser uses a frontend adapter that matches the configured broker. Redis,
+local, and in-memory adapters open EventSource directly on the CodeIgniter
+route. Mercure first calls the same route for topic authorization and then
+opens EventSource on the Hub.
+
 ## Public application boundary
 
 Normal application code uses the high-level service:

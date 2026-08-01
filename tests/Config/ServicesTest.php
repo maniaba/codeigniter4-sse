@@ -5,26 +5,35 @@ declare(strict_types=1);
 namespace Tests\Config;
 
 use CodeIgniter\Config\Services as FrameworkServices;
+use CodeIgniter\HTTP\RequestInterface;
+use CodeIgniter\HTTP\ResponseInterface;
 use CodeIgniter\Test\CIUnitTestCase;
-use Maniaba\CodeIgniterSse\Broker\InMemoryBroker;
+use Maniaba\CodeIgniterSse\Broker\InMemory\InMemoryBroker;
 use Maniaba\CodeIgniterSse\Broker\Mercure\MercurePublisher;
-use Maniaba\CodeIgniterSse\Broker\NullBroker;
+use Maniaba\CodeIgniterSse\Broker\Null\NullBroker;
 use Maniaba\CodeIgniterSse\Broker\Redis\RedisConfig;
 use Maniaba\CodeIgniterSse\Broker\Redis\RedisConnectionFactory;
 use Maniaba\CodeIgniterSse\Broker\Redis\RedisPublisher;
 use Maniaba\CodeIgniterSse\Config\Services;
 use Maniaba\CodeIgniterSse\Config\Sse;
+use Maniaba\CodeIgniterSse\Contracts\BrokerAdapterFactoryInterface;
+use Maniaba\CodeIgniterSse\Contracts\BrokerAdapterInterface;
 use Maniaba\CodeIgniterSse\Contracts\EventInterface;
 use Maniaba\CodeIgniterSse\Contracts\PublisherInterface;
+use Maniaba\CodeIgniterSse\Contracts\SubscriberAwareBrokerAdapterInterface;
 use Maniaba\CodeIgniterSse\Contracts\SubscriberInterface;
+use Maniaba\CodeIgniterSse\Contracts\SubscriptionEndpointInterface;
 use Maniaba\CodeIgniterSse\Debug\Toolbar\SseEventHistory;
 use Maniaba\CodeIgniterSse\Debug\Toolbar\TraceablePublisher;
 use Maniaba\CodeIgniterSse\Event\SseEvent;
 use Maniaba\CodeIgniterSse\Factory\AuthorizationFactory;
+use Maniaba\CodeIgniterSse\Factory\BrokerBuildContext;
 use Maniaba\CodeIgniterSse\Factory\BrokerFactory;
 use Maniaba\CodeIgniterSse\Sse as SseManager;
 use ReflectionProperty;
-use Tests\Config\Fixtures\ConfiguredChannelAuthorizer;
+use Support\Tests\Adapter\BasicBrokerAdapter;
+use Support\Tests\Adapter\BasicSubscriptionEndpoint;
+use Support\Tests\Config\Fixtures\ConfiguredChannelAuthorizer;
 
 /**
  * @internal
@@ -71,10 +80,10 @@ final class ServicesTest extends CIUnitTestCase
             'maxPayloadBytes'            => 2048,
             'maxResponseElements'        => 128,
             'maxResponseDepth'           => 4,
+            'allowPatternSubscriptions'  => true,
             'clientName'                 => 'ci-sse',
         ];
-        $config->channelPrefix             = 'test:sse:';
-        $config->allowPatternSubscriptions = true;
+        $config->channelPrefix = 'test:sse:';
 
         $publisher = Services::ssePublisher($config, false);
         $redis     = (new ReflectionProperty($publisher, 'config'))->getValue($publisher);
@@ -129,7 +138,7 @@ final class ServicesTest extends CIUnitTestCase
         $this->assertInstanceOf(MercurePublisher::class, $publisher);
     }
 
-    public function testCustomBrokerCanBeConfiguredWithFactories(): void
+    public function testCustomBrokerCanBeConfiguredWithAnAdapterClosure(): void
     {
         $publisher = new class () implements PublisherInterface {
             public function publish(string $channel, EventInterface $event): void
@@ -147,11 +156,12 @@ final class ServicesTest extends CIUnitTestCase
             }
         };
 
+        $adapter = new BasicBrokerAdapter($publisher, $subscriber, new BasicSubscriptionEndpoint());
+
         $config                    = new Sse();
         $config->broker            = 'custom';
         $config->brokers['custom'] = [
-            'publisher'  => static fn (): PublisherInterface => $publisher,
-            'subscriber' => static fn (): SubscriberInterface => $subscriber,
+            'adapter' => static fn (): BrokerAdapterInterface => $adapter,
         ];
 
         $brokers = new BrokerFactory();
@@ -160,22 +170,88 @@ final class ServicesTest extends CIUnitTestCase
         $this->assertSame($subscriber, $brokers->subscriber($config));
     }
 
-    public function testCustomBrokerCanUseSimpleClassNames(): void
+    public function testCustomBrokerCanBeConfiguredWithAnAdapterFactory(): void
     {
-        $config                         = new Sse();
-        $config->broker                 = 'custom-null';
-        $config->brokers['custom-null'] = [
-            'publisher'  => NullBroker::class,
-            'subscriber' => NullBroker::class,
-            'shared'     => true,
+        $publisher = new class () implements PublisherInterface {
+            public function publish(string $channel, EventInterface $event): void
+            {
+            }
+        };
+
+        $endpoint = new class () implements SubscriptionEndpointInterface {
+            /**
+             * @var list<string>
+             */
+            public array $channels = [];
+
+            public function respond(
+                RequestInterface $request,
+                ResponseInterface $response,
+                array $channels,
+            ): ResponseInterface {
+                $this->channels = $channels;
+
+                return $response->setStatusCode(204);
+            }
+        };
+
+        $adapter = new class ($publisher, $endpoint) implements BrokerAdapterInterface {
+            public function __construct(
+                private readonly PublisherInterface $publisher,
+                private readonly SubscriptionEndpointInterface $endpoint,
+            ) {
+            }
+
+            public function publisher(): PublisherInterface
+            {
+                return $this->publisher;
+            }
+
+            public function subscriptionEndpoint(): SubscriptionEndpointInterface
+            {
+                return $this->endpoint;
+            }
+        };
+
+        $factory = new class ($adapter) implements BrokerAdapterFactoryInterface {
+            public function __construct(
+                private readonly BrokerAdapterInterface $adapter,
+            ) {
+            }
+
+            public function create(Sse $config, BrokerBuildContext $context): BrokerAdapterInterface
+            {
+                return $this->adapter;
+            }
+        };
+
+        $config                            = new Sse();
+        $config->broker                    = 'custom-adapter';
+        $config->brokers['custom-adapter'] = [
+            'factory' => $factory,
         ];
 
         $brokers = new BrokerFactory();
 
-        $this->assertInstanceOf(NullBroker::class, $brokers->publisher($config));
+        $this->assertSame($publisher, $brokers->publisher($config));
+        $this->assertSame($endpoint, $brokers->subscriptionEndpoint($config));
+    }
+
+    public function testCustomBrokerCanUseAdapterClassNames(): void
+    {
+        $config                         = new Sse();
+        $config->broker                 = 'custom-null';
+        $config->brokers['custom-null'] = [
+            'adapter' => BasicBrokerAdapter::class,
+            'shared'  => true,
+        ];
+
+        $brokers = new BrokerFactory();
+
+        $this->assertInstanceOf(BasicBrokerAdapter::class, $brokers->adapter($config));
         $this->assertSame(
-            $brokers->publisher($config),
-            $brokers->subscriber($config),
+            $brokers->adapter($config),
+            $brokers->adapter($config),
         );
     }
 
@@ -203,12 +279,13 @@ final class ServicesTest extends CIUnitTestCase
             }
         };
 
+        $adapter = new BasicBrokerAdapter($publisher, $subscriber, new BasicSubscriptionEndpoint());
+
         $config                    = new Sse();
         $config->broker            = 'custom';
         $config->toolbar           = ['brokers' => ['custom']];
         $config->brokers['custom'] = [
-            'publisher'  => static fn (): PublisherInterface => $publisher,
-            'subscriber' => static fn (): SubscriberInterface => $subscriber,
+            'adapter' => static fn (): BrokerAdapterInterface => $adapter,
         ];
 
         $traceable = (new BrokerFactory(enableToolbarTracing: true))->publisher($config);
@@ -239,6 +316,17 @@ final class ServicesTest extends CIUnitTestCase
         $publisher->publish('public.news', new SseEvent('news.created', ['id' => 42], 'event-1'));
 
         $this->assertSame([], SseEventHistory::all());
+    }
+
+    public function testBrokerAdapterServiceCanCreateSharedLocalAdapters(): void
+    {
+        $config         = new Sse();
+        $config->broker = 'memory';
+
+        $adapter = Services::sseBrokerAdapter($config, false);
+
+        $this->assertInstanceOf(SubscriberAwareBrokerAdapterInterface::class, $adapter);
+        $this->assertSame($adapter->publisher(), $adapter->subscriber());
     }
 
     public function testConvenienceServiceUsesApplicationPublisherOverride(): void

@@ -126,10 +126,14 @@ provides the channel, event name or event object, and payload.
 ## 4. Connect from the browser
 
 ```javascript
-import { SseClient } from '/vendor/codeigniter4-sse/sse-client.js';
+import {
+    RedisSseAdapter,
+    SseClient,
+} from '/vendor/codeigniter4-sse/sse-client.js';
 
 const live = new SseClient({
     endpoint: '/sse',
+    adapter: new RedisSseAdapter(),
     channels: [`users.${currentUserId}`],
     withCredentials: true,
 });
@@ -146,7 +150,7 @@ live.on('status', ({ status }) => {
 live.connect();
 ```
 
-The client requests:
+With the default Redis broker, the browser opens:
 
 ```http
 GET /sse?channels=users.42

@@ -17,7 +17,7 @@ final class BoundedEventIdSet
     /**
      * @var array<string, true>
      */
-    private array $ids = [];
+    private array $keys = [];
 
     /**
      * @var SplQueue<string>
@@ -31,19 +31,19 @@ final class BoundedEventIdSet
     }
 
     /**
-     * Returns true when the ID was already present.
+     * Returns true when the key was already present.
      */
-    public function containsOrAdd(string $id): bool
+    public function containsOrAdd(string $key): bool
     {
-        if (isset($this->ids[$id])) {
+        if (isset($this->keys[$key])) {
             return true;
         }
 
-        $this->ids[$id] = true;
-        $this->order->enqueue($id);
+        $this->keys[$key] = true;
+        $this->order->enqueue($key);
 
         if ($this->order->count() > $this->capacity) {
-            unset($this->ids[$this->order->dequeue()]);
+            unset($this->keys[$this->order->dequeue()]);
         }
 
         return false;
