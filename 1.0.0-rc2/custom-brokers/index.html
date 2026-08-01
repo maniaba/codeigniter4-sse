@@ -1,0 +1,1792 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Redis and Mercure Server-Sent Events for CodeIgniter 4.">
+      
+      
+      
+        <link rel="canonical" href="https://maniaba.github.io/codeigniter4-sse/latest/custom-brokers/">
+      
+      
+        <link rel="prev" href="../channels-and-authorization/">
+      
+      
+        <link rel="next" href="../browser-client/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/flame.svg">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Custom brokers - CodeIgniter SSE</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.8.0/build/styles/github.min.css">
+    
+      <link rel="stylesheet" href="../assets/css/codeigniter.css">
+    
+      <link rel="stylesheet" href="../assets/css/codeigniter_dark_mode.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="codeigniter" data-md-color-primary="custom" data-md-color-accent="custom">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#custom-brokers" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+          <aside class="md-banner md-banner--warning">
+            <div class="md-banner__inner md-grid md-typeset">
+              
+  You're not viewing the latest version.
+  <a href="../..">
+    <strong>Click here to go to latest.</strong>
+  </a>
+
+            </div>
+            <script>var el=document.querySelector("[data-md-component=outdated]"),base=new URL(".."),outdated=__md_get("__outdated",sessionStorage,base);!0===outdated&&el&&(el.hidden=!1)</script>
+          </aside>
+        
+      </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="https://maniaba.github.io/codeigniter4-sse/" title="CodeIgniter SSE" class="md-header__button md-logo" aria-label="CodeIgniter SSE" data-md-component="logo">
+      
+  <img src="../assets/flame.svg" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            CodeIgniter SSE
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Custom brokers
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="codeigniter" data-md-color-primary="custom" data-md-color-accent="custom"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="custom" data-md-color-accent="custom"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+          <a href="javascript:void(0)" class="md-search__icon md-icon" title="Share" aria-label="Share" data-clipboard data-clipboard-text="" data-md-component="search-share" tabindex="-1">
+            
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9a3 3 0 0 0-3 3 3 3 0 0 0 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.15c-.05.21-.08.43-.08.66 0 1.61 1.31 2.91 2.92 2.91s2.92-1.3 2.92-2.91A2.92 2.92 0 0 0 18 16.08"/></svg>
+          </a>
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/maniaba/codeigniter4-sse" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="https://maniaba.github.io/codeigniter4-sse/" title="CodeIgniter SSE" class="md-nav__button md-logo" aria-label="CodeIgniter SSE" data-md-component="logo">
+      
+  <img src="../assets/flame.svg" alt="logo">
+
+    </a>
+    CodeIgniter SSE
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/maniaba/codeigniter4-sse" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../quick-start/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quick start
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Configuration
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../channels-and-authorization/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Channels and authorization
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom brokers
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom brokers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#required-contracts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Required contracts
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#recommended-folder-layout" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Recommended folder layout
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#register-the-broker" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Register the broker
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#broker-specific-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Broker-specific configuration
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#implement-the-factory" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Implement the factory
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#implement-publishing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Implement publishing
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#implement-the-subscription-endpoint" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Implement the subscription endpoint
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#php-stream-brokers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PHP-stream brokers
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#custom-channel-selectors" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Custom channel selectors
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#health-checks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Health checks
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#when-a-custom-broker-does-not-work" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        When a custom broker does not work
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Usage
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Usage
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../browser-client/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Browser client
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../mercure/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Mercure Hub
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../deployment/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Streaming and deployment
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Architecture
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../events/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Events
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../examples/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Examples
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../testing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Testing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../troubleshooting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Troubleshooting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_11" >
+        
+          
+          <label class="md-nav__link" for="__nav_11" id="__nav_11_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Upgrade
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_11_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_11">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Upgrade
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../upgrade/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Upgrade policy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../module-structure/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Module structure
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#required-contracts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Required contracts
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#recommended-folder-layout" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Recommended folder layout
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#register-the-broker" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Register the broker
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#broker-specific-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Broker-specific configuration
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#implement-the-factory" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Implement the factory
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#implement-publishing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Implement publishing
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#implement-the-subscription-endpoint" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Implement the subscription endpoint
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#php-stream-brokers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PHP-stream brokers
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#custom-channel-selectors" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Custom channel selectors
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#health-checks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Health checks
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#when-a-custom-broker-does-not-work" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        When a custom broker does not work
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+    <a href="https://github.com/maniaba/codeigniter4-sse/edit/develop/docs/custom-brokers.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
+    </a>
+  
+  
+
+
+<h1 id="custom-brokers">Custom brokers</h1>
+<p>Custom brokers plug into the package through one boundary: a broker adapter.
+Do not configure separate <code>publisher</code> and <code>subscriber</code> classes in
+<code>Sse::$brokers</code>; that legacy shape is not supported.</p>
+<h2 id="required-contracts">Required contracts</h2>
+<p>Every custom broker definition must resolve to <code>BrokerAdapterInterface</code>.</p>
+<table>
+<thead>
+<tr>
+<th>Need</th>
+<th>Contract</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Publish application events and provide a subscribe endpoint</td>
+<td><code>BrokerAdapterInterface</code></td>
+</tr>
+<tr>
+<td>Build the adapter from configuration/services</td>
+<td><code>BrokerAdapterFactoryInterface</code></td>
+</tr>
+<tr>
+<td>Publish one event to the transport</td>
+<td><code>PublisherInterface</code></td>
+</tr>
+<tr>
+<td>Let the package stream through PHP</td>
+<td><code>SubscriberAwareBrokerAdapterInterface</code> plus <code>SubscriberInterface</code></td>
+</tr>
+<tr>
+<td>Return a broker-specific HTTP response</td>
+<td><code>SubscriptionEndpointInterface</code></td>
+</tr>
+<tr>
+<td>Run checks in <code>php spark sse:health-check</code></td>
+<td><code>HealthCheckableInterface</code></td>
+</tr>
+<tr>
+<td>Accept non-standard channel selectors</td>
+<td><code>ChannelSelectorValidatorProviderInterface</code></td>
+</tr>
+</tbody>
+</table>
+<p>The minimal adapter contract is:</p>
+<pre class="highlight"><code class="language-php">use Maniaba\CodeIgniterSse\Contracts\BrokerAdapterInterface;
+use Maniaba\CodeIgniterSse\Contracts\PublisherInterface;
+use Maniaba\CodeIgniterSse\Contracts\SubscriptionEndpointInterface;
+
+final readonly class AcmeBrokerAdapter implements BrokerAdapterInterface
+{
+    public function __construct(
+        private PublisherInterface $publisher,
+        private SubscriptionEndpointInterface $endpoint,
+    ) {
+    }
+
+    public function publisher(): PublisherInterface
+    {
+        return $this-&gt;publisher;
+    }
+
+    public function subscriptionEndpoint(): SubscriptionEndpointInterface
+    {
+        return $this-&gt;endpoint;
+    }
+}</code></pre>
+<h2 id="recommended-folder-layout">Recommended folder layout</h2>
+<p>Keep every broker-specific class in its own application folder:</p>
+<pre class="highlight"><code class="language-text">app/
+└── Sse/
+    └── Broker/
+        └── Acme/
+            ├── AcmeBrokerAdapter.php
+            ├── AcmeBrokerAdapterFactory.php
+            ├── AcmeConfig.php
+            ├── AcmeConfigFactory.php
+            ├── AcmePublisher.php
+            ├── AcmeSubscriptionEndpoint.php
+            └── AcmeSubscriber.php</code></pre>
+<p><code>AcmeSubscriber</code> is needed only when the transport should be streamed by PHP.
+Hub-style transports, where the browser connects directly to an external
+service, usually need only a publisher and a subscription endpoint.</p>
+<h2 id="register-the-broker">Register the broker</h2>
+<p>Register the broker under a key in <code>app/Config/Sse.php</code>:</p>
+<pre class="highlight"><code class="language-php">use App\Sse\Broker\Acme\AcmeBrokerAdapterFactory;
+use Maniaba\CodeIgniterSse\Config\Sse as BaseSse;
+
+final class Sse extends BaseSse
+{
+    public string $broker = 'acme';
+
+    public array $brokers = [
+        'acme' =&gt; [
+            'factory' =&gt; AcmeBrokerAdapterFactory::class,
+        ],
+    ];
+}</code></pre>
+<p>If the application still needs the built-in brokers, keep their definitions in
+the same array or merge them before <code>Sse::validate()</code> runs. The package default
+definitions are shown in <a href="../configuration/#broker">Configuration</a>.</p>
+<p>If the factory needs application services or constructor arguments, use a
+callable factory provider:</p>
+<pre class="highlight"><code class="language-php">use App\Sse\Broker\Acme\AcmeBrokerAdapterFactory;
+use Maniaba\CodeIgniterSse\Contracts\BrokerAdapterFactoryInterface;
+
+public array $brokers = [
+    'acme' =&gt; [
+        'factory' =&gt; static fn (): BrokerAdapterFactoryInterface =&gt; new AcmeBrokerAdapterFactory(
+            service('acmeSseClient'),
+            env('sse.acme.endpoint'),
+        ),
+    ],
+];</code></pre>
+<p>The callable receives no arguments. The returned factory receives <code>Sse</code> and
+<code>BrokerBuildContext</code> when the broker is built.</p>
+<h2 id="broker-specific-configuration">Broker-specific configuration</h2>
+<p>Keep custom transport options out of the core package config fields. A common
+shape is to store broker-specific options beside the broker definition:</p>
+<pre class="highlight"><code class="language-php">public array $brokers = [
+    'acme' =&gt; [
+        'factory' =&gt; AcmeBrokerAdapterFactory::class,
+        'options' =&gt; [
+            'endpoint' =&gt; 'https://broker.example.com/sse',
+            'token'    =&gt; null,
+        ],
+    ],
+];</code></pre>
+<p>The package resolver ignores unknown keys such as <code>options</code>; the custom
+factory may read them from <code>$config-&gt;brokers[$config-&gt;broker]</code>.</p>
+<p>For non-trivial options, mirror the built-in Redis and Mercure adapters: put a
+small config object and config factory in the broker folder.</p>
+<pre class="highlight"><code class="language-php">use Maniaba\CodeIgniterSse\Config\Sse;
+
+final class AcmeConfigFactory
+{
+    public function create(Sse $config): AcmeConfig
+    {
+        $definition = $config-&gt;brokers[$config-&gt;broker] ?? [];
+        $options    = self::arrayOption($definition['options'] ?? null);
+
+        return new AcmeConfig(
+            endpoint: (string) ($options['endpoint'] ?? ''),
+            token: self::nullableString($options['token'] ?? null),
+        );
+    }
+
+    private static function nullableString(mixed $value): ?string
+    {
+        return is_string($value) &amp;&amp; $value !== '' ? $value : null;
+    }
+
+    /**
+     * @return array&lt;string, mixed&gt;
+     */
+    private static function arrayOption(mixed $value): array
+    {
+        return is_array($value) ? $value : [];
+    }
+}</code></pre>
+<h2 id="implement-the-factory">Implement the factory</h2>
+<p><code>BrokerAdapterFactoryInterface</code> is the normal entry point for a custom broker:</p>
+<pre class="highlight"><code class="language-php">use App\Sse\Broker\Acme\AcmeBrokerAdapter;
+use App\Sse\Broker\Acme\AcmePublisher;
+use App\Sse\Broker\Acme\AcmeSubscriptionEndpoint;
+use Maniaba\CodeIgniterSse\Config\Sse;
+use Maniaba\CodeIgniterSse\Contracts\BrokerAdapterFactoryInterface;
+use Maniaba\CodeIgniterSse\Contracts\BrokerAdapterInterface;
+use Maniaba\CodeIgniterSse\Factory\BrokerBuildContext;
+
+final readonly class AcmeBrokerAdapterFactory implements BrokerAdapterFactoryInterface
+{
+    public function __construct(
+        private AcmeClient $client,
+        private string $publicEndpoint,
+    ) {
+    }
+
+    public function create(Sse $config, BrokerBuildContext $context): BrokerAdapterInterface
+    {
+        return new AcmeBrokerAdapter(
+            new AcmePublisher($this-&gt;client, $context-&gt;serializer),
+            new AcmeSubscriptionEndpoint($this-&gt;publicEndpoint),
+        );
+    }
+}</code></pre>
+<p><code>BrokerBuildContext</code> provides the package serializer and event factory. Use the
+serializer when the external transport should receive the standard package
+event envelope. The PHP stream manager encodes browser SSE payloads itself;
+the serializer is for broker transport payloads.</p>
+<h2 id="implement-publishing">Implement publishing</h2>
+<pre class="highlight"><code class="language-php">use Maniaba\CodeIgniterSse\Contracts\EventInterface;
+use Maniaba\CodeIgniterSse\Contracts\PublisherInterface;
+use Maniaba\CodeIgniterSse\Contracts\SerializerInterface;
+
+final readonly class AcmePublisher implements PublisherInterface
+{
+    public function __construct(
+        private AcmeClient $client,
+        private SerializerInterface $serializer,
+    ) {
+    }
+
+    public function publish(string $channel, EventInterface $event): void
+    {
+        $this-&gt;client-&gt;publish(
+            $channel,
+            $this-&gt;serializer-&gt;serialize($channel, $event),
+        );
+    }
+}</code></pre>
+<p>The package validates channels before application code calls
+<code>sse()-&gt;publish(...)</code>, but a custom publisher is still a transport boundary.
+Validate or constrain anything that becomes a remote topic, URL, header, or
+query parameter.</p>
+<h2 id="implement-the-subscription-endpoint">Implement the subscription endpoint</h2>
+<p>For Hub-style brokers, return the authorization payload expected by that
+broker's frontend adapter. The core browser client does not hard-code custom
+Hub payloads.</p>
+<pre class="highlight"><code class="language-php">use CodeIgniter\HTTP\RequestInterface;
+use CodeIgniter\HTTP\ResponseInterface;
+use Maniaba\CodeIgniterSse\Contracts\ChannelSelectorValidatorInterface;
+use Maniaba\CodeIgniterSse\Contracts\ChannelSelectorValidatorProviderInterface;
+use Maniaba\CodeIgniterSse\Contracts\SubscriptionEndpointInterface;
+use Maniaba\CodeIgniterSse\Support\ChannelNameValidator;
+
+final readonly class AcmeSubscriptionEndpoint implements
+    SubscriptionEndpointInterface,
+    ChannelSelectorValidatorProviderInterface
+{
+    public function __construct(private string $publicEndpoint)
+    {
+    }
+
+    public function channelSelectorValidator(): ChannelSelectorValidatorInterface
+    {
+        return new ChannelNameValidator();
+    }
+
+    public function respond(
+        RequestInterface $request,
+        ResponseInterface $response,
+        array $channels,
+    ): ResponseInterface {
+        return $response
+            -&gt;setStatusCode(200)
+            -&gt;setJSON([
+                'endpoint'  =&gt; $this-&gt;publicEndpoint,
+                'channels'  =&gt; $channels,
+                'expiresAt' =&gt; null,
+            ])
+            -&gt;setHeader('Cache-Control', 'private, no-store')
+            -&gt;setHeader('X-Content-Type-Options', 'nosniff');
+    }
+}</code></pre>
+<p>The package authorizes channels before <code>respond()</code> is called. The endpoint
+receives only approved channel selectors. Build EventSource targets only from
+trusted broker configuration, never from unchecked request input, because the
+browser opens that HTTP(S) target with the configured credential policy.</p>
+<p>The matching frontend adapter can translate the broker payload into the
+standard <code>{ url, expiresAt }</code> connection object used by <code>SseClient</code>:</p>
+<pre class="highlight"><code class="language-javascript">class AcmeSseAdapter {
+    async resolve({ url, withCredentials }) {
+        const response = await fetch(url, {
+            headers: { Accept: 'application/json' },
+            credentials: withCredentials ? 'include' : 'same-origin',
+            cache: 'no-store',
+        });
+        const payload = await response.json();
+        const stream = new URL(payload.endpoint);
+
+        for (const channel of payload.channels) {
+            stream.searchParams.append('channel', channel);
+        }
+
+        return {
+            url: stream.toString(),
+            expiresAt: payload.expiresAt ?? null,
+        };
+    }
+}</code></pre>
+<h2 id="php-stream-brokers">PHP-stream brokers</h2>
+<p>If the broker should keep the browser connected to a PHP SSE response, the
+adapter must also implement <code>SubscriberAwareBrokerAdapterInterface</code>. The
+factory can reuse the built-in local endpoint:</p>
+<pre class="highlight"><code class="language-php">use Maniaba\CodeIgniterSse\Broker\Local\LocalBrokerAdapter;
+use Maniaba\CodeIgniterSse\Config\Sse;
+use Maniaba\CodeIgniterSse\Contracts\BrokerAdapterFactoryInterface;
+use Maniaba\CodeIgniterSse\Contracts\BrokerAdapterInterface;
+use Maniaba\CodeIgniterSse\Endpoint\LocalSseSubscriptionEndpoint;
+use Maniaba\CodeIgniterSse\Factory\BrokerBuildContext;
+use Maniaba\CodeIgniterSse\Stream\SseConnectionManager;
+use Maniaba\CodeIgniterSse\Stream\SseConnectionOptions;
+
+final readonly class AcmeStreamBrokerAdapterFactory implements BrokerAdapterFactoryInterface
+{
+    public function create(Sse $config, BrokerBuildContext $context): BrokerAdapterInterface
+    {
+        $publisher  = new AcmePublisher(service('acmeSseClient'), $context-&gt;serializer);
+        $subscriber = new AcmeSubscriber(service('acmeSseClient'), $context-&gt;serializer);
+        $manager    = new SseConnectionManager(
+            $subscriber,
+            $context-&gt;events,
+            SseConnectionOptions::fromConfig($config),
+        );
+
+        return new LocalBrokerAdapter(
+            $publisher,
+            $subscriber,
+            new LocalSseSubscriptionEndpoint($manager, $config-&gt;requireAcceptHeader),
+        );
+    }
+}</code></pre>
+<p>The subscriber must call <code>$onMessage</code> with <code>BrokerMessage</code> instances and must
+regularly return control to <code>$onIdle</code> or <code>shouldStop</code> checks so disconnects,
+heartbeats, and maximum lifetime can work.</p>
+<h2 id="custom-channel-selectors">Custom channel selectors</h2>
+<p>By default the request parser accepts exact package channel names such as
+<code>public.news</code> or <code>users.42</code>. If a broker supports selectors such as patterns,
+the endpoint should implement <code>ChannelSelectorValidatorProviderInterface</code> and
+return a validator that knows that broker's syntax.</p>
+<p>Throw <code>InvalidChannelException</code> from the validator when the selector is not
+allowed. Keep syntax validation in the broker folder; the core parser should
+not know Redis, Mercure, or custom broker rules.</p>
+<h2 id="health-checks">Health checks</h2>
+<p>If the adapter implements <code>HealthCheckableInterface</code>, <code>php spark
+sse:health-check</code> will render its result. Without that interface the command
+prints a skipped result for the broker.</p>
+<p>Use health checks for external dependencies: credentials, sockets, HTTP Hub
+availability, TLS configuration, or required PHP extensions.</p>
+<h2 id="when-a-custom-broker-does-not-work">When a custom broker does not work</h2>
+<p>Most failures map directly to a missing or wrong contract:</p>
+<table>
+<thead>
+<tr>
+<th>Error or symptom</th>
+<th>Fix</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>must define either "factory" or "adapter"</code></td>
+<td>Add exactly one of <code>factory</code> or <code>adapter</code> to <code>Sse::$brokers[$broker]</code>.</td>
+</tr>
+<tr>
+<td><code>must not define both "factory" and "adapter"</code></td>
+<td>Remove one entry so the broker definition has a single construction path.</td>
+</tr>
+<tr>
+<td><code>adapter factory "..." does not exist</code></td>
+<td>Check namespace, Composer autoload, and class name. Run <code>composer dump-autoload</code>.</td>
+</tr>
+<tr>
+<td><code>factory must implement BrokerAdapterFactoryInterface</code></td>
+<td>Implement <code>create(Sse $config, BrokerBuildContext $context): BrokerAdapterInterface</code>.</td>
+</tr>
+<tr>
+<td><code>adapter must implement BrokerAdapterInterface</code></td>
+<td>Implement <code>publisher()</code> and <code>subscriptionEndpoint()</code>.</td>
+</tr>
+<tr>
+<td><code>does not provide a PHP subscriber</code></td>
+<td>Use a custom <code>SubscriptionEndpointInterface</code>, or implement <code>SubscriberAwareBrokerAdapterInterface</code> and <code>SubscriberInterface</code>.</td>
+</tr>
+<tr>
+<td>Endpoint returns <code>400 invalid_channels</code></td>
+<td>The endpoint uses the default exact channel validator. Add <code>ChannelSelectorValidatorProviderInterface</code> if the broker supports custom selector syntax.</td>
+</tr>
+<tr>
+<td><code>sse:health-check</code> says skipped</td>
+<td>Implement <code>HealthCheckableInterface</code> on the adapter if the broker should be checkable.</td>
+</tr>
+</tbody>
+</table>
+<p>Do not work around these errors by bypassing <code>SseController</code> or accepting
+unvalidated channel strings. The adapter/factory contracts are the extension
+point.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="Footer" >
+        
+          
+          <a href="../channels-and-authorization/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Channels and authorization">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              <div class="md-ellipsis">
+                Channels and authorization
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="../browser-client/" class="md-footer__link md-footer__link--next" aria-label="Next: Browser client">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              <div class="md-ellipsis">
+                Browser client
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Copyright &copy; 2026 Maniaba.
+    </div>
+  
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+    <a href="https://github.com/maniaba/codeigniter4-sse" target="_blank" rel="noopener" title="GitHub" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 2A10 10 0 0 0 2 12c0 4.42 2.87 8.17 6.84 9.5.5.08.66-.23.66-.5v-1.69c-2.77.6-3.36-1.34-3.36-1.34-.46-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.87 1.52 2.34 1.07 2.91.83.09-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.92 0-1.11.38-2 1.03-2.71-.1-.25-.45-1.29.1-2.64 0 0 .84-.27 2.75 1.02.79-.22 1.65-.33 2.5-.33s1.71.11 2.5.33c1.91-1.29 2.75-1.02 2.75-1.02.55 1.35.2 2.39.1 2.64.65.71 1.03 1.6 1.03 2.71 0 3.82-2.34 4.66-4.57 4.91.36.31.69.92.69 1.85V21c0 .27.16.59.67.5C19.14 20.16 22 16.42 22 12A10 10 0 0 0 12 2"/></svg>
+    </a>
+  
+    
+    
+    
+    
+    <a href="https://forum.codeigniter.com" target="_blank" rel="noopener" title="Forum CodeIgniter" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M17 12V3a1 1 0 0 0-1-1H3a1 1 0 0 0-1 1v14l4-4h10a1 1 0 0 0 1-1m4-6h-2v9H6v2a1 1 0 0 0 1 1h11l4 4V7a1 1 0 0 0-1-1"/></svg>
+    </a>
+  
+    
+    
+    
+    
+    <a href="https://join.slack.com/t/codeigniterchat/shared_invite/zt-244xrrslc-l_I69AJSi5y2a2RVN~xIdQ" target="_blank" rel="noopener" title="Slack" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M6 15a2 2 0 0 1-2 2 2 2 0 0 1-2-2 2 2 0 0 1 2-2h2zm1 0a2 2 0 0 1 2-2 2 2 0 0 1 2 2v5a2 2 0 0 1-2 2 2 2 0 0 1-2-2zm2-8a2 2 0 0 1-2-2 2 2 0 0 1 2-2 2 2 0 0 1 2 2v2zm0 1a2 2 0 0 1 2 2 2 2 0 0 1-2 2H4a2 2 0 0 1-2-2 2 2 0 0 1 2-2zm8 2a2 2 0 0 1 2-2 2 2 0 0 1 2 2 2 2 0 0 1-2 2h-2zm-1 0a2 2 0 0 1-2 2 2 2 0 0 1-2-2V5a2 2 0 0 1 2-2 2 2 0 0 1 2 2zm-2 8a2 2 0 0 1 2 2 2 2 0 0 1-2 2 2 2 0 0 1-2-2v-2zm0-1a2 2 0 0 1-2-2 2 2 0 0 1 2-2h5a2 2 0 0 1 2 2 2 2 0 0 1-2 2z"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["content.code.copy", "content.action.edit", "navigation.footer", "navigation.instant", "navigation.top", "search.highlight", "search.share", "search.suggest"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"alias": true, "default": "latest", "provider": "mike"}}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+        <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.8.0/build/highlight.min.js"></script>
+      
+        <script src="../assets/js/hljs.js"></script>
+      
+    
+  </body>
+</html>

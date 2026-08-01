@@ -1,0 +1,1773 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Redis and Mercure Server-Sent Events for CodeIgniter 4.">
+      
+      
+      
+        <link rel="canonical" href="https://maniaba.github.io/codeigniter4-sse/latest/browser-client/">
+      
+      
+        <link rel="prev" href="../custom-brokers/">
+      
+      
+        <link rel="next" href="../mercure/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/flame.svg">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Browser client - CodeIgniter SSE</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.8.0/build/styles/github.min.css">
+    
+      <link rel="stylesheet" href="../assets/css/codeigniter.css">
+    
+      <link rel="stylesheet" href="../assets/css/codeigniter_dark_mode.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="codeigniter" data-md-color-primary="custom" data-md-color-accent="custom">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#browser-client" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+          <aside class="md-banner md-banner--warning">
+            <div class="md-banner__inner md-grid md-typeset">
+              
+  You're not viewing the latest version.
+  <a href="../..">
+    <strong>Click here to go to latest.</strong>
+  </a>
+
+            </div>
+            <script>var el=document.querySelector("[data-md-component=outdated]"),base=new URL(".."),outdated=__md_get("__outdated",sessionStorage,base);!0===outdated&&el&&(el.hidden=!1)</script>
+          </aside>
+        
+      </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="https://maniaba.github.io/codeigniter4-sse/" title="CodeIgniter SSE" class="md-header__button md-logo" aria-label="CodeIgniter SSE" data-md-component="logo">
+      
+  <img src="../assets/flame.svg" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            CodeIgniter SSE
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Browser client
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="codeigniter" data-md-color-primary="custom" data-md-color-accent="custom"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="custom" data-md-color-accent="custom"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+          <a href="javascript:void(0)" class="md-search__icon md-icon" title="Share" aria-label="Share" data-clipboard data-clipboard-text="" data-md-component="search-share" tabindex="-1">
+            
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9a3 3 0 0 0-3 3 3 3 0 0 0 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.15c-.05.21-.08.43-.08.66 0 1.61 1.31 2.91 2.92 2.91s2.92-1.3 2.92-2.91A2.92 2.92 0 0 0 18 16.08"/></svg>
+          </a>
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/maniaba/codeigniter4-sse" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="https://maniaba.github.io/codeigniter4-sse/" title="CodeIgniter SSE" class="md-nav__button md-logo" aria-label="CodeIgniter SSE" data-md-component="logo">
+      
+  <img src="../assets/flame.svg" alt="logo">
+
+    </a>
+    CodeIgniter SSE
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/maniaba/codeigniter4-sse" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../quick-start/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quick start
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Configuration
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../channels-and-authorization/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Channels and authorization
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../custom-brokers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom brokers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Usage
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Usage
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Browser client
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Browser client
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#import" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Import
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#constructor" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Constructor
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#adapters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Adapters
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#channels" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Channels
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#named-events" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Named events
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#system-events" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        System events
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#message-shape" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Message shape
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#global-message-handler" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Global message handler
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#connection-status" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Connection status
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#close-and-reconnect" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Close and reconnect
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#fallback-hook" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fallback hook
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#credentials-and-cors" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Credentials and CORS
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../mercure/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Mercure Hub
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../deployment/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Streaming and deployment
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Architecture
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../events/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Events
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../examples/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Examples
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../testing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Testing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../troubleshooting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Troubleshooting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_11" >
+        
+          
+          <label class="md-nav__link" for="__nav_11" id="__nav_11_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Upgrade
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_11_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_11">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Upgrade
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../upgrade/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Upgrade policy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../module-structure/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Module structure
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#import" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Import
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#constructor" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Constructor
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#adapters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Adapters
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#channels" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Channels
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#named-events" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Named events
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#system-events" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        System events
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#message-shape" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Message shape
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#global-message-handler" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Global message handler
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#connection-status" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Connection status
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#close-and-reconnect" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Close and reconnect
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#fallback-hook" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fallback hook
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#credentials-and-cors" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Credentials and CORS
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+    <a href="https://github.com/maniaba/codeigniter4-sse/edit/develop/docs/browser-client.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
+    </a>
+  
+  
+
+
+<h1 id="browser-client">Browser client</h1>
+<p><code>resources/js/sse-client.js</code> is a dependency-free ES module that wraps native
+browser <code>EventSource</code>. Broker-specific stream resolution lives in small
+adapter classes.</p>
+<p>It provides:</p>
+<ul>
+<li>named event dispatch;</li>
+<li>a global message handler;</li>
+<li>connection status notifications;</li>
+<li>safe JSON parsing;</li>
+<li>channel and custom query parameters;</li>
+<li>credential configuration;</li>
+<li>explicit frontend adapters for Redis, Mercure, local, and in-memory brokers;</li>
+<li>explicit <code>connect()</code> and <code>close()</code>;</li>
+<li>a hook for an application-defined fallback.</li>
+</ul>
+<p>After EventSource opens, native <code>EventSource</code> follows the server's SSE <code>retry</code>
+value and reconnects automatically.</p>
+<h2 id="import">Import</h2>
+<p>Install the browser client from npm when the application already has a frontend
+build:</p>
+<pre class="highlight"><code class="language-bash">npm install @maniaba/codeigniter4-sse-browser</code></pre>
+<p>Then import it through the package export:</p>
+<pre class="highlight"><code class="language-javascript">import {
+    RedisSseAdapter,
+    SseClient,
+    SseClientStatus,
+} from '@maniaba/codeigniter4-sse-browser';</code></pre>
+<p>The module also provides a default export:</p>
+<pre class="highlight"><code class="language-javascript">import SseClient from '@maniaba/codeigniter4-sse-browser';</code></pre>
+<p>TypeScript projects can import the public types:</p>
+<pre class="highlight"><code class="language-typescript">import {
+    SseClient,
+    type SseClientOptions,
+    type SseMessage,
+    type SseStatusEvent,
+} from '@maniaba/codeigniter4-sse-browser';</code></pre>
+<p>Without npm, copy the module to a public asset path or include it directly from
+published package assets:</p>
+<pre class="highlight"><code class="language-javascript">import {
+    RedisSseAdapter,
+    SseClient,
+    SseClientStatus,
+} from '/vendor/codeigniter4-sse/sse-client.js';</code></pre>
+<p>The direct asset module also provides a default export:</p>
+<pre class="highlight"><code class="language-javascript">import SseClient from '/vendor/codeigniter4-sse/sse-client.js';</code></pre>
+<p>The package ships TypeScript declarations next to the module:</p>
+<pre class="highlight"><code class="language-text">resources/js/sse-client.d.ts
+resources/js/adapters/*.d.ts</code></pre>
+<p>When <code>php spark sse:install</code> publishes browser assets, it copies
+<code>sse-client.js</code>, <code>sse-client.d.ts</code>, and the adapter files.</p>
+<h2 id="constructor">Constructor</h2>
+<pre class="highlight"><code class="language-javascript">const live = new SseClient({
+    endpoint: '/sse',
+    adapter: new RedisSseAdapter(),
+    channels: ['users.42', 'orders.918'],
+    query: {
+        locale: document.documentElement.lang,
+        source: 'orders-page',
+    },
+    withCredentials: true,
+    fallback: null,
+});</code></pre>
+<table>
+<thead>
+<tr>
+<th>Option</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>endpoint</code></td>
+<td>required</td>
+<td>Absolute or browser-relative SSE URL.</td>
+</tr>
+<tr>
+<td><code>adapter</code></td>
+<td><code>new DirectSseAdapter()</code></td>
+<td>Object that resolves the final EventSource URL.</td>
+</tr>
+<tr>
+<td><code>channels</code></td>
+<td><code>[]</code></td>
+<td>Unique logical channel names, sent comma-separated.</td>
+</tr>
+<tr>
+<td><code>query</code></td>
+<td><code>{}</code></td>
+<td>Object or <code>URLSearchParams</code> merged into the endpoint.</td>
+</tr>
+<tr>
+<td><code>withCredentials</code></td>
+<td><code>true</code></td>
+<td>Enables cross-origin credentials for EventSource and adapter requests.</td>
+</tr>
+<tr>
+<td><code>fallback</code></td>
+<td><code>null</code></td>
+<td>Optional adapter-error, connection-error, or unsupported-browser hook.</td>
+</tr>
+<tr>
+<td><code>eventSourceFactory</code></td>
+<td>native</td>
+<td>Test seam for supplying an EventSource-compatible object.</td>
+</tr>
+</tbody>
+</table>
+<p>Array query values are appended as repeated parameters. <code>null</code> and <code>undefined</code>
+object values are omitted. The <code>channels</code> option wins over an existing
+<code>channels</code> value in the endpoint or query object.</p>
+<p>Do not use query parameters for bearer tokens or secrets.</p>
+<h2 id="adapters">Adapters</h2>
+<p>Choose the adapter that matches the configured server broker:</p>
+<pre class="highlight"><code class="language-javascript">import {
+    RedisSseAdapter,
+    SseClient,
+} from '@maniaba/codeigniter4-sse-browser';
+
+const live = new SseClient({
+    endpoint: '/sse',
+    adapter: new RedisSseAdapter(),
+    channels: ['users.42'],
+});</code></pre>
+<p><code>RedisSseAdapter</code>, <code>LocalSseAdapter</code>, and <code>InMemorySseAdapter</code> are semantic
+direct adapters. They open EventSource against <code>endpoint</code> after <code>SseClient</code>
+adds channels and query parameters.</p>
+<p>Mercure uses an authorization step before EventSource opens:</p>
+<pre class="highlight"><code class="language-javascript">import {
+    MercureSseAdapter,
+    SseClient,
+} from '@maniaba/codeigniter4-sse-browser';
+
+const live = new SseClient({
+    endpoint: '/sse',
+    adapter: new MercureSseAdapter(),
+    channels: ['users.42'],
+    withCredentials: true,
+});</code></pre>
+<p><code>MercureSseAdapter</code> calls the CodeIgniter endpoint with
+<code>Accept: application/json</code>, receives <code>{ hub, topics, expiresAt }</code>, then opens
+EventSource directly against the Hub URL with repeated <code>topic</code> parameters.</p>
+<p>The client refreshes a time-limited Mercure authorization before it expires.
+Channel changes request a new token scoped to the new topic list. See
+<a href="../mercure/">Mercure Hub</a> for server, cookie, CORS, and reverse-proxy setup.</p>
+<p>Custom adapters implement <code>resolve()</code> and may implement <code>cancel()</code>:</p>
+<pre class="highlight"><code class="language-javascript">const adapter = {
+    resolve({ url }) {
+        return { url, expiresAt: null };
+    },
+    cancel() {
+        // Optional: abort an in-flight async resolve.
+    },
+};</code></pre>
+<h2 id="channels">Channels</h2>
+<p>Initial channels are passed to the constructor:</p>
+<pre class="highlight"><code class="language-javascript">const live = new SseClient({
+    endpoint: '/sse',
+    adapter: new RedisSseAdapter(),
+    channels: ['users.42'],
+});</code></pre>
+<p>Channels can also be changed later:</p>
+<pre class="highlight"><code class="language-javascript">live.subscribe('orders.918');
+live.subscribe(['projects.15.activity', 'public.news']);
+
+live.unsubscribe('orders.918');
+
+live.setChannels(['users.42', 'orders.918']);</code></pre>
+<p><code>subscribe()</code>, <code>unsubscribe()</code>, and <code>setChannels()</code> return the client for
+chaining.</p>
+<p>Native <code>EventSource</code> cannot change its URL after it is opened. When channels
+change on an active client, the wrapper closes the current source, asks the
+adapter for a new connection, and opens it with the updated <code>channels</code> query
+parameter. Removing the last channel closes the stream.</p>
+<h2 id="named-events">Named events</h2>
+<p>Register a handler before or after connecting:</p>
+<pre class="highlight"><code class="language-javascript">const updateOrder = ({ data }) =&gt; {
+    renderOrder(data);
+};
+
+live.on('order.updated', updateOrder);
+live.connect();
+
+// Later:
+live.off('order.updated', updateOrder);</code></pre>
+<p>Calling <code>off('order.updated')</code> without a handler removes all handlers for that
+event. <code>on()</code> and <code>off()</code> return the client for chaining.</p>
+<p>The names <code>open</code> and <code>error</code> are reserved by native <code>EventSource</code>. <code>status</code> is
+the wrapper lifecycle event and <code>message</code> is its global message event, so avoid
+those four names for application events. Use namespaced domain names such as
+<code>order.updated</code>.</p>
+<h2 id="system-events">System events</h2>
+<p>When <code>emitConnectedEvent</code> is enabled, the server emits <code>sse.connected</code> with
+the authorized channel list:</p>
+<pre class="highlight"><code class="language-javascript">live.on('sse.connected', ({ data }) =&gt; {
+    console.log('Subscribed to', data.channels);
+});</code></pre>
+<p>If an established stream loses its broker subscription and cannot recover,
+the server attempts to emit <code>sse.error</code> before the browser reconnects:</p>
+<pre class="highlight"><code class="language-javascript">live.on('sse.error', ({ data }) =&gt; {
+    if (data.retry) {
+        showTemporaryLiveWarning();
+    }
+});</code></pre>
+<p>Connection state should still be taken from the <code>status</code> handler. Heartbeats
+are SSE comments and never dispatch a JavaScript event.</p>
+<h2 id="message-shape">Message shape</h2>
+<p>The server sends a JSON envelope. Handlers receive a normalized object:</p>
+<pre class="highlight"><code class="language-javascript">live.on('order.updated', (message) =&gt; {
+    console.log(message.id);
+    console.log(message.event);
+    console.log(message.channel);
+    console.log(message.data);
+    console.log(message.occurredAt);
+    console.log(message.version);
+});</code></pre>
+<p>The complete shape is:</p>
+<pre class="highlight"><code class="language-text">{
+    id: '019...',
+    event: 'order.updated',
+    channel: 'orders.918',
+    data: {
+        orderId: 918,
+        status: 'paid',
+    },
+    occurredAt: '2026-07-30T19:10:00+00:00',
+    version: 1,
+    raw: '{"id":"019..."}',
+    parsed: true,
+    parseError: null,
+    originalEvent: MessageEvent,
+}</code></pre>
+<p>Invalid JSON never throws from the EventSource callback. In that case:</p>
+<ul>
+<li><code>data</code> contains the raw string;</li>
+<li><code>parsed</code> is <code>false</code>;</li>
+<li><code>parseError</code> contains the parsing error.</li>
+</ul>
+<p>Application handlers should still validate payload fields before changing the
+DOM.</p>
+<h2 id="global-message-handler">Global message handler</h2>
+<p>Use <code>message</code> or the convenience alias:</p>
+<pre class="highlight"><code class="language-javascript">live.on('message', (message) =&gt; {
+    analytics.count(`sse.${message.event}`);
+});
+
+live.onMessage((message) =&gt; {
+    debugSse(message);
+});</code></pre>
+<p>The global handler receives unnamed SSE messages and each named event that the
+client is observing through <code>on(eventName, handler)</code>. The native EventSource
+API has no wildcard listener, so an unknown named server event cannot be
+observed until its event name is registered.</p>
+<h2 id="connection-status">Connection status</h2>
+<p>Read the current state:</p>
+<pre class="highlight"><code class="language-javascript">if (live.status === SseClientStatus.OPEN) {
+    showLiveIndicator();
+}</code></pre>
+<p>Or subscribe:</p>
+<pre class="highlight"><code class="language-javascript">live.on('status', ({ status, previous, reason }) =&gt; {
+    console.log({ status, previous, reason });
+});</code></pre>
+<p>Possible values:</p>
+<pre class="highlight"><code class="language-text">idle
+connecting
+open
+reconnecting
+closed
+unsupported</code></pre>
+<p>A finite server connection lifetime normally produces <code>reconnecting</code>, followed
+by <code>open</code>. This is expected and does not require application retry code.</p>
+<h2 id="close-and-reconnect">Close and reconnect</h2>
+<pre class="highlight"><code class="language-javascript">live.close();
+
+// Existing event handlers are retained.
+live.connect();</code></pre>
+<p><code>connect()</code> is idempotent while a connection is active. <code>close()</code> prevents the
+native source from reconnecting and releases its browser resources.</p>
+<p>In a single-page application, close clients when their owning view unmounts.
+Prefer one connection with several authorized channels over one EventSource
+per widget.</p>
+<h2 id="fallback-hook">Fallback hook</h2>
+<p>The package does not prescribe polling. An application can start its own
+fallback when EventSource is unavailable or a connection reports an error:</p>
+<pre class="highlight"><code class="language-javascript">const live = new SseClient({
+    endpoint: '/sse',
+    adapter: new RedisSseAdapter(),
+    channels: ['public.status'],
+    fallback: ({ reason, client }) =&gt; {
+        if (reason === 'unsupported') {
+            startStatusPolling();
+            return;
+        }
+
+        if (reason === 'connection-error') {
+            reportLiveConnectionProblem();
+
+            // Optional: stop native reconnect before starting polling.
+            // client.close();
+            // startStatusPolling();
+        }
+    },
+});</code></pre>
+<p>The hook receives:</p>
+<pre class="highlight"><code class="language-text">{
+    reason,
+    event,
+    error,
+    status,
+    url,
+    client,
+}</code></pre>
+<p>Reasons are <code>unsupported</code>, <code>construction-error</code>, <code>connection-error</code>, and
+<code>adapter-error</code>. The last value means the selected adapter failed or returned
+invalid connection data. The hook runs once per reconnect cycle; a successful
+native <code>open</code> resets it.</p>
+<p>Browsers report the server's expected finite-lifetime rotation through the
+same native <code>error</code> event as a network outage, so <code>connection-error</code> alone
+must not immediately start polling. Debounce an outage fallback and cancel it
+when the next <code>open</code> arrives. The <code>unsupported</code> reason is definitive and can
+start a fallback immediately.</p>
+<p>Direct adapters require only <code>EventSource</code>. <code>MercureSseAdapter</code> also requires
+<code>fetch</code>; missing <code>fetch</code> is reported as <code>adapter-error</code>.</p>
+<h2 id="credentials-and-cors">Credentials and CORS</h2>
+<pre class="highlight"><code class="language-javascript">const live = new SseClient({
+    endpoint: 'https://api.example.com/sse',
+    adapter: new RedisSseAdapter(),
+    channels: ['users.42'],
+    withCredentials: true,
+});</code></pre>
+<p>For cross-origin cookies, adapter requests and EventSource responses must
+return the exact allowed origin and the
+<code>Access-Control-Allow-Credentials: true</code> header. Cookie <code>Domain</code>, <code>Secure</code>, and
+<code>SameSite</code> attributes must also permit the request.</p>
+<p>Standard browser EventSource does not accept arbitrary request headers.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="Footer" >
+        
+          
+          <a href="../custom-brokers/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Custom brokers">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              <div class="md-ellipsis">
+                Custom brokers
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="../mercure/" class="md-footer__link md-footer__link--next" aria-label="Next: Mercure Hub">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              <div class="md-ellipsis">
+                Mercure Hub
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Copyright &copy; 2026 Maniaba.
+    </div>
+  
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+    <a href="https://github.com/maniaba/codeigniter4-sse" target="_blank" rel="noopener" title="GitHub" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 2A10 10 0 0 0 2 12c0 4.42 2.87 8.17 6.84 9.5.5.08.66-.23.66-.5v-1.69c-2.77.6-3.36-1.34-3.36-1.34-.46-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.87 1.52 2.34 1.07 2.91.83.09-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.92 0-1.11.38-2 1.03-2.71-.1-.25-.45-1.29.1-2.64 0 0 .84-.27 2.75 1.02.79-.22 1.65-.33 2.5-.33s1.71.11 2.5.33c1.91-1.29 2.75-1.02 2.75-1.02.55 1.35.2 2.39.1 2.64.65.71 1.03 1.6 1.03 2.71 0 3.82-2.34 4.66-4.57 4.91.36.31.69.92.69 1.85V21c0 .27.16.59.67.5C19.14 20.16 22 16.42 22 12A10 10 0 0 0 12 2"/></svg>
+    </a>
+  
+    
+    
+    
+    
+    <a href="https://forum.codeigniter.com" target="_blank" rel="noopener" title="Forum CodeIgniter" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M17 12V3a1 1 0 0 0-1-1H3a1 1 0 0 0-1 1v14l4-4h10a1 1 0 0 0 1-1m4-6h-2v9H6v2a1 1 0 0 0 1 1h11l4 4V7a1 1 0 0 0-1-1"/></svg>
+    </a>
+  
+    
+    
+    
+    
+    <a href="https://join.slack.com/t/codeigniterchat/shared_invite/zt-244xrrslc-l_I69AJSi5y2a2RVN~xIdQ" target="_blank" rel="noopener" title="Slack" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M6 15a2 2 0 0 1-2 2 2 2 0 0 1-2-2 2 2 0 0 1 2-2h2zm1 0a2 2 0 0 1 2-2 2 2 0 0 1 2 2v5a2 2 0 0 1-2 2 2 2 0 0 1-2-2zm2-8a2 2 0 0 1-2-2 2 2 0 0 1 2-2 2 2 0 0 1 2 2v2zm0 1a2 2 0 0 1 2 2 2 2 0 0 1-2 2H4a2 2 0 0 1-2-2 2 2 0 0 1 2-2zm8 2a2 2 0 0 1 2-2 2 2 0 0 1 2 2 2 2 0 0 1-2 2h-2zm-1 0a2 2 0 0 1-2 2 2 2 0 0 1-2-2V5a2 2 0 0 1 2-2 2 2 0 0 1 2 2zm-2 8a2 2 0 0 1 2 2 2 2 0 0 1-2 2 2 2 0 0 1-2-2v-2zm0-1a2 2 0 0 1-2-2 2 2 0 0 1 2-2h5a2 2 0 0 1 2 2 2 2 0 0 1-2 2z"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["content.code.copy", "content.action.edit", "navigation.footer", "navigation.instant", "navigation.top", "search.highlight", "search.share", "search.suggest"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"alias": true, "default": "latest", "provider": "mike"}}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+        <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.8.0/build/highlight.min.js"></script>
+      
+        <script src="../assets/js/hljs.js"></script>
+      
+    
+  </body>
+</html>
