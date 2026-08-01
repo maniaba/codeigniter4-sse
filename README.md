@@ -1,5 +1,10 @@
 # CodeIgniter SSE
 
+[![PHPUnit](https://github.com/maniaba/codeigniter4-sse/actions/workflows/phpunit.yml/badge.svg)](https://github.com/maniaba/codeigniter4-sse/actions/workflows/phpunit.yml)
+[![PHPStan](https://github.com/maniaba/codeigniter4-sse/actions/workflows/phpstan.yml/badge.svg)](https://github.com/maniaba/codeigniter4-sse/actions/workflows/phpstan.yml)
+[![Docs](https://github.com/maniaba/codeigniter4-sse/actions/workflows/docs.yml/badge.svg)](https://github.com/maniaba/codeigniter4-sse/actions/workflows/docs.yml)
+[![Coverage Status](https://coveralls.io/repos/github/maniaba/codeigniter4-sse/badge.svg?branch=develop)](https://coveralls.io/github/maniaba/codeigniter4-sse?branch=develop)
+
 [![PHP](https://img.shields.io/badge/PHP-8.2%2B-777BB4.svg)](https://www.php.net/)
 [![CodeIgniter](https://img.shields.io/badge/CodeIgniter-4.7%2B-DD4814.svg)](https://codeigniter.com/)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE.md)
