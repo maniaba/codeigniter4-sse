@@ -135,10 +135,9 @@ For non-trivial options, mirror the built-in Redis and Mercure adapters: put a
 small config object and config factory in the broker folder.
 
 ```php
-use Maniaba\CodeIgniterSse\Broker\AbstractBrokerConfigFactory;
 use Maniaba\CodeIgniterSse\Config\Sse;
 
-final class AcmeConfigFactory extends AbstractBrokerConfigFactory
+final class AcmeConfigFactory
 {
     public function create(Sse $config): AcmeConfig
     {
@@ -149,6 +148,19 @@ final class AcmeConfigFactory extends AbstractBrokerConfigFactory
             endpoint: (string) ($options['endpoint'] ?? ''),
             token: self::nullableString($options['token'] ?? null),
         );
+    }
+
+    private static function nullableString(mixed $value): ?string
+    {
+        return is_string($value) && $value !== '' ? $value : null;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private static function arrayOption(mixed $value): array
+    {
+        return is_array($value) ? $value : [];
     }
 }
 ```
@@ -186,7 +198,8 @@ final readonly class AcmeBrokerAdapterFactory implements BrokerAdapterFactoryInt
 
 `BrokerBuildContext` provides the package serializer and event factory. Use the
 serializer when the external transport should receive the standard package
-event envelope.
+event envelope. The PHP stream manager encodes browser SSE payloads itself;
+the serializer is for broker transport payloads.
 
 ## Implement publishing
 
@@ -289,7 +302,6 @@ final readonly class AcmeStreamBrokerAdapterFactory implements BrokerAdapterFact
         $subscriber = new AcmeSubscriber(service('acmeSseClient'), $context->serializer);
         $manager    = new SseConnectionManager(
             $subscriber,
-            $context->serializer,
             $context->events,
             SseConnectionOptions::fromConfig($config),
         );
@@ -333,7 +345,8 @@ Most failures map directly to a missing or wrong contract:
 
 | Error or symptom | Fix |
 |---|---|
-| `must define either "factory" or "adapter"` | Add `factory` or `adapter` to `Sse::$brokers[$broker]`. |
+| `must define either "factory" or "adapter"` | Add exactly one of `factory` or `adapter` to `Sse::$brokers[$broker]`. |
+| `must not define both "factory" and "adapter"` | Remove one entry so the broker definition has a single construction path. |
 | `adapter factory "..." does not exist` | Check namespace, Composer autoload, and class name. Run `composer dump-autoload`. |
 | `factory must implement BrokerAdapterFactoryInterface` | Implement `create(Sse $config, BrokerBuildContext $context): BrokerAdapterInterface`. |
 | `adapter must implement BrokerAdapterInterface` | Implement `publisher()` and `subscriptionEndpoint()`. |

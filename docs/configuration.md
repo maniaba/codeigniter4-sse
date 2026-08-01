@@ -180,7 +180,7 @@ therefore does not separate SSE traffic; `channelPrefix` is the isolation
 boundary.
 
 Custom brokers are added by registering a new key in `brokers`. A broker
-definition must provide either `factory` or `adapter`:
+definition must provide exactly one of `factory` or `adapter`:
 
 - `factory`: `BrokerAdapterFactoryInterface`, callable returning one, or class
   name implementing it;
@@ -305,7 +305,7 @@ public array $redis = [
 | `pingInterval` | `15.0` | Verify an otherwise idle subscribed socket with Redis PING. |
 | `reconnectAttempts` | `2` | Publisher/subscriber transport reconnect attempts. |
 | `reconnectDelayMilliseconds` | `250` | Delay between Redis reconnect attempts. |
-| `deduplicationCapacity` | `1024` | Recent event IDs retained to suppress duplicates after reconnects or overlapping subscriptions. |
+| `deduplicationCapacity` | `1024` | Recent channel/event ID pairs retained to suppress duplicates from overlapping exact and pattern subscriptions. |
 | `maxPayloadBytes` | `1048576` | Maximum serialized event or inbound RESP bulk string size. |
 | `maxResponseElements` | `1024` | Maximum elements accepted in one RESP array. |
 | `maxResponseDepth` | `8` | Maximum accepted RESP nesting depth. |

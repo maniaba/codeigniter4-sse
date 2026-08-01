@@ -7,7 +7,6 @@ and browser behavior separate.
 src/
 ├── Authorization/
 ├── Broker/
-│   ├── AbstractBrokerConfigFactory.php
 │   ├── InMemory/
 │   ├── Local/
 │   ├── Mercure/
@@ -59,8 +58,6 @@ because browsers subscribe directly to the Hub.
 `Broker\InMemory` is for tests and one-process examples. `Broker\Null` is
 useful when applications want the API enabled without delivering live events.
 `Broker\Local` contains the reusable local adapter used by PHP-stream brokers.
-`Broker\AbstractBrokerConfigFactory` is a shared helper for broker-specific
-config factories; it is a file rather than a broker folder.
 
 Custom broker implementations should live in their own folder and enter the
 package through `BrokerAdapterInterface` or `BrokerAdapterFactoryInterface`.
@@ -87,7 +84,9 @@ Current package streaming response
 
 `SseConnectionManager` owns the long-running stream loop. It sends retry
 configuration, the optional connected event, broker events, idle heartbeats,
-and maximum-lifetime shutdown.
+and maximum-lifetime shutdown. `BrowserEventEncoder` keeps the JSON payload
+sent to browser EventSource clients separate from broker transport
+serialization.
 
 ## Browser asset
 

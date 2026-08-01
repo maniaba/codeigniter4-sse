@@ -86,12 +86,15 @@ TCP, TLS, ACL, or application configuration problem.
 ## Custom broker is not loaded
 
 The broker entry in `Sse::$brokers` must resolve to `BrokerAdapterInterface`.
-Use either:
+Use exactly one of:
 
 - `factory`: a `BrokerAdapterFactoryInterface` instance, class name, or
   callable returning one;
 - `adapter`: a `BrokerAdapterInterface` instance, class name, or callable
   returning one.
+
+If both keys are present, remove one so the resolver has a single construction
+path.
 
 If the error says the factory or adapter class does not exist, verify the
 namespace and Composer autoload, then run:
