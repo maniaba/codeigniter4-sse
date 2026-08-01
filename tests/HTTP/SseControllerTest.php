@@ -126,80 +126,37 @@ final class SseControllerTest extends CIUnitTestCase
 
     public function testMercureRouteAuthorizesChannelsWithoutOpeningAPhpStream(): void
     {
-        $config          = new Sse();
-        $config->broker  = 'mercure';
-        $config->mercure = [
-            'hubUrl'        => 'http://mercure/.well-known/mercure',
-            'publicHubUrl'  => 'https://example.test/.well-known/mercure',
-            'topicPrefix'   => 'urn:example:sse:',
-            'publisherKey'  => 'publisher-test-secret-at-least-32-bytes',
-            'subscriberKey' => 'subscriber-test-secret-at-least-32-bytes',
-            'cookie'        => [
-                'name'     => 'mercureAuthorization',
-                'secure'   => true,
-                'httpOnly' => true,
-                'sameSite' => 'Lax',
+        $result = $this->mercureBootstrapResponse(null, channels: 'public.news,public.status');
+        $body   = $result->getBody();
+
+        $this->assertSame(200, $result->getStatusCode());
+        $this->assertStringStartsWith('application/json', $result->getHeaderLine('Content-Type'));
+        $this->assertStringContainsString('private', $result->getHeaderLine('Cache-Control'));
+        $this->assertStringContainsString('no-store', $result->getHeaderLine('Cache-Control'));
+        $this->assertSame(
+            '<https://example.test/.well-known/mercure>; rel="mercure"',
+            $result->getHeaderLine('Link'),
+        );
+        $this->assertIsString($body);
+        $decoded = json_decode($body, true, 512, JSON_THROW_ON_ERROR);
+        $this->assertSame(
+            'https://example.test/.well-known/mercure',
+            $decoded['hub'],
+        );
+        $this->assertSame(
+            [
+                'urn:example:sse:public.news',
+                'urn:example:sse:public.status',
             ],
-        ];
-        $request  = single_service('request');
-        $response = single_service('response');
-        $logger   = service('logger');
+            $decoded['topics'],
+        );
+        $this->assertIsInt($decoded['expiresAt']);
 
-        $this->assertInstanceOf(RequestInterface::class, $request);
-        $this->assertInstanceOf(ResponseInterface::class, $response);
-        $this->assertInstanceOf(LoggerInterface::class, $logger);
-
-        $superglobals = service('superglobals');
-        $this->assertInstanceOf(Superglobals::class, $superglobals);
-        $previousGet = $superglobals->getGetArray();
-        $superglobals->setGetArray(['channels' => 'public.news,public.status']);
-        $request->removeHeader('Origin');
-        $request->removeHeader('Accept');
-        $request->removeHeader('Sec-Fetch-Site');
-
-        try {
-            FrameworkServices::injectMock(
-                'sseBrokerAdapter',
-                new BasicBrokerAdapter(endpoint: new MercureSubscriptionEndpoint($config)),
-            );
-
-            $controller = new SseController();
-            $controller->initController($request, $response, $logger);
-            $result = $controller->stream();
-            $body   = $result->getBody();
-
-            $this->assertSame(200, $result->getStatusCode());
-            $this->assertStringStartsWith('application/json', $result->getHeaderLine('Content-Type'));
-            $this->assertStringContainsString('private', $result->getHeaderLine('Cache-Control'));
-            $this->assertStringContainsString('no-store', $result->getHeaderLine('Cache-Control'));
-            $this->assertSame(
-                '<https://example.test/.well-known/mercure>; rel="mercure"',
-                $result->getHeaderLine('Link'),
-            );
-            $this->assertIsString($body);
-            $decoded = json_decode($body, true, 512, JSON_THROW_ON_ERROR);
-            $this->assertSame(
-                'https://example.test/.well-known/mercure',
-                $decoded['hub'],
-            );
-            $this->assertSame(
-                [
-                    'urn:example:sse:public.news',
-                    'urn:example:sse:public.status',
-                ],
-                $decoded['topics'],
-            );
-            $this->assertIsInt($decoded['expiresAt']);
-
-            $cookie = $result->getCookie('mercureAuthorization');
-            $this->assertInstanceOf(Cookie::class, $cookie);
-            $this->assertTrue($cookie->isSecure());
-            $this->assertTrue($cookie->isHTTPOnly());
-            $this->assertSame('Lax', $cookie->getSameSite());
-        } finally {
-            $superglobals->setGetArray($previousGet);
-            FrameworkServices::resetSingle('sseBrokerAdapter');
-        }
+        $cookie = $result->getCookie('mercureAuthorization');
+        $this->assertInstanceOf(Cookie::class, $cookie);
+        $this->assertTrue($cookie->isSecure());
+        $this->assertTrue($cookie->isHTTPOnly());
+        $this->assertSame('Lax', $cookie->getSameSite());
     }
 
     public function testMercureRouteRejectsCrossSiteBootstrapRequest(): void
@@ -266,6 +223,7 @@ final class SseControllerTest extends CIUnitTestCase
     private function mercureBootstrapResponse(
         ?string $secFetchSite,
         bool $rejectCrossSiteBootstrap = true,
+        string $channels = 'public.news',
     ): ResponseInterface {
         $config                           = new Sse();
         $config->broker                   = 'mercure';
@@ -294,7 +252,7 @@ final class SseControllerTest extends CIUnitTestCase
         $superglobals = service('superglobals');
         $this->assertInstanceOf(Superglobals::class, $superglobals);
         $previousGet = $superglobals->getGetArray();
-        $superglobals->setGetArray(['channels' => 'public.news']);
+        $superglobals->setGetArray(['channels' => $channels]);
         $request->removeHeader('Origin');
         $request->removeHeader('Accept');
         $request->removeHeader('Sec-Fetch-Site');
