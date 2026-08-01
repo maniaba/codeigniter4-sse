@@ -34,6 +34,9 @@ final class SubscriptionEndpointTest extends CIUnitTestCase
 
         $this->assertInstanceOf(ResponseInterface::class, $result);
         $this->assertSame(406, $result->getStatusCode());
+        $this->assertStringContainsString('no-store', $result->getHeaderLine('Cache-Control'));
+        $this->assertSame('Accept', $result->getHeaderLine('Vary'));
+        $this->assertSame('nosniff', $result->getHeaderLine('X-Content-Type-Options'));
         $this->assertStringContainsString('not_acceptable', (string) $result->getBody());
     }
 
@@ -67,75 +70,6 @@ final class SubscriptionEndpointTest extends CIUnitTestCase
         yield 'accept header disabled' => [null, false];
     }
 
-    public function testLocalEndpointReturnsBrowserBootstrapForJsonRequests(): void
-    {
-        [$request, $response] = $this->http('application/json');
-        $endpoint             = new LocalSseSubscriptionEndpoint($this->manager());
-
-        $this->assertNull($endpoint->preflight($request, $response));
-
-        $result = $endpoint->respond($request, $response, ['public.news']);
-        $body   = $result->getBody();
-
-        $this->assertSame(200, $result->getStatusCode());
-        $this->assertStringStartsWith('application/json', $result->getHeaderLine('Content-Type'));
-        $this->assertStringContainsString('no-store', $result->getHeaderLine('Cache-Control'));
-        $this->assertSame('Accept', $result->getHeaderLine('Vary'));
-        $this->assertSame('nosniff', $result->getHeaderLine('X-Content-Type-Options'));
-        $this->assertIsString($body);
-        $this->assertSame(
-            ['url' => null, 'expiresAt' => null],
-            json_decode($body, true, 512, JSON_THROW_ON_ERROR),
-        );
-    }
-
-    #[DataProvider('provideLocalEndpointHonorsPreferredRepresentation')]
-    public function testLocalEndpointHonorsPreferredRepresentation(
-        string $accept,
-        bool $expectsBootstrap,
-    ): void {
-        [$request, $response] = $this->http($accept);
-        $endpoint             = new LocalSseSubscriptionEndpoint($this->manager());
-
-        $this->assertNull($endpoint->preflight($request, $response));
-
-        $result = $endpoint->respond($request, $response, ['public.news']);
-
-        if ($expectsBootstrap) {
-            $this->assertStringStartsWith('application/json', $result->getHeaderLine('Content-Type'));
-
-            return;
-        }
-
-        $this->assertInstanceOf(LegacySseResponse::class, $result);
-    }
-
-    /**
-     * @return iterable<string, array{string, bool}>
-     */
-    public static function provideLocalEndpointHonorsPreferredRepresentation(): iterable
-    {
-        yield 'stream has higher quality' => [
-            'application/json;q=0.1, text/event-stream;q=1',
-            false,
-        ];
-
-        yield 'bootstrap has higher quality' => [
-            'application/json;q=1, text/event-stream;q=0.1',
-            true,
-        ];
-
-        yield 'stream wins equal quality by order' => [
-            'text/event-stream, application/json',
-            false,
-        ];
-
-        yield 'bootstrap wins equal quality by order' => [
-            'application/json, text/event-stream',
-            true,
-        ];
-    }
-
     #[DataProvider('provideLocalEndpointRejectsUnacceptableEventStreamRequests')]
     public function testLocalEndpointRejectsUnacceptableEventStreamRequests(string $accept): void
     {
@@ -153,15 +87,23 @@ final class SubscriptionEndpointTest extends CIUnitTestCase
      */
     public static function provideLocalEndpointRejectsUnacceptableEventStreamRequests(): iterable
     {
+        yield 'JSON only' => ['application/json'];
+
         yield 'event stream q zero' => ['text/event-stream;q=0'];
 
         yield 'wildcard q zero' => ['*/*;q=0'];
 
-        yield 'bootstrap q zero' => ['application/json;q=0'];
+        yield 'event stream excluded despite wildcard' => [
+            'text/event-stream;q=0, */*;q=1',
+        ];
 
-        yield 'specific q zero wins over wildcard' => ['text/event-stream;q=0, */*;q=1'];
+        yield 'text excluded despite wildcard' => [
+            'text/*;q=0, */*;q=1',
+        ];
 
-        yield 'text wildcard q zero wins over wildcard' => ['text/*;q=0, */*;q=1'];
+        yield 'malformed quality values' => [
+            'text/event-stream;q=2',
+        ];
     }
 
     public function testLocalEndpointCreatesStreamingResponse(): void
@@ -222,10 +164,10 @@ final class SubscriptionEndpointTest extends CIUnitTestCase
         $this->assertIsString($body);
 
         $decoded = json_decode($body, true, 512, JSON_THROW_ON_ERROR);
-        $this->assertSame('https://example.test/.well-known/mercure', $decoded['url']);
+        $this->assertSame('https://example.test/.well-known/mercure', $decoded['hub']);
         $this->assertSame(
-            ['topic' => ['urn:example:sse:public.news']],
-            $decoded['query'],
+            ['urn:example:sse:public.news'],
+            $decoded['topics'],
         );
         $this->assertIsInt($decoded['expiresAt']);
 
@@ -233,6 +175,66 @@ final class SubscriptionEndpointTest extends CIUnitTestCase
         $this->assertInstanceOf(Cookie::class, $cookie);
         $this->assertTrue($cookie->isSecure());
         $this->assertTrue($cookie->isHTTPOnly());
+    }
+
+    #[DataProvider('provideMercureEndpointAcceptsJsonCompatibleRequests')]
+    public function testMercureEndpointAcceptsJsonCompatibleRequests(?string $accept): void
+    {
+        [$request, $response] = $this->http($accept);
+        $endpoint             = new MercureSubscriptionEndpoint($this->mercureConfig());
+
+        $this->assertNull($endpoint->preflight($request, $response));
+    }
+
+    /**
+     * @return iterable<string, array{string|null}>
+     */
+    public static function provideMercureEndpointAcceptsJsonCompatibleRequests(): iterable
+    {
+        yield 'missing header' => [null];
+
+        yield 'JSON' => ['application/json'];
+
+        yield 'application wildcard' => ['application/*'];
+
+        yield 'wildcard' => ['*/*'];
+
+        yield 'JSON fallback behind unsupported preferred type' => [
+            'text/event-stream, */*;q=0.5',
+        ];
+    }
+
+    #[DataProvider('provideMercureEndpointRejectsJsonExclusions')]
+    public function testMercureEndpointRejectsJsonExclusions(string $accept): void
+    {
+        [$request, $response] = $this->http($accept);
+        $endpoint             = new MercureSubscriptionEndpoint($this->mercureConfig());
+
+        $result = $endpoint->preflight($request, $response);
+
+        $this->assertInstanceOf(ResponseInterface::class, $result);
+        $this->assertSame(406, $result->getStatusCode());
+        $this->assertNull($result->getCookie('mercureAuthorization'));
+        $this->assertStringContainsString('no-store', $result->getHeaderLine('Cache-Control'));
+        $this->assertSame('Accept', $result->getHeaderLine('Vary'));
+        $this->assertSame('nosniff', $result->getHeaderLine('X-Content-Type-Options'));
+        $this->assertStringContainsString('not_acceptable', (string) $result->getBody());
+    }
+
+    /**
+     * @return iterable<string, array{string}>
+     */
+    public static function provideMercureEndpointRejectsJsonExclusions(): iterable
+    {
+        yield 'event stream only' => ['text/event-stream'];
+
+        yield 'unsupported media type' => ['text/html'];
+
+        yield 'JSON q zero' => ['application/json;q=0'];
+
+        yield 'explicit JSON exclusion wins over wildcard' => [
+            'application/json;q=0, */*;q=1',
+        ];
     }
 
     public function testMercureEndpointDeletesCookieWhenSubscriberAuthorizationIsDisabled(): void

@@ -16,7 +16,7 @@ class Sse extends BaseSse
      *
      * GET /sse?channels=public.news
      *
-     * Redis returns the SSE stream. Mercure returns short-lived Hub bootstrap
+     * Redis returns the SSE stream. Mercure returns short-lived Hub
      * authorization for the browser client.
      *
      * @var array<string, mixed>

@@ -20,8 +20,8 @@ If the route was customized, use that path in the browser client.
 
 ## The endpoint returns 406
 
-The default configuration accepts the browser client's JSON bootstrap request
-or requires this header for a direct PHP stream request:
+The default Redis configuration requires this header for a direct PHP stream
+request:
 
 ```http
 Accept: text/event-stream
@@ -151,23 +151,22 @@ Verify:
 - Hub CORS lists the exact application origin.
 
 Inspect the authorization request in browser developer tools. The JSON
-`query.topic` array must contain the expected topics and the response must set
-the subscriber cookie.
+`topics` array must contain the expected topics and the response must set the
+subscriber cookie.
 The cookie is HttpOnly, so it will not appear through `document.cookie`.
 
-## Browser client reports bootstrap-error
+## Browser client reports adapter-error
 
-The browser client could not resolve the EventSource URL through the short
-CodeIgniter bootstrap request. Inspect its HTTP status:
+The selected frontend adapter could not resolve the EventSource URL. For
+Mercure, inspect the short CodeIgniter authorization request:
 
 - `400` means the channel list is invalid;
 - `403` means channel policy or application CORS denied the request;
-- `5xx` means the active broker could not build its connection descriptor;
+- `5xx` means the active broker could not build its authorization response;
 - an invalid JSON shape means a proxy or custom controller replaced the
   package response.
 
-This error occurs before EventSource connects to the PHP stream or external
-Hub.
+This error occurs before EventSource connects to the external Hub.
 
 ## The connection opens but no events arrive
 

@@ -137,7 +137,7 @@ repository's integration test and are not read by the Spark command.
 Feature tests should verify:
 
 - `GET /sse` route discovery;
-- JSON stream bootstrap and required `Accept: text/event-stream` for direct streams;
+- required `Accept: text/event-stream` for direct streams and JSON Mercure authorization;
 - missing, invalid, duplicate, and excessive channels;
 - default `public.*` access;
 - rejection of unauthorized private channels;
@@ -152,20 +152,21 @@ Use recording implementations of `SubscriberInterface` and
 
 ## Browser client tests
 
-`SseClient` accepts `fetchFactory` and `eventSourceFactory` specifically so
-tests can supply small deterministic fakes:
+`SseClient` accepts `eventSourceFactory`, and `MercureSseAdapter` accepts
+`fetchFactory`, so tests can supply small deterministic fakes:
 
 ```javascript
+import {
+    RedisSseAdapter,
+    SseClient,
+} from '@maniaba/codeigniter4-sse-browser';
+
 const source = new FakeEventSource();
 
 const live = new SseClient({
     endpoint: 'https://example.test/sse',
+    adapter: new RedisSseAdapter(),
     channels: ['public.test'],
-    fetchFactory: async () => ({
-        ok: true,
-        status: 200,
-        json: async () => ({ url: null, expiresAt: null }),
-    }),
     eventSourceFactory: (url, options) => {
         expect(url).toContain('channels=public.test');
         expect(options.withCredentials).toBe(true);

@@ -21,8 +21,14 @@ sse()->publish(
 Listen in the browser:
 
 ```javascript
+import {
+    RedisSseAdapter,
+    SseClient,
+} from '/vendor/codeigniter4-sse/sse-client.js';
+
 const live = new SseClient({
     endpoint: '/sse',
+    adapter: new RedisSseAdapter(),
     channels: [`users.${currentUserId}`],
 });
 

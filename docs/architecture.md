@@ -44,10 +44,10 @@ Application service / controller / worker
 Both paths use the same event envelope, channel authorizer, browser event
 handlers, and `sse()->publish(...)` API.
 
-The browser begins both paths with the same short JSON request. The active
-subscription endpoint returns a generic EventSource URL and query map: Redis
-points back to the PHP route, while Mercure points to the Hub. Broker selection
-therefore remains on the server.
+The browser uses a frontend adapter that matches the configured broker. Redis,
+local, and in-memory adapters open EventSource directly on the CodeIgniter
+route. Mercure first calls the same route for topic authorization and then
+opens EventSource on the Hub.
 
 ## Public application boundary
 

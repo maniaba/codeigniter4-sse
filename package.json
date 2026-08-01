@@ -39,10 +39,37 @@
       "import": "./resources/js/sse-client.js",
       "default": "./resources/js/sse-client.js"
     },
+    "./adapters/direct-sse-adapter.js": {
+      "types": "./resources/js/adapters/direct-sse-adapter.d.ts",
+      "import": "./resources/js/adapters/direct-sse-adapter.js",
+      "default": "./resources/js/adapters/direct-sse-adapter.js"
+    },
+    "./adapters/local-sse-adapter.js": {
+      "types": "./resources/js/adapters/local-sse-adapter.d.ts",
+      "import": "./resources/js/adapters/local-sse-adapter.js",
+      "default": "./resources/js/adapters/local-sse-adapter.js"
+    },
+    "./adapters/redis-sse-adapter.js": {
+      "types": "./resources/js/adapters/redis-sse-adapter.d.ts",
+      "import": "./resources/js/adapters/redis-sse-adapter.js",
+      "default": "./resources/js/adapters/redis-sse-adapter.js"
+    },
+    "./adapters/in-memory-sse-adapter.js": {
+      "types": "./resources/js/adapters/in-memory-sse-adapter.d.ts",
+      "import": "./resources/js/adapters/in-memory-sse-adapter.js",
+      "default": "./resources/js/adapters/in-memory-sse-adapter.js"
+    },
+    "./adapters/mercure-sse-adapter.js": {
+      "types": "./resources/js/adapters/mercure-sse-adapter.d.ts",
+      "import": "./resources/js/adapters/mercure-sse-adapter.js",
+      "default": "./resources/js/adapters/mercure-sse-adapter.js"
+    },
     "./package.json": "./package.json"
   },
   "files": [
     "resources/js/sse-client.js",
+    "resources/js/adapters/*.js",
+    "resources/js/adapters/*.d.ts",
     "resources/js/sse-client.d.ts",
     "README.md",
     "LICENSE.md",

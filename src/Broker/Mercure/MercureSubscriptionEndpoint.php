@@ -9,11 +9,12 @@ use CodeIgniter\HTTP\ResponseInterface;
 use Maniaba\CodeIgniterSse\Config\Sse;
 use Maniaba\CodeIgniterSse\Contracts\ChannelSelectorValidatorInterface;
 use Maniaba\CodeIgniterSse\Contracts\ChannelSelectorValidatorProviderInterface;
-use Maniaba\CodeIgniterSse\Contracts\SubscriptionEndpointInterface;
+use Maniaba\CodeIgniterSse\Contracts\PreflightSubscriptionEndpointInterface;
 use Maniaba\CodeIgniterSse\Factory\MercureSubscriptionFactory;
+use Maniaba\CodeIgniterSse\HTTP\AcceptHeaderNegotiator;
 use Maniaba\CodeIgniterSse\Support\ChannelNameValidator;
 
-final readonly class MercureSubscriptionEndpoint implements SubscriptionEndpointInterface, ChannelSelectorValidatorProviderInterface
+final readonly class MercureSubscriptionEndpoint implements PreflightSubscriptionEndpointInterface, ChannelSelectorValidatorProviderInterface
 {
     public function __construct(
         private Sse $config,
@@ -28,6 +29,33 @@ final readonly class MercureSubscriptionEndpoint implements SubscriptionEndpoint
         return new ChannelNameValidator();
     }
 
+    public function preflight(RequestInterface $request, ResponseInterface $response): ?ResponseInterface
+    {
+        $accept = $request->getHeaderLine('Accept');
+
+        if (
+            $accept === ''
+            || (new AcceptHeaderNegotiator())->preferred(
+                $accept,
+                ['bootstrap' => 'application/json'],
+            ) === 'bootstrap'
+        ) {
+            return null;
+        }
+
+        return $response
+            ->setStatusCode(406)
+            ->setJSON([
+                'error' => [
+                    'code'    => 'not_acceptable',
+                    'message' => 'This endpoint requires Accept: application/json.',
+                ],
+            ])
+            ->setHeader('Cache-Control', 'private, no-store')
+            ->appendHeader('Vary', 'Accept')
+            ->setHeader('X-Content-Type-Options', 'nosniff');
+    }
+
     public function respond(
         RequestInterface $request,
         ResponseInterface $response,
@@ -40,8 +68,8 @@ final readonly class MercureSubscriptionEndpoint implements SubscriptionEndpoint
         $response = $response
             ->setStatusCode(200)
             ->setJSON([
-                'url'       => $subscription->hubUrl,
-                'query'     => ['topic' => $subscription->topics],
+                'hub'       => $subscription->hubUrl,
+                'topics'    => $subscription->topics,
                 'expiresAt' => $subscription->expiresAt,
             ])
             ->setHeader('Cache-Control', 'private, no-store')

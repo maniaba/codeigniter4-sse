@@ -233,9 +233,9 @@ query parameter.
 
 ## Implement the subscription endpoint
 
-For Hub-style brokers, return the generic stream descriptor understood by the
-browser client. The frontend does not need a broker name or custom transport
-switch:
+For Hub-style brokers, return the authorization payload expected by that
+broker's frontend adapter. The core browser client does not hard-code custom
+Hub payloads.
 
 ```php
 use CodeIgniter\HTTP\RequestInterface;
@@ -266,8 +266,8 @@ final readonly class AcmeSubscriptionEndpoint implements
         return $response
             ->setStatusCode(200)
             ->setJSON([
-                'url'       => $this->publicEndpoint,
-                'query'     => ['channel' => $channels],
+                'endpoint'  => $this->publicEndpoint,
+                'channels'  => $channels,
                 'expiresAt' => null,
             ])
             ->setHeader('Cache-Control', 'private, no-store')
@@ -277,9 +277,35 @@ final readonly class AcmeSubscriptionEndpoint implements
 ```
 
 The package authorizes channels before `respond()` is called. The endpoint
-receives only approved channel selectors. `url` is the EventSource target,
-`query` contains parameters merged into that URL, and `expiresAt` is either a
-Unix timestamp for refreshing short-lived authorization or `null`.
+receives only approved channel selectors. Build EventSource targets only from
+trusted broker configuration, never from unchecked request input, because the
+browser opens that HTTP(S) target with the configured credential policy.
+
+The matching frontend adapter can translate the broker payload into the
+standard `{ url, expiresAt }` connection object used by `SseClient`:
+
+```javascript
+class AcmeSseAdapter {
+    async resolve({ url, withCredentials }) {
+        const response = await fetch(url, {
+            headers: { Accept: 'application/json' },
+            credentials: withCredentials ? 'include' : 'same-origin',
+            cache: 'no-store',
+        });
+        const payload = await response.json();
+        const stream = new URL(payload.endpoint);
+
+        for (const channel of payload.channels) {
+            stream.searchParams.append('channel', channel);
+        }
+
+        return {
+            url: stream.toString(),
+            expiresAt: payload.expiresAt ?? null,
+        };
+    }
+}
+```
 
 ## PHP-stream brokers
 

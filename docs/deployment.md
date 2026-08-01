@@ -4,12 +4,12 @@ An SSE response stays open and flushes frames incrementally. Web servers,
 reverse proxies, compression middleware, CDNs, and PHP worker limits must be
 configured for that behavior.
 
-This page primarily describes the built-in PHP stream used with Redis. The
-browser always starts with a short JSON bootstrap request. With Redis it then
-opens EventSource on the same CodeIgniter route; with Mercure the Hub owns the
+This page primarily describes the built-in PHP stream used with Redis. Direct
+frontend adapters open EventSource on the CodeIgniter route. With Mercure, the
+CodeIgniter route is only a short authorization request and the Hub owns the
 long-lived response. PHP-FPM stream capacity, heartbeat, and buffering
-requirements then apply to the Hub deployment, not the `/sse` bootstrap route.
-See [Mercure Hub](mercure.md).
+requirements then apply to the Hub deployment, not the `/sse` authorization
+route. See [Mercure Hub](mercure.md).
 
 ## Response headers
 

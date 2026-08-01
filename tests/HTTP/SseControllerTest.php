@@ -38,7 +38,7 @@ final class SseControllerTest extends CIUnitTestCase
         $this->assertStringContainsString('not_acceptable', $body);
     }
 
-    public function testLocalRouteReturnsBrowserBootstrapWithoutOpeningAPhpStream(): void
+    public function testLocalRouteRejectsJsonAcceptHeader(): void
     {
         $manager = new SseConnectionManager(
             new RecordingSubscriber(),
@@ -59,15 +59,11 @@ final class SseControllerTest extends CIUnitTestCase
             );
             $body = $result->getBody();
 
-            $this->assertSame(200, $result->getStatusCode());
+            $this->assertSame(406, $result->getStatusCode());
             $this->assertStringStartsWith('application/json', $result->getHeaderLine('Content-Type'));
-            $this->assertStringContainsString('no-store', $result->getHeaderLine('Cache-Control'));
             $this->assertSame('Accept', $result->getHeaderLine('Vary'));
             $this->assertIsString($body);
-            $this->assertSame(
-                ['url' => null, 'expiresAt' => null],
-                json_decode($body, true, 512, JSON_THROW_ON_ERROR),
-            );
+            $this->assertStringContainsString('not_acceptable', $body);
         } finally {
             $superglobals->setGetArray($previousGet);
         }
@@ -183,16 +179,14 @@ final class SseControllerTest extends CIUnitTestCase
             $decoded = json_decode($body, true, 512, JSON_THROW_ON_ERROR);
             $this->assertSame(
                 'https://example.test/.well-known/mercure',
-                $decoded['url'],
+                $decoded['hub'],
             );
             $this->assertSame(
                 [
-                    'topic' => [
-                        'urn:example:sse:public.news',
-                        'urn:example:sse:public.status',
-                    ],
+                    'urn:example:sse:public.news',
+                    'urn:example:sse:public.status',
                 ],
-                $decoded['query'],
+                $decoded['topics'],
             );
             $this->assertIsInt($decoded['expiresAt']);
 

@@ -1,8 +1,8 @@
 # Browser client
 
-`resources/js/sse-client.js` is a dependency-free ES module that resolves the
-configured stream through the package endpoint and then opens a native browser
-`EventSource`.
+`resources/js/sse-client.js` is a dependency-free ES module that wraps native
+browser `EventSource`. Broker-specific stream resolution lives in small
+adapter classes.
 
 It provides:
 
@@ -12,15 +12,12 @@ It provides:
 - safe JSON parsing;
 - channel and custom query parameters;
 - credential configuration;
-- automatic stream resolution without exposing the configured broker;
-- direct Mercure Hub transport with cookie authorization;
+- explicit frontend adapters for Redis, Mercure, local, and in-memory brokers;
 - explicit `connect()` and `close()`;
 - a hook for an application-defined fallback.
 
 After EventSource opens, native `EventSource` follows the server's SSE `retry`
-value and reconnects automatically. Before it opens, transient bootstrap
-network failures and retryable HTTP responses use a bounded exponential
-backoff.
+value and reconnects automatically.
 
 ## Import
 
@@ -35,6 +32,7 @@ Then import it through the package export:
 
 ```javascript
 import {
+    RedisSseAdapter,
     SseClient,
     SseClientStatus,
 } from '@maniaba/codeigniter4-sse-browser';
@@ -62,6 +60,7 @@ published package assets:
 
 ```javascript
 import {
+    RedisSseAdapter,
     SseClient,
     SseClientStatus,
 } from '/vendor/codeigniter4-sse/sse-client.js';
@@ -77,16 +76,18 @@ The package ships TypeScript declarations next to the module:
 
 ```text
 resources/js/sse-client.d.ts
+resources/js/adapters/*.d.ts
 ```
 
-When `php spark sse:install` publishes browser assets, it copies both
-`sse-client.js` and `sse-client.d.ts`.
+When `php spark sse:install` publishes browser assets, it copies
+`sse-client.js`, `sse-client.d.ts`, and the adapter files.
 
 ## Constructor
 
 ```javascript
 const live = new SseClient({
     endpoint: '/sse',
+    adapter: new RedisSseAdapter(),
     channels: ['users.42', 'orders.918'],
     query: {
         locale: document.documentElement.lang,
@@ -100,12 +101,12 @@ const live = new SseClient({
 | Option | Default | Description |
 |---|---|---|
 | `endpoint` | required | Absolute or browser-relative SSE URL. |
+| `adapter` | `new DirectSseAdapter()` | Object that resolves the final EventSource URL. |
 | `channels` | `[]` | Unique logical channel names, sent comma-separated. |
 | `query` | `{}` | Object or `URLSearchParams` merged into the endpoint. |
-| `withCredentials` | `true` | Enables cross-origin credentials for bootstrap and EventSource requests. |
-| `fallback` | `null` | Optional bootstrap, connection-error, or unsupported-browser hook. |
+| `withCredentials` | `true` | Enables cross-origin credentials for EventSource and adapter requests. |
+| `fallback` | `null` | Optional adapter-error, connection-error, or unsupported-browser hook. |
 | `eventSourceFactory` | native | Test seam for supplying an EventSource-compatible object. |
-| `fetchFactory` | native | Test seam for the short stream-resolution request. |
 
 Array query values are appended as repeated parameters. `null` and `undefined`
 object values are omitted. The `channels` option wins over an existing
@@ -113,45 +114,63 @@ object values are omitted. The `channels` option wins over an existing
 
 Do not use query parameters for bearer tokens or secrets.
 
-## Automatic stream resolution
+## Adapters
 
-The browser does not select Redis, Mercure, or another broker. `connect()`
-first requests a generic connection descriptor from `endpoint` with
-`Accept: application/json`. The server decides where the EventSource should
-connect.
-
-For a PHP stream, `url: null` tells the client to reuse the original endpoint:
-
-```json
-{
-  "url": null,
-  "expiresAt": null
-}
-```
-
-For an external Hub, the response supplies its URL, query parameters, and an
-optional authorization expiry. The client treats both forms identically and
-does not expose a transport option.
-
-When Mercure is configured, `endpoint` remains the short CodeIgniter
-authorization route:
+Choose the adapter that matches the configured server broker:
 
 ```javascript
+import {
+    RedisSseAdapter,
+    SseClient,
+} from '@maniaba/codeigniter4-sse-browser';
+
 const live = new SseClient({
     endpoint: '/sse',
+    adapter: new RedisSseAdapter(),
+    channels: ['users.42'],
+});
+```
+
+`RedisSseAdapter`, `LocalSseAdapter`, and `InMemorySseAdapter` are semantic
+direct adapters. They open EventSource against `endpoint` after `SseClient`
+adds channels and query parameters.
+
+Mercure uses an authorization step before EventSource opens:
+
+```javascript
+import {
+    MercureSseAdapter,
+    SseClient,
+} from '@maniaba/codeigniter4-sse-browser';
+
+const live = new SseClient({
+    endpoint: '/sse',
+    adapter: new MercureSseAdapter(),
     channels: ['users.42'],
     withCredentials: true,
 });
 ```
 
-`connect()` fetches authorized Hub topics, receives the subscriber JWT through
-an HttpOnly cookie, then opens EventSource directly against the returned Hub
-URL. The authorization request is asynchronous; observe `status` when the UI
-needs to know when the Hub connection reaches `open`.
+`MercureSseAdapter` calls the CodeIgniter endpoint with
+`Accept: application/json`, receives `{ hub, topics, expiresAt }`, then opens
+EventSource directly against the Hub URL with repeated `topic` parameters.
 
 The client refreshes a time-limited Mercure authorization before it expires.
 Channel changes request a new token scoped to the new topic list. See
 [Mercure Hub](mercure.md) for server, cookie, CORS, and reverse-proxy setup.
+
+Custom adapters implement `resolve()` and may implement `cancel()`:
+
+```javascript
+const adapter = {
+    resolve({ url }) {
+        return { url, expiresAt: null };
+    },
+    cancel() {
+        // Optional: abort an in-flight async resolve.
+    },
+};
+```
 
 ## Channels
 
@@ -160,6 +179,7 @@ Initial channels are passed to the constructor:
 ```javascript
 const live = new SseClient({
     endpoint: '/sse',
+    adapter: new RedisSseAdapter(),
     channels: ['users.42'],
 });
 ```
@@ -179,8 +199,8 @@ live.setChannels(['users.42', 'orders.918']);
 chaining.
 
 Native `EventSource` cannot change its URL after it is opened. When channels
-change on an active client, the wrapper closes the current source, resolves a
-new authorized stream URL, and opens it with the updated `channels` query
+change on an active client, the wrapper closes the current source, asks the
+adapter for a new connection, and opens it with the updated `channels` query
 parameter. Removing the last channel closes the stream.
 
 ## Named events
@@ -351,6 +371,7 @@ fallback when EventSource is unavailable or a connection reports an error:
 ```javascript
 const live = new SseClient({
     endpoint: '/sse',
+    adapter: new RedisSseAdapter(),
     channels: ['public.status'],
     fallback: ({ reason, client }) => {
         if (reason === 'unsupported') {
@@ -383,15 +404,9 @@ The hook receives:
 ```
 
 Reasons are `unsupported`, `construction-error`, `connection-error`, and
-`bootstrap-error`. The last value means the stream-resolution request failed
-or returned invalid data. The hook runs once per reconnect cycle; a successful
+`adapter-error`. The last value means the selected adapter failed or returned
+invalid connection data. The hook runs once per reconnect cycle; a successful
 native `open` resets it.
-
-Network failures and HTTP `408`, `425`, `429`, or `5xx` bootstrap responses are
-retried automatically with a capped exponential delay. `close()` cancels both
-an in-flight bootstrap request and a scheduled retry. Other bootstrap failures
-close the client because retrying cannot repair an invalid request or response
-contract.
 
 Browsers report the server's expected finite-lifetime rotation through the
 same native `error` event as a network outage, so `connection-error` alone
@@ -399,22 +414,22 @@ must not immediately start polling. Debounce an outage fallback and cancel it
 when the next `open` arrives. The `unsupported` reason is definitive and can
 start a fallback immediately.
 
-The client requires both `fetch` and `EventSource`. If no fallback is provided
-and the browser has no `EventSource`, `connect()` throws a clear error. A
-missing `fetch` is reported as `bootstrap-error`.
+Direct adapters require only `EventSource`. `MercureSseAdapter` also requires
+`fetch`; missing `fetch` is reported as `adapter-error`.
 
 ## Credentials and CORS
 
 ```javascript
 const live = new SseClient({
     endpoint: 'https://api.example.com/sse',
+    adapter: new RedisSseAdapter(),
     channels: ['users.42'],
     withCredentials: true,
 });
 ```
 
-For cross-origin cookies, both the bootstrap response and EventSource response
-must return the exact allowed origin and the
+For cross-origin cookies, adapter requests and EventSource responses must
+return the exact allowed origin and the
 `Access-Control-Allow-Credentials: true` header. Cookie `Domain`, `Secure`, and
 `SameSite` attributes must also permit the request.
 

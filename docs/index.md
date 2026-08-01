@@ -48,10 +48,14 @@ sse()->publish(
 Subscribe:
 
 ```javascript
-import { SseClient } from '/vendor/codeigniter4-sse/sse-client.js';
+import {
+    RedisSseAdapter,
+    SseClient,
+} from '/vendor/codeigniter4-sse/sse-client.js';
 
 const live = new SseClient({
     endpoint: '/sse',
+    adapter: new RedisSseAdapter(),
     channels: [`users.${currentUserId}`],
 });
 
@@ -62,8 +66,9 @@ live.on('notification.created', ({ data }) => {
 live.connect();
 ```
 
-The endpoint selects the actual stream URL, so this frontend code stays the
-same for Redis, Mercure, and compatible custom brokers.
+Use the frontend adapter that matches the configured broker. Redis, local, and
+in-memory adapters connect directly to the package route; Mercure authorizes
+through the route and then connects to the Hub.
 
 Private channels are denied until the application supplies an authorizer. Start
 with the [Quick start](quick-start.md), then configure

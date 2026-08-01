@@ -37,6 +37,8 @@ The command creates:
 app/Config/Sse.php
 public/vendor/codeigniter4-sse/sse-client.js
 public/vendor/codeigniter4-sse/sse-client.d.ts
+public/vendor/codeigniter4-sse/adapters/*.js
+public/vendor/codeigniter4-sse/adapters/*.d.ts
 ```
 
 Existing files are skipped. Use `--force` only when they should be replaced,
@@ -135,6 +137,7 @@ Without npm, the installer publishes the source ES module from:
 
 ```text
 vendor/maniaba/codeigniter4-sse/resources/js/sse-client.js
+vendor/maniaba/codeigniter4-sse/resources/js/adapters/
 ```
 
 The default public import is:
@@ -150,6 +153,8 @@ cp vendor/maniaba/codeigniter4-sse/resources/js/sse-client.js \
     public/assets/sse-client.js
 cp vendor/maniaba/codeigniter4-sse/resources/js/sse-client.d.ts \
     public/assets/sse-client.d.ts
+cp -R vendor/maniaba/codeigniter4-sse/resources/js/adapters \
+    public/assets/adapters
 ```
 
 Then import it:
