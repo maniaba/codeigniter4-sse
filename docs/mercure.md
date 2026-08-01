@@ -306,7 +306,7 @@ pod. Do not expose the entire Caddy admin API publicly.
 |---|---|---|
 | `hubUrl` | `http://127.0.0.1:3000/.well-known/mercure` | Server-side publish URL. |
 | `publicHubUrl` | same local URL | Browser-facing subscription URL. |
-| `topicPrefix` | `urn:codeigniter4-sse:` | Absolute IRI prefix added to logical channels. |
+| `topicPrefix` | `urn:codeigniter4-sse:` | Literal absolute IRI prefix added to logical channels. Wildcard and URI-template characters are rejected. |
 | `private` | `true` | Mark published updates as private. |
 | `authorizeSubscribers` | `true` | Issue a topic-restricted subscriber JWT cookie. |
 | `publisherJwt` | `null` | Optional pre-generated publisher JWT. |

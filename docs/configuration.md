@@ -285,6 +285,11 @@ public array $mercure = [
 ];
 ```
 
+Use a literal absolute IRI prefix such as `urn:herceg:sse:`. Prefixes
+containing wildcard or URI-template characters, such as
+`https://example.com/{topic}`, are rejected because they can broaden Mercure
+topic selectors.
+
 Nested `.env` overrides are supported:
 
 ```dotenv

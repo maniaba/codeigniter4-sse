@@ -126,5 +126,17 @@ final class MercureConfigTest extends TestCase
                 ];
             },
         ];
+
+        foreach (['{', '}', '*', '?', '[', ']'] as $character) {
+            yield sprintf('topic prefix rejects "%s"', $character) => [
+                static function (Sse $config) use ($character): void {
+                    $config->mercure = [
+                        'topicPrefix'   => 'https://example.test/sse/' . $character . 'topic',
+                        'publisherKey'  => 'publisher-test-secret-at-least-32-bytes',
+                        'subscriberKey' => 'subscriber-test-secret-at-least-32-bytes',
+                    ];
+                },
+            ];
+        }
     }
 }

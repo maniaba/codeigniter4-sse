@@ -41,16 +41,7 @@ final readonly class MercureConfig
     ) {
         $this->assertUrl($this->hubUrl, 'server-side Hub');
         $this->assertUrl($this->publicHubUrl, 'public Hub');
-
-        if (
-            $this->topicPrefix === ''
-            || strpbrk($this->topicPrefix, "\r\n\0") !== false
-            || preg_match('/^[A-Za-z][A-Za-z0-9+.-]*:/D', $this->topicPrefix) !== 1
-        ) {
-            throw new MercureConfigurationException(
-                'Mercure topicPrefix must be a non-empty absolute IRI prefix.',
-            );
-        }
+        $this->assertTopicPrefix($this->topicPrefix);
 
         if ($this->publisherJwt === null && $this->publisherKey === null) {
             throw new MercureConfigurationException(
@@ -137,6 +128,20 @@ final readonly class MercureConfig
         if (strtolower($this->cookieSameSite) === 'none' && ! $this->cookieSecure) {
             throw new MercureConfigurationException(
                 'Mercure SameSite=None cookies must be secure.',
+            );
+        }
+    }
+
+    private function assertTopicPrefix(string $prefix): void
+    {
+        if (
+            $prefix === ''
+            || strpbrk($prefix, "\r\n\0{}*?[]") !== false
+            || preg_match('/^[A-Za-z][A-Za-z0-9+.-]*:/D', $prefix) !== 1
+        ) {
+            throw new MercureConfigurationException(
+                'Mercure topicPrefix must be a literal absolute IRI prefix '
+                . 'without wildcard or URI-template characters.',
             );
         }
     }
