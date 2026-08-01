@@ -9,9 +9,14 @@
 [![CodeIgniter](https://img.shields.io/badge/CodeIgniter-4.7%2B-DD4814.svg)](https://codeigniter.com/)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE.md)
 
-`maniaba/codeigniter4-sse` adds Redis and Mercure Server-Sent Events to
-CodeIgniter 4 applications. Application code publishes semantic events through
-one CI4 API while the selected adapter handles delivery and streaming.
+CodeIgniter SSE is a lightweight, powerful Server-Sent Events
+library for CodeIgniter 4. It provides a clean, framework-native API for
+building real-time features with one-way event streams over HTTP.
+
+Use it for notifications, progress updates, activity feeds, logs, live
+dashboards, and other event-driven UI updates. Application code publishes
+semantic events through one CI4 service, while the selected broker adapter
+handles Redis or Mercure delivery, browser streaming, and reconnect behavior.
 
 ```text
                          ┌─ Redis Pub/Sub ── PHP SSE response ─┐
@@ -19,9 +24,9 @@ CodeIgniter application ┤                                    ├─ Browser
     sse()->publish()     └─ Mercure Hub ──────────────────────┘
 ```
 
-The public API is independent of Redis and of the concrete HTTP streaming
-implementation. Application code publishes events through package services and
-does not need to manage Redis subscriptions or SSE frame emission directly.
+The public API stays independent of the transport. Start with Redis for simple
+deployments, switch to Mercure when long-lived browser connections should move
+out of PHP, and keep the same `sse()->publish(...)` application code.
 
 ## Requirements
 
