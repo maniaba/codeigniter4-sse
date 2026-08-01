@@ -99,6 +99,25 @@ final class BrokerAdapterResolverTest extends TestCase
         ]));
     }
 
+    public function testRejectsInvalidAdapterClosureAfterOneInvocation(): void
+    {
+        $calls = 0;
+
+        try {
+            (new BrokerAdapterResolver())->resolve($this->config([
+                'adapter' => static function () use (&$calls): stdClass {
+                    $calls++;
+
+                    return new stdClass();
+                },
+            ]));
+
+            $this->fail('Invalid adapter closures must be rejected.');
+        } catch (LogicException) {
+            $this->assertSame(1, $calls);
+        }
+    }
+
     public function testResolvesConfiguredFactoryInstance(): void
     {
         $adapter                            = new BasicBrokerAdapter();
@@ -170,6 +189,25 @@ final class BrokerAdapterResolverTest extends TestCase
         ]));
     }
 
+    public function testRejectsInvalidFactoryClosureAfterOneInvocation(): void
+    {
+        $calls = 0;
+
+        try {
+            (new BrokerAdapterResolver())->resolve($this->config([
+                'factory' => static function () use (&$calls): stdClass {
+                    $calls++;
+
+                    return new stdClass();
+                },
+            ]));
+
+            $this->fail('Invalid factory closures must be rejected.');
+        } catch (LogicException) {
+            $this->assertSame(1, $calls);
+        }
+    }
+
     public function testSharedDefinitionsReuseTheResolvedAdapter(): void
     {
         $config = $this->config([
@@ -212,6 +250,17 @@ final class BrokerAdapterResolverTest extends TestCase
         $this->expectExceptionMessage('must define either "factory" or "adapter"');
 
         (new BrokerAdapterResolver())->resolve($this->config([]));
+    }
+
+    public function testRejectsBrokerDefinitionsWithFactoryAndAdapter(): void
+    {
+        $this->expectException(LogicException::class);
+        $this->expectExceptionMessage('must not define both "factory" and "adapter"');
+
+        (new BrokerAdapterResolver())->resolve($this->config([
+            'factory' => BasicBrokerAdapterFactory::class,
+            'adapter' => new BasicBrokerAdapter(),
+        ]));
     }
 
     /**

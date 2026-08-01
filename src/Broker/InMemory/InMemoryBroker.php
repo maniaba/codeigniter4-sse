@@ -31,51 +31,37 @@ final class InMemoryBroker implements BrokerInterface
         ?callable $onIdle = null,
     ): void {
         $allowed = [];
+        $cursor  = 0;
 
         foreach ($channels as $channel) {
             $name           = Channel::from($channel)->value();
             $allowed[$name] = true;
         }
 
-        foreach ($this->messages as $message) {
+        while (true) {
             if ($shouldStop !== null && $shouldStop()) {
                 return;
             }
 
-            if (! isset($allowed[$message->channel()])) {
-                continue;
+            while (isset($this->messages[$cursor])) {
+                $message = $this->messages[$cursor++];
+
+                if (! isset($allowed[$message->channel()])) {
+                    continue;
+                }
+
+                $onMessage($message);
             }
 
-            $onMessage($message);
-        }
-
-        if ($shouldStop === null) {
             if ($onIdle !== null) {
                 $onIdle();
             }
 
-            return;
-        }
-
-        while (! $shouldStop()) {
-            if ($onIdle !== null) {
-                $onIdle();
+            if ($shouldStop === null) {
+                return;
             }
 
             usleep(250_000);
         }
-    }
-
-    /**
-     * @return list<BrokerMessage>
-     */
-    public function messages(): array
-    {
-        return $this->messages;
-    }
-
-    public function clear(): void
-    {
-        $this->messages = [];
     }
 }

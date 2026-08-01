@@ -8,6 +8,7 @@ use Maniaba\CodeIgniterSse\Config\Sse;
 use Maniaba\CodeIgniterSse\Contracts\BrokerAdapterFactoryInterface;
 use Maniaba\CodeIgniterSse\Contracts\BrokerAdapterInterface;
 use Maniaba\CodeIgniterSse\Factory\BrokerBuildContext;
+use Maniaba\CodeIgniterSse\Factory\MercureSubscriptionFactory;
 
 final readonly class MercureBrokerAdapterFactory implements BrokerAdapterFactoryInterface
 {
@@ -24,7 +25,11 @@ final readonly class MercureBrokerAdapterFactory implements BrokerAdapterFactory
         return new MercureBrokerAdapter(
             $mercure,
             new MercurePublisher($mercure, $context->serializer),
-            new MercureSubscriptionEndpoint($config, configs: $configs),
+            new MercureSubscriptionEndpoint(
+                $config,
+                new MercureSubscriptionFactory(mercure: $mercure),
+                mercure: $mercure,
+            ),
         );
     }
 }

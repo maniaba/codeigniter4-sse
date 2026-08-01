@@ -27,7 +27,6 @@ final readonly class RedisBrokerAdapterFactory implements BrokerAdapterFactoryIn
         $subscriber        = new RedisSubscriber($redis, $context->serializer, $connectionFactory);
         $manager           = new SseConnectionManager(
             $subscriber,
-            $context->serializer,
             $context->events,
             SseConnectionOptions::fromConfig($config),
         );
@@ -41,7 +40,7 @@ final readonly class RedisBrokerAdapterFactory implements BrokerAdapterFactoryIn
                 $config->requireAcceptHeader,
                 channelSelectorValidator: new RedisChannelSelectorValidator($redis),
             ),
-            new RedisHealthChecker(new RedisConnectionFactory($redis)),
+            new RedisHealthChecker($connectionFactory),
         );
     }
 }

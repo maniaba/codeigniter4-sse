@@ -68,15 +68,73 @@ final readonly class LocalSseSubscriptionEndpoint implements PreflightSubscripti
             return false;
         }
 
-        foreach (explode(',', $accept) as $mediaRange) {
-            $mediaType = trim(explode(';', $mediaRange, 2)[0]);
+        $quality     = 0.0;
+        $specificity = -1;
 
-            if ($mediaType === 'text/event-stream' || $mediaType === '*/*') {
-                return true;
+        foreach (explode(',', $accept) as $mediaRange) {
+            $mediaRange = trim($mediaRange);
+
+            if ($mediaRange === '') {
+                continue;
+            }
+
+            [$mediaType, $rangeQuality, $rangeSpecificity] = $this->parseAcceptRange($mediaRange);
+
+            if (
+                ($mediaType !== 'text/event-stream' && $mediaType !== 'text/*' && $mediaType !== '*/*')
+                || $rangeSpecificity < $specificity
+            ) {
+                continue;
+            }
+
+            if ($rangeSpecificity > $specificity || $rangeQuality > $quality) {
+                $quality     = $rangeQuality;
+                $specificity = $rangeSpecificity;
             }
         }
 
-        return false;
+        return $specificity >= 0 && $quality > 0.0;
+    }
+
+    /**
+     * @return array{0: string, 1: float, 2: int}
+     */
+    private function parseAcceptRange(string $mediaRange): array
+    {
+        $parts     = array_map(trim(...), explode(';', $mediaRange));
+        $mediaType = array_shift($parts) ?? '';
+        $quality   = 1.0;
+
+        foreach ($parts as $parameter) {
+            if (! str_starts_with($parameter, 'q=')) {
+                continue;
+            }
+
+            $quality = $this->parseQuality(substr($parameter, 2));
+
+            break;
+        }
+
+        return [$mediaType, $quality, $this->specificity($mediaType)];
+    }
+
+    private function parseQuality(string $value): float
+    {
+        if (preg_match('/^(?:0(?:\.\d{0,3})?|1(?:\.0{0,3})?)$/D', $value) !== 1) {
+            return 0.0;
+        }
+
+        return (float) $value;
+    }
+
+    private function specificity(string $mediaType): int
+    {
+        return match ($mediaType) {
+            'text/event-stream' => 2,
+            'text/*'            => 1,
+            '*/*'               => 0,
+            default             => -1,
+        };
     }
 
     private function error(

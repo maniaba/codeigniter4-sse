@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Maniaba\CodeIgniterSse\Factory;
 
+use Maniaba\CodeIgniterSse\Broker\Mercure\MercureConfig;
 use Maniaba\CodeIgniterSse\Broker\Mercure\MercureConfigFactory;
 use Maniaba\CodeIgniterSse\Broker\Mercure\MercureJwtFactory;
 use Maniaba\CodeIgniterSse\Broker\Mercure\MercureSubscription;
@@ -15,6 +16,7 @@ final readonly class MercureSubscriptionFactory
     public function __construct(
         private ?MercureConfigFactory $configs = null,
         private ?MercureJwtFactory $tokens = null,
+        private ?MercureConfig $mercure = null,
     ) {
     }
 
@@ -26,7 +28,7 @@ final readonly class MercureSubscriptionFactory
         array $channels,
         ?int $issuedAt = null,
     ): MercureSubscription {
-        $mercure = ($this->configs ?? new MercureConfigFactory())->create($config);
+        $mercure = $this->mercure ?? ($this->configs ?? new MercureConfigFactory())->create($config);
         $topics  = (new MercureTopicMapper($mercure->topicPrefix))->mapAll($channels);
 
         if (! $mercure->authorizeSubscribers) {

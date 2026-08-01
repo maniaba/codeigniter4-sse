@@ -124,7 +124,7 @@ final class SocketRedisConnectionTest extends TestCase
         $this->assertNotNull($pattern);
         $this->assertSame('app:sse:news.eu', $pattern->channel);
         $this->assertSame('app:sse:news.*', $pattern->pattern);
-        $this->assertTrue($pattern->isPatternMessage());
+        $this->assertNotNull($pattern->pattern);
 
         $this->assertSame(
             self::command('PING')

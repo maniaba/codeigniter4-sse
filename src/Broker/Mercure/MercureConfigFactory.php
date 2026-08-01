@@ -4,10 +4,9 @@ declare(strict_types=1);
 
 namespace Maniaba\CodeIgniterSse\Broker\Mercure;
 
-use Maniaba\CodeIgniterSse\Broker\AbstractBrokerConfigFactory;
 use Maniaba\CodeIgniterSse\Config\Sse;
 
-final class MercureConfigFactory extends AbstractBrokerConfigFactory
+final class MercureConfigFactory
 {
     public function create(Sse $config): MercureConfig
     {
@@ -42,5 +41,33 @@ final class MercureConfigFactory extends AbstractBrokerConfigFactory
             cookieHttpOnly: (bool) ($cookie['httpOnly'] ?? true),
             cookieSameSite: (string) ($cookie['sameSite'] ?? 'Lax'),
         );
+    }
+
+    private static function nullableString(mixed $value): ?string
+    {
+        return is_string($value) && $value !== '' ? $value : null;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private static function stringList(mixed $value): array
+    {
+        if (! is_array($value)) {
+            return [];
+        }
+
+        return array_values(array_filter(
+            $value,
+            is_string(...),
+        ));
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private static function arrayOption(mixed $value): array
+    {
+        return is_array($value) ? $value : [];
     }
 }

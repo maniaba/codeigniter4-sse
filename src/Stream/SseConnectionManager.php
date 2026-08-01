@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Maniaba\CodeIgniterSse\Stream;
 
-use Maniaba\CodeIgniterSse\Contracts\SerializerInterface;
 use Maniaba\CodeIgniterSse\Contracts\SseOutputInterface;
 use Maniaba\CodeIgniterSse\Contracts\SubscriberInterface;
 use Maniaba\CodeIgniterSse\Event\BrokerMessage;
@@ -15,9 +14,9 @@ final readonly class SseConnectionManager
 {
     public function __construct(
         private SubscriberInterface $subscriber,
-        private SerializerInterface $serializer,
         private EventFactory $events,
         private SseConnectionOptions $options = new SseConnectionOptions(),
+        private BrowserEventEncoder $encoder = new BrowserEventEncoder(),
     ) {
     }
 
@@ -29,6 +28,7 @@ final readonly class SseConnectionManager
         $startedAt     = microtime(true);
         $lastHeartbeat = $startedAt;
         $state         = new SseConnectionState();
+        $encoder       = $this->encoder;
 
         $state->stopWhen(! $output->retry($this->options->retryMilliseconds));
 
@@ -43,7 +43,7 @@ final readonly class SseConnectionManager
             );
 
             $state->stopWhen(! $output->event(
-                $this->serializer->serialize($connected->channel(), $connected->event()),
+                $this->encoder->encode($connected),
                 $connected->event()->name(),
                 $connected->id(),
             ));
@@ -56,19 +56,13 @@ final readonly class SseConnectionManager
         try {
             $this->subscriber->subscribe(
                 channels: $channels,
-                onMessage: static function (BrokerMessage $message) use ($output, $state): void {
+                onMessage: static function (BrokerMessage $message) use ($output, $state, $encoder): void {
                     if ($state->isStopped()) {
                         return;
                     }
 
                     $state->stopWhen(! $output->event(
-                        json_encode(
-                            $message,
-                            JSON_THROW_ON_ERROR
-                            | JSON_UNESCAPED_SLASHES
-                            | JSON_UNESCAPED_UNICODE
-                            | JSON_PRESERVE_ZERO_FRACTION,
-                        ),
+                        $encoder->encode($message),
                         $message->event()->name(),
                         $message->id(),
                     ));
@@ -107,7 +101,7 @@ final readonly class SseConnectionManager
                 );
 
                 $output->event(
-                    $this->serializer->serialize($error->channel(), $error->event()),
+                    $this->encoder->encode($error),
                     $error->event()->name(),
                     $error->id(),
                 );

@@ -31,7 +31,7 @@ final class RedisHealthCheckerTest extends TestCase
         $connection->connectFailure = new RedisConnectionException('offline');
         $checker                    = new RedisHealthChecker(new FakeRedisConnectionFactory([$connection]));
 
-        $this->assertFalse($checker->isHealthy());
+        $this->assertFalse($checker->check());
         $this->assertSame($connection->connectFailure, $checker->lastError());
         $this->assertSame(1, $connection->closeCalls);
     }

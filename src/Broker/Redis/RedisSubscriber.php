@@ -46,57 +46,24 @@ final class RedisSubscriber implements SubscriberInterface
         }
 
         [$redisChannels, $redisPatterns] = $this->prepareSubscriptions($channels);
-        $seenIds                         = new BoundedEventIdSet($this->config->deduplicationCapacity);
-        $connection                      = null;
-        $reconnectAttempts               = 0;
-        $this->subscribing               = true;
+        $seenIds                         = $redisPatterns === []
+            ? null
+            : new BoundedEventIdSet($this->config->deduplicationCapacity);
+        $reconnectAttempts = 0;
+        $this->subscribing = true;
 
         try {
             while (! $this->shouldStop($shouldStop)) {
                 try {
-                    $connection = $this->connectionFactory->create();
-                    $connection->connect();
-                    $connection->subscribe($redisChannels, $redisPatterns);
-                    $lastRedisActivity = ($this->clock)();
-
-                    while (! $this->shouldStop($shouldStop)) {
-                        $redisMessage = $connection->readMessage($this->config->pollIntervalSeconds);
-
-                        if ($redisMessage === null) {
-                            if ($onIdle !== null) {
-                                $onIdle();
-                            }
-
-                            $now = ($this->clock)();
-
-                            if (
-                                $now - $lastRedisActivity >= $this->config->subscriberPingIntervalSeconds
-                            ) {
-                                if (! $connection->ping()) {
-                                    throw new RedisConnectionException(
-                                        'Redis subscription health check failed.',
-                                    );
-                                }
-
-                                $lastRedisActivity = $now;
-                                $reconnectAttempts = 0;
-                            }
-
-                            continue;
-                        }
-
-                        $lastRedisActivity = ($this->clock)();
-                        $reconnectAttempts = 0;
-                        $message           = $this->deserialize($redisMessage);
-
-                        if ($message !== null && ! $seenIds->containsOrAdd($message->id())) {
-                            $onMessage($message);
-                        }
-
-                        if ($onIdle !== null) {
-                            $onIdle();
-                        }
-                    }
+                    $this->consumeConnection(
+                        $redisChannels,
+                        $redisPatterns,
+                        $onMessage,
+                        $shouldStop,
+                        $onIdle,
+                        $seenIds,
+                        $reconnectAttempts,
+                    );
                 } catch (RedisConnectionException $exception) {
                     if ($this->shouldStop($shouldStop)) {
                         return;
@@ -113,16 +80,101 @@ final class RedisSubscriber implements SubscriberInterface
                     $this->delayReconnect();
                 } catch (RedisCommandException $exception) {
                     throw new RedisSubscriptionException('Redis rejected the SSE subscription.', 0, $exception);
-                } finally {
-                    if ($connection !== null) {
-                        $connection->close();
-                        $connection = null;
-                    }
                 }
             }
         } finally {
             $this->subscribing = false;
         }
+    }
+
+    /**
+     * @param list<string> $redisChannels
+     * @param list<string> $redisPatterns
+     */
+    private function consumeConnection(
+        array $redisChannels,
+        array $redisPatterns,
+        callable $onMessage,
+        ?callable $shouldStop,
+        ?callable $onIdle,
+        ?BoundedEventIdSet $seenIds,
+        int &$reconnectAttempts,
+    ): void {
+        $connection = $this->connectionFactory->create();
+
+        try {
+            $connection->connect();
+            $connection->subscribe($redisChannels, $redisPatterns);
+            $lastRedisActivity = ($this->clock)();
+
+            while (! $this->shouldStop($shouldStop)) {
+                $redisMessage = $connection->readMessage($this->config->pollIntervalSeconds);
+
+                if ($redisMessage === null) {
+                    $this->handleIdle($connection, $onIdle, $lastRedisActivity, $reconnectAttempts);
+
+                    continue;
+                }
+
+                $lastRedisActivity = ($this->clock)();
+                $reconnectAttempts = 0;
+
+                $this->dispatchMessage($redisMessage, $seenIds, $onMessage);
+
+                if ($onIdle !== null) {
+                    $onIdle();
+                }
+            }
+        } finally {
+            $connection->close();
+        }
+    }
+
+    private function handleIdle(
+        RedisConnectionInterface $connection,
+        ?callable $onIdle,
+        float &$lastRedisActivity,
+        int &$reconnectAttempts,
+    ): void {
+        if ($onIdle !== null) {
+            $onIdle();
+        }
+
+        $now = ($this->clock)();
+
+        if ($now - $lastRedisActivity < $this->config->subscriberPingIntervalSeconds) {
+            return;
+        }
+
+        if (! $connection->ping()) {
+            throw new RedisConnectionException('Redis subscription health check failed.');
+        }
+
+        $lastRedisActivity = $now;
+        $reconnectAttempts = 0;
+    }
+
+    private function dispatchMessage(
+        RedisSubscriptionMessage $redisMessage,
+        ?BoundedEventIdSet $seenIds,
+        callable $onMessage,
+    ): void {
+        $message = $this->deserialize($redisMessage);
+
+        if ($message === null || $this->isDuplicate($seenIds, $redisMessage, $message)) {
+            return;
+        }
+
+        $onMessage($message);
+    }
+
+    private function isDuplicate(
+        ?BoundedEventIdSet $seenIds,
+        RedisSubscriptionMessage $redisMessage,
+        BrokerMessage $message,
+    ): bool {
+        return $seenIds !== null
+            && $seenIds->containsOrAdd($redisMessage->channel . "\0" . $message->id());
     }
 
     /**

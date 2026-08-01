@@ -13,7 +13,6 @@ use Maniaba\CodeIgniterSse\Config\Sse;
 use Maniaba\CodeIgniterSse\Contracts\ChannelSelectorValidatorInterface;
 use Maniaba\CodeIgniterSse\Endpoint\LocalSseSubscriptionEndpoint;
 use Maniaba\CodeIgniterSse\Event\EventFactory;
-use Maniaba\CodeIgniterSse\Event\JsonEventSerializer;
 use Maniaba\CodeIgniterSse\HTTP\LegacySseResponse;
 use Maniaba\CodeIgniterSse\Stream\SseConnectionManager;
 use Maniaba\CodeIgniterSse\Support\ChannelNameValidator;
@@ -61,9 +60,37 @@ final class SubscriptionEndpointTest extends CIUnitTestCase
 
         yield 'event stream with parameters' => ['text/event-stream; charset=utf-8', true];
 
+        yield 'text wildcard' => ['application/json, text/*;q=0.5', true];
+
         yield 'wildcard' => ['application/json, */*', true];
 
         yield 'accept header disabled' => [null, false];
+    }
+
+    #[DataProvider('provideLocalEndpointRejectsUnacceptableEventStreamRequests')]
+    public function testLocalEndpointRejectsUnacceptableEventStreamRequests(string $accept): void
+    {
+        [$request, $response] = $this->http($accept);
+        $endpoint             = new LocalSseSubscriptionEndpoint($this->manager());
+
+        $result = $endpoint->preflight($request, $response);
+
+        $this->assertInstanceOf(ResponseInterface::class, $result);
+        $this->assertSame(406, $result->getStatusCode());
+    }
+
+    /**
+     * @return iterable<string, array{string}>
+     */
+    public static function provideLocalEndpointRejectsUnacceptableEventStreamRequests(): iterable
+    {
+        yield 'event stream q zero' => ['text/event-stream;q=0'];
+
+        yield 'wildcard q zero' => ['*/*;q=0'];
+
+        yield 'specific q zero wins over wildcard' => ['text/event-stream;q=0, */*;q=1'];
+
+        yield 'text wildcard q zero wins over wildcard' => ['text/*;q=0, */*;q=1'];
     }
 
     public function testLocalEndpointCreatesStreamingResponse(): void
@@ -186,7 +213,6 @@ final class SubscriptionEndpointTest extends CIUnitTestCase
     {
         return new SseConnectionManager(
             new RecordingSubscriber(),
-            new JsonEventSerializer(),
             new EventFactory(new FixedEventIdGenerator('connected-id')),
         );
     }

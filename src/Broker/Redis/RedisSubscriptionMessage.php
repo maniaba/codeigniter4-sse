@@ -12,9 +12,4 @@ final readonly class RedisSubscriptionMessage
         public ?string $pattern = null,
     ) {
     }
-
-    public function isPatternMessage(): bool
-    {
-        return $this->pattern !== null;
-    }
 }

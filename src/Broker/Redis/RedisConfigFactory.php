@@ -4,10 +4,9 @@ declare(strict_types=1);
 
 namespace Maniaba\CodeIgniterSse\Broker\Redis;
 
-use Maniaba\CodeIgniterSse\Broker\AbstractBrokerConfigFactory;
 use Maniaba\CodeIgniterSse\Config\Sse;
 
-final class RedisConfigFactory extends AbstractBrokerConfigFactory
+final class RedisConfigFactory
 {
     public function create(Sse $config): RedisConfig
     {
@@ -35,5 +34,18 @@ final class RedisConfigFactory extends AbstractBrokerConfigFactory
             streamContext: self::arrayOption($redis['streamContext'] ?? null),
             clientName: self::nullableString($redis['clientName'] ?? null),
         );
+    }
+
+    private static function nullableString(mixed $value): ?string
+    {
+        return is_string($value) && $value !== '' ? $value : null;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private static function arrayOption(mixed $value): array
+    {
+        return is_array($value) ? $value : [];
     }
 }

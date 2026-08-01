@@ -15,7 +15,6 @@ use Maniaba\CodeIgniterSse\Config\Sse;
 use Maniaba\CodeIgniterSse\Contracts\BrokerAdapterInterface;
 use Maniaba\CodeIgniterSse\Endpoint\LocalSseSubscriptionEndpoint;
 use Maniaba\CodeIgniterSse\Event\EventFactory;
-use Maniaba\CodeIgniterSse\Event\JsonEventSerializer;
 use Maniaba\CodeIgniterSse\HTTP\SseController;
 use Maniaba\CodeIgniterSse\HTTP\SseResponseFactory;
 use Maniaba\CodeIgniterSse\Stream\SseConnectionManager;
@@ -53,7 +52,6 @@ final class SseControllerTest extends CIUnitTestCase
     {
         $manager = new SseConnectionManager(
             new RecordingSubscriber(),
-            new JsonEventSerializer(),
             new EventFactory(new FixedEventIdGenerator('connected-id')),
         );
         $factoryResponse = single_service('response');

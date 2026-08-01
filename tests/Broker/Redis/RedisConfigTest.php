@@ -33,6 +33,33 @@ final class RedisConfigTest extends TestCase
         $this->assertNull($config->username);
     }
 
+    public function testFactoryDefaultsMatchStandaloneRedisConfigDefaults(): void
+    {
+        $standalone = new RedisConfig();
+        $factory    = (new RedisConfigFactory())->create(new Sse());
+
+        $this->assertSame($standalone->scheme, $factory->scheme);
+        $this->assertSame($standalone->host, $factory->host);
+        $this->assertSame($standalone->port, $factory->port);
+        $this->assertSame($standalone->username, $factory->username);
+        $this->assertSame($standalone->password, $factory->password);
+        $this->assertSame($standalone->database, $factory->database);
+        $this->assertSame($standalone->connectTimeout, $factory->connectTimeout);
+        $this->assertSame($standalone->readTimeout, $factory->readTimeout);
+        $this->assertSame($standalone->channelPrefix, $factory->channelPrefix);
+        $this->assertSame($standalone->pollIntervalSeconds, $factory->pollIntervalSeconds);
+        $this->assertSame($standalone->subscriberPingIntervalSeconds, $factory->subscriberPingIntervalSeconds);
+        $this->assertSame($standalone->maxReconnectAttempts, $factory->maxReconnectAttempts);
+        $this->assertSame($standalone->reconnectDelayMilliseconds, $factory->reconnectDelayMilliseconds);
+        $this->assertSame($standalone->deduplicationCapacity, $factory->deduplicationCapacity);
+        $this->assertSame($standalone->maxPayloadBytes, $factory->maxPayloadBytes);
+        $this->assertSame($standalone->maxResponseElements, $factory->maxResponseElements);
+        $this->assertSame($standalone->maxResponseDepth, $factory->maxResponseDepth);
+        $this->assertSame($standalone->allowPatternSubscriptions, $factory->allowPatternSubscriptions);
+        $this->assertSame($standalone->clientName, $factory->clientName);
+        $this->assertSame($standalone->streamContext, $factory->streamContext);
+    }
+
     public function testFactoryMapsRedisOptions(): void
     {
         $config                = new Sse();

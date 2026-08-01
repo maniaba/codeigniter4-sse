@@ -38,7 +38,6 @@ final readonly class LocalBrokerAdapterFactory implements BrokerAdapterFactoryIn
 
         $manager = new SseConnectionManager(
             $broker,
-            $context->serializer,
             $context->events,
             SseConnectionOptions::fromConfig($config),
         );

@@ -19,6 +19,7 @@ final readonly class MercureSubscriptionEndpoint implements SubscriptionEndpoint
         private Sse $config,
         private ?MercureSubscriptionFactory $subscriptions = null,
         private ?MercureConfigFactory $configs = null,
+        private ?MercureConfig $mercure = null,
     ) {
     }
 
@@ -32,9 +33,9 @@ final readonly class MercureSubscriptionEndpoint implements SubscriptionEndpoint
         ResponseInterface $response,
         array $channels,
     ): ResponseInterface {
-        $subscription = ($this->subscriptions ?? new MercureSubscriptionFactory())
-            ->create($this->config, $channels);
-        $mercure = ($this->configs ?? new MercureConfigFactory())->create($this->config);
+        $subscriptions = $this->subscriptions ?? new MercureSubscriptionFactory(mercure: $this->mercure);
+        $subscription  = $subscriptions->create($this->config, $channels);
+        $mercure       = $this->mercure ?? ($this->configs ?? new MercureConfigFactory())->create($this->config);
 
         $response = $response
             ->setStatusCode(200)

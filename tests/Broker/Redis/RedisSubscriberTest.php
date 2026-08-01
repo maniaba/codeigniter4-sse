@@ -117,6 +117,31 @@ final class RedisSubscriberTest extends TestCase
         $this->assertSame(['same-id'], $received);
     }
 
+    public function testDoesNotDeduplicateTheSameEventIdAcrossDifferentChannels(): void
+    {
+        $connection           = new FakeRedisConnection();
+        $connection->messages = [
+            new RedisSubscriptionMessage('app:sse:public.one', $this->payload('public.one', 'same-id')),
+            new RedisSubscriptionMessage('app:sse:public.two', $this->payload('public.two', 'same-id')),
+        ];
+        $subscriber = new RedisSubscriber(
+            new RedisConfig(allowPatternSubscriptions: true, reconnectDelayMilliseconds: 0),
+            $this->serializer,
+            new FakeRedisConnectionFactory([$connection]),
+        );
+        $received = [];
+
+        $subscriber->subscribe(
+            ['public.*'],
+            static function ($message) use (&$received): void {
+                $received[] = $message->channel();
+            },
+            static fn (): bool => $connection->readCalls >= 2,
+        );
+
+        $this->assertSame(['public.one', 'public.two'], $received);
+    }
+
     public function testReconnectsWithASeparateConnection(): void
     {
         $first            = new FakeRedisConnection();

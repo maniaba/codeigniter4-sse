@@ -8,7 +8,6 @@ use DateTimeImmutable;
 use Maniaba\CodeIgniterSse\Contracts\SseOutputInterface;
 use Maniaba\CodeIgniterSse\Event\BrokerMessage;
 use Maniaba\CodeIgniterSse\Event\EventFactory;
-use Maniaba\CodeIgniterSse\Event\JsonEventSerializer;
 use Maniaba\CodeIgniterSse\Event\SseEvent;
 use Maniaba\CodeIgniterSse\Stream\SseConnectionManager;
 use Maniaba\CodeIgniterSse\Stream\SseConnectionOptions;
@@ -37,7 +36,6 @@ final class SseConnectionManagerTest extends TestCase
         $output     = new RecordingSseOutput();
         $manager    = new SseConnectionManager(
             $subscriber,
-            new JsonEventSerializer(),
             new EventFactory(new FixedEventIdGenerator('connected-event')),
         );
 
@@ -95,7 +93,6 @@ final class SseConnectionManagerTest extends TestCase
         };
         $manager = new SseConnectionManager(
             $subscriber,
-            new JsonEventSerializer(),
             new EventFactory(new FixedEventIdGenerator()),
             new SseConnectionOptions(emitConnectedEvent: false),
         );
@@ -112,7 +109,6 @@ final class SseConnectionManagerTest extends TestCase
         $output->connected = false;
         $manager           = new SseConnectionManager(
             $subscriber,
-            new JsonEventSerializer(),
             new EventFactory(new FixedEventIdGenerator()),
         );
 

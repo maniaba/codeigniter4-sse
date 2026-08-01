@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Maniaba\CodeIgniterSse\Factory;
 
-use Closure;
 use LogicException;
 use Maniaba\CodeIgniterSse\Config\Sse;
 use Maniaba\CodeIgniterSse\Contracts\BrokerAdapterFactoryInterface;
@@ -63,6 +62,12 @@ final class BrokerAdapterResolver
      */
     private function make(Sse $config, array $definition): BrokerAdapterInterface
     {
+        if (array_key_exists('adapter', $definition) && array_key_exists('factory', $definition)) {
+            throw new LogicException(
+                'The configured SSE broker definition must not define both "factory" and "adapter".',
+            );
+        }
+
         if (array_key_exists('adapter', $definition)) {
             return $this->makeAdapter($config, $definition['adapter']);
         }
@@ -79,12 +84,8 @@ final class BrokerAdapterResolver
 
     private function makeAdapter(Sse $config, mixed $definition): BrokerAdapterInterface
     {
-        if ($definition instanceof Closure) {
-            $adapter = $definition($config, $this->context());
-
-            if ($adapter instanceof BrokerAdapterInterface) {
-                return $adapter;
-            }
+        if ($definition instanceof BrokerAdapterInterface) {
+            return $definition;
         }
 
         if (is_callable($definition) && ! is_string($definition)) {
@@ -107,10 +108,6 @@ final class BrokerAdapterResolver
             }
         }
 
-        if ($definition instanceof BrokerAdapterInterface) {
-            return $definition;
-        }
-
         throw new LogicException(
             'The configured SSE broker adapter must implement ' . BrokerAdapterInterface::class . '.',
         );
@@ -120,14 +117,6 @@ final class BrokerAdapterResolver
     {
         if ($definition instanceof BrokerAdapterFactoryInterface) {
             return $definition;
-        }
-
-        if ($definition instanceof Closure) {
-            $factory = $definition();
-
-            if ($factory instanceof BrokerAdapterFactoryInterface) {
-                return $factory;
-            }
         }
 
         if (is_callable($definition) && ! is_string($definition)) {
