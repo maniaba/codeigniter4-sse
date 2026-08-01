@@ -40,5 +40,11 @@ and retain a deserializer for previous versions where practical.
 Documentation is published per package version. Use the version selector in
 the site header to match the installed Composer package version.
 
-For unreleased work, use the `develop` documentation channel. For installed
-releases, use the matching tag version such as `1.0.0`.
+Before the first stable release, documentation deploys without a package
+version publish the `develop` channel and move the `latest` alias/default
+redirect to `develop`.
+
+After any stable docs version exists, `develop` continues to publish as its own
+channel but never moves `latest` again. Tagged stable releases publish their
+tag version, such as `1.0.0`, and move `latest` to that release. Prereleases
+are published without changing `latest`.
