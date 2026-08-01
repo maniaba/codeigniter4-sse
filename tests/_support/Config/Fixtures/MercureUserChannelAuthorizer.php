@@ -35,13 +35,13 @@ final class MercureUserChannelAuthorizer implements ChannelAuthorizerInterface
         if (preg_match('/^tenants\.([A-Za-z0-9_-]+)$/D', $channel, $matches) === 1) {
             $tenantIds = $user->tenantIds ?? [];
 
-            return is_array($tenantIds) && in_array($matches[1], array_map('strval', $tenantIds), true);
+            return is_array($tenantIds) && in_array($matches[1], array_map(strval(...), $tenantIds), true);
         }
 
         if (preg_match('/^projects\.([A-Za-z0-9_-]+)$/D', $channel, $matches) === 1) {
             $projectIds = $user->projectIds ?? [];
 
-            return is_array($projectIds) && in_array($matches[1], array_map('strval', $projectIds), true);
+            return is_array($projectIds) && in_array($matches[1], array_map(strval(...), $projectIds), true);
         }
 
         if (str_starts_with($channel, 'admin.')) {
