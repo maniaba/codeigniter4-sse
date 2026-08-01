@@ -1437,7 +1437,8 @@ configured proxy that strips request headers.</p>
 <pre class="highlight"><code class="language-text">/sse?channels=public.news
 /sse?channels=users.42,orders.918
 /sse?channels[]=users.42&amp;channels[]=orders.918</code></pre>
-<p>Check the channel syntax and <code>maxChannelsPerConnection</code>. Patterns are rejected
+<p>Check the channel syntax and <code>maxChannelsPerConnection</code>. Oversized raw
+<code>channels</code> query input is rejected before splitting. Patterns are rejected
 unless explicitly enabled.</p>
 <h2 id="the-endpoint-returns-403">The endpoint returns 403</h2>
 <p>There are two common causes:</p>

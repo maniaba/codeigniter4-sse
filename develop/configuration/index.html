@@ -1430,7 +1430,7 @@ then connects directly to the authorized Hub URL.</p>
 <tr>
 <td><code>maxChannelsPerConnection</code></td>
 <td style="text-align: right;"><code>20</code></td>
-<td>Maximum unique requested logical channels.</td>
+<td>Maximum unique requested logical channels. The raw <code>channels</code> query input is also bounded from this value before splitting.</td>
 </tr>
 <tr>
 <td><code>emitConnectedEvent</code></td>
@@ -1644,6 +1644,9 @@ public array $mercure = [
 
     'publisherKey'  =&gt; null,
     'subscriberKey' =&gt; null,
+    // Defaults to topicPrefix . '{channel}'.
+    'publisherTopicSelectors' =&gt; null,
+    'allowGlobalPublisherSelector' =&gt; false,
 
     'cookie' =&gt; [
         'name'     =&gt; 'mercureAuthorization',
@@ -1654,14 +1657,19 @@ public array $mercure = [
         'sameSite' =&gt; 'Lax',
     ],
 ];</code></pre>
+<p>Use a literal absolute IRI prefix such as <code>urn:herceg:sse:</code>. Prefixes
+containing wildcard or URI-template characters, such as
+<code>https://example.com/{topic}</code>, are rejected because they can broaden Mercure
+topic selectors.</p>
 <p>Nested <code>.env</code> overrides are supported:</p>
 <pre class="highlight"><code class="language-dotenv">sse.mercure.publisherKey = replace-with-the-hub-publisher-key
 sse.mercure.subscriberKey = replace-with-the-hub-subscriber-key</code></pre>
 <p>For local plain HTTP only, also set:</p>
 <pre class="highlight"><code class="language-dotenv">sse.mercure.cookie.secure = false</code></pre>
-<p>Keep Hub signing keys out of source control. The package validates Mercure
-configuration when the Mercure adapter factory builds the broker. The full key
-reference and deployment guidance are in <a href="../mercure/">Mercure Hub</a>.</p>
+<p>Keep Hub signing keys out of source control. HMAC JWT signing keys must be at
+least 32 bytes. The package validates Mercure configuration when the Mercure
+adapter factory builds the broker. The full key reference and deployment
+guidance are in <a href="../mercure/">Mercure Hub</a>.</p>
 <h2 id="redis-connection">Redis connection</h2>
 <p>Redis setup has five parts:</p>
 <ol>
@@ -1919,6 +1927,11 @@ public string $userResolver = \App\Sse\UserResolver::class;</code></pre>
 <td style="text-align: right;"><code>true</code></td>
 <td>Allow credentialed CORS responses.</td>
 </tr>
+<tr>
+<td><code>rejectCrossSiteBootstrap</code></td>
+<td style="text-align: right;"><code>true</code></td>
+<td>Reject Mercure authorization bootstrap requests with <code>Sec-Fetch-Site: cross-site</code>.</td>
+</tr>
 </tbody>
 </table>
 <p>Same-origin requests do not require an allowlist entry because browsers omit
@@ -1932,6 +1945,11 @@ public bool $withCredentials = true;</code></pre>
 <p>When credentials are enabled, <code>*</code> is not a valid allowed origin. Cookie domain,
 <code>Secure</code>, and <code>SameSite</code> settings must also permit the browser to send the
 session cookie.</p>
+<p><code>rejectCrossSiteBootstrap</code> adds a Fetch Metadata check for browsers that send
+<code>Sec-Fetch-Site</code>. It is an extra defense for the Mercure authorization request
+that sets the HttpOnly subscriber cookie; it does not replace CORS, session
+authentication, or channel authorization. Disable it only for trusted legacy or
+non-browser clients that cannot send Fetch Metadata headers.</p>
 
 
 

@@ -1316,6 +1316,9 @@ final class Sse extends BaseSse
 
         'publisherKey'  =&gt; null,
         'subscriberKey' =&gt; null,
+        // Defaults to topicPrefix . '{channel}'.
+        'publisherTopicSelectors' =&gt; null,
+        'allowGlobalPublisherSelector' =&gt; false,
 
         'cookie' =&gt; [
             'name'     =&gt; 'mercureAuthorization',
@@ -1445,6 +1448,10 @@ adapter therefore uses the Mercure cookie flow recommended for browsers.</p>
 <li>serve both endpoints over HTTPS;</li>
 <li>allow the Hub origin in Content Security Policy <code>connect-src</code>.</li>
 </ul>
+<p>The CodeIgniter authorization route also rejects
+<code>Sec-Fetch-Site: cross-site</code> bootstrap requests by default before issuing the
+subscriber cookie. Set <code>rejectCrossSiteBootstrap = false</code> only for trusted
+legacy or non-browser clients that cannot send Fetch Metadata headers.</p>
 <p>An application on <code>app.example.com</code> can set <code>domain = '.example.com'</code> for a
 Hub on <code>hub.example.com</code>. An application cannot set a cookie for an unrelated
 site. Use a same-origin reverse proxy in that case.</p>
@@ -1487,7 +1494,7 @@ pod. Do not expose the entire Caddy admin API publicly.</p>
 <tr>
 <td><code>topicPrefix</code></td>
 <td><code>urn:codeigniter4-sse:</code></td>
-<td>Absolute IRI prefix added to logical channels.</td>
+<td>Literal absolute IRI prefix added to logical channels. Wildcard and URI-template characters are rejected.</td>
 </tr>
 <tr>
 <td><code>private</code></td>
@@ -1536,8 +1543,13 @@ pod. Do not expose the entire Caddy admin API publicly.</p>
 </tr>
 <tr>
 <td><code>publisherTopicSelectors</code></td>
-<td><code>['*']</code></td>
-<td>Topics the generated publisher JWT may publish.</td>
+<td><code>null</code></td>
+<td>Topics the generated publisher JWT may publish. <code>null</code> becomes <code>topicPrefix . '{channel}'</code>.</td>
+</tr>
+<tr>
+<td><code>allowGlobalPublisherSelector</code></td>
+<td><code>false</code></td>
+<td>Allows <code>publisherTopicSelectors</code> to contain <code>*</code>. Enable only for an intentionally global publisher.</td>
 </tr>
 <tr>
 <td><code>connectTimeout</code></td>
@@ -1566,11 +1578,17 @@ pod. Do not expose the entire Caddy admin API publicly.</p>
 </tr>
 </tbody>
 </table>
-<p>The built-in JWT issuer supports HMAC algorithms. <code>publisherJwt</code> can contain a
-token issued by an external system, but dynamic subscriber authorization still
-requires the configured HMAC subscriber key. Applications using an external
-OAuth/JWKS issuer should replace the authorization controller rather than
-exposing signing keys to the browser.</p>
+<p>The built-in JWT issuer supports HMAC algorithms and requires HMAC signing keys
+to be at least 32 bytes. Generated JWTs include <code>iss</code>, <code>aud</code>, <code>sub</code>, <code>jti</code>,
+<code>iat</code>, and <code>exp</code> claims plus the Mercure scope. <code>publisherJwt</code> can contain a
+token issued by an external system. The package does not cryptographically
+verify pre-generated publisher tokens, but it rejects malformed JWTs, unsupported
+<code>alg</code> values, missing or expired <code>exp</code> claims, missing <code>mercure.publish</code> rights,
+and publish selectors outside <code>topicPrefix</code> unless the global <code>*</code> selector was
+explicitly enabled. Dynamic subscriber authorization still requires the
+configured HMAC subscriber key. Applications using an external OAuth/JWKS issuer
+should replace the authorization controller rather than exposing signing keys to
+the browser.</p>
 <p>The adapter currently maps exact logical channels. Redis glob patterns are not
 accepted by the Mercure transport; pattern selectors remain a Redis adapter
 option.</p>
