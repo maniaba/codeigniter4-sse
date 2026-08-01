@@ -273,6 +273,9 @@ public array $mercure = [
 
     'publisherKey'  => null,
     'subscriberKey' => null,
+    // Defaults to topicPrefix . '{channel}'.
+    'publisherTopicSelectors' => null,
+    'allowGlobalPublisherSelector' => false,
 
     'cookie' => [
         'name'     => 'mercureAuthorization',

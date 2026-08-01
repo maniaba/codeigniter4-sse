@@ -98,6 +98,9 @@ final class Sse extends BaseSse
 
         'publisherKey'  => null,
         'subscriberKey' => null,
+        // Defaults to topicPrefix . '{channel}'.
+        'publisherTopicSelectors' => null,
+        'allowGlobalPublisherSelector' => false,
 
         'cookie' => [
             'name'     => 'mercureAuthorization',
@@ -316,7 +319,8 @@ pod. Do not expose the entire Caddy admin API publicly.
 | `subscriberAlgorithm` | `HS256` | Subscriber JWT algorithm: HS256, HS384, or HS512. |
 | `publisherTokenTtl` | `300` | Generated publisher token lifetime in seconds. |
 | `subscriberTokenTtl` | `3600` | Browser token lifetime in seconds. |
-| `publisherTopicSelectors` | `['*']` | Topics the generated publisher JWT may publish. |
+| `publisherTopicSelectors` | `null` | Topics the generated publisher JWT may publish. `null` becomes `topicPrefix . '{channel}'`. |
+| `allowGlobalPublisherSelector` | `false` | Allows `publisherTopicSelectors` to contain `*`. Enable only for an intentionally global publisher. |
 | `connectTimeout` | `2.5` | Hub connection timeout in seconds. |
 | `timeout` | `5.0` | Complete publish request timeout in seconds. |
 | `verifyTls` | `true` | TLS verification flag or CA bundle path. |

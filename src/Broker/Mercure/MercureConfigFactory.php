@@ -26,7 +26,8 @@ final class MercureConfigFactory
             subscriberAlgorithm: strtoupper((string) $mercure['subscriberAlgorithm']),
             publisherTokenTtl: (int) $mercure['publisherTokenTtl'],
             subscriberTokenTtl: (int) $mercure['subscriberTokenTtl'],
-            publisherTopicSelectors: self::stringList($mercure['publisherTopicSelectors'] ?? null),
+            publisherTopicSelectors: self::publisherTopicSelectors($mercure),
+            allowGlobalPublisherSelector: (bool) $mercure['allowGlobalPublisherSelector'],
             connectTimeout: (float) $mercure['connectTimeout'],
             timeout: (float) $mercure['timeout'],
             verifyTls: is_string($mercure['verifyTls'])
@@ -46,6 +47,20 @@ final class MercureConfigFactory
     private static function nullableString(mixed $value): ?string
     {
         return is_string($value) && $value !== '' ? $value : null;
+    }
+
+    /**
+     * @param array<string, mixed> $mercure
+     *
+     * @return list<string>
+     */
+    private static function publisherTopicSelectors(array $mercure): array
+    {
+        if (($mercure['publisherTopicSelectors'] ?? null) === null) {
+            return [(string) $mercure['topicPrefix'] . '{channel}'];
+        }
+
+        return self::stringList($mercure['publisherTopicSelectors']);
     }
 
     /**

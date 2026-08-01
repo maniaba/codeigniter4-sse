@@ -20,24 +20,25 @@ final class MercureConfigTest extends TestCase
         $config                    = new Sse();
         $config->retryMilliseconds = 1250;
         $config->mercure           = [
-            'hubUrl'                  => 'http://mercure/.well-known/mercure',
-            'publicHubUrl'            => 'https://example.test/.well-known/mercure',
-            'topicPrefix'             => 'urn:example:sse:',
-            'private'                 => false,
-            'authorizeSubscribers'    => false,
-            'publisherJwt'            => 'static-publisher-token',
-            'publisherKey'            => null,
-            'subscriberKey'           => null,
-            'publisherAlgorithm'      => 'hs384',
-            'subscriberAlgorithm'     => 'hs512',
-            'publisherTokenTtl'       => 90,
-            'subscriberTokenTtl'      => 600,
-            'publisherTopicSelectors' => ['*', 'users.*', 17],
-            'connectTimeout'          => 1.5,
-            'timeout'                 => 4.5,
-            'verifyTls'               => '/etc/ssl/certs/ca.pem',
-            'maxPayloadBytes'         => 4096,
-            'cookie'                  => [
+            'hubUrl'                       => 'http://mercure/.well-known/mercure',
+            'publicHubUrl'                 => 'https://example.test/.well-known/mercure',
+            'topicPrefix'                  => 'urn:example:sse:',
+            'private'                      => false,
+            'authorizeSubscribers'         => false,
+            'publisherJwt'                 => 'static-publisher-token',
+            'publisherKey'                 => null,
+            'subscriberKey'                => null,
+            'publisherAlgorithm'           => 'hs384',
+            'subscriberAlgorithm'          => 'hs512',
+            'publisherTokenTtl'            => 90,
+            'subscriberTokenTtl'           => 600,
+            'publisherTopicSelectors'      => ['*', 'users.*', 17],
+            'allowGlobalPublisherSelector' => true,
+            'connectTimeout'               => 1.5,
+            'timeout'                      => 4.5,
+            'verifyTls'                    => '/etc/ssl/certs/ca.pem',
+            'maxPayloadBytes'              => 4096,
+            'cookie'                       => [
                 'name'     => 'mercureAuth',
                 'domain'   => 'example.test',
                 'path'     => '/mercure',
@@ -62,6 +63,7 @@ final class MercureConfigTest extends TestCase
         $this->assertSame(90, $mercure->publisherTokenTtl);
         $this->assertSame(600, $mercure->subscriberTokenTtl);
         $this->assertSame(['*', 'users.*'], $mercure->publisherTopicSelectors);
+        $this->assertTrue($mercure->allowGlobalPublisherSelector);
         $this->assertSame(1.5, $mercure->connectTimeout);
         $this->assertSame(4.5, $mercure->timeout);
         $this->assertSame('/etc/ssl/certs/ca.pem', $mercure->verifyTls);
@@ -73,6 +75,21 @@ final class MercureConfigTest extends TestCase
         $this->assertFalse($mercure->cookieSecure);
         $this->assertFalse($mercure->cookieHttpOnly);
         $this->assertSame('Lax', $mercure->cookieSameSite);
+    }
+
+    public function testDefaultsPublisherSelectorsFromTopicPrefix(): void
+    {
+        $config          = new Sse();
+        $config->mercure = [
+            'topicPrefix'   => 'urn:herceg:sse:',
+            'publisherKey'  => 'publisher-test-secret-at-least-32-bytes',
+            'subscriberKey' => 'subscriber-test-secret-at-least-32-bytes',
+        ];
+
+        $mercure = (new MercureConfigFactory())->create($config);
+
+        $this->assertSame(['urn:herceg:sse:{channel}'], $mercure->publisherTopicSelectors);
+        $this->assertFalse($mercure->allowGlobalPublisherSelector);
     }
 
     #[DataProvider('provideRejectsInvalidMercureConfig')]
@@ -123,6 +140,16 @@ final class MercureConfigTest extends TestCase
                     'publisherKey'            => 'publisher-test-secret-at-least-32-bytes',
                     'subscriberKey'           => 'subscriber-test-secret-at-least-32-bytes',
                     'publisherTopicSelectors' => '*',
+                ];
+            },
+        ];
+
+        yield 'global publisher selector requires opt in' => [
+            static function (Sse $config): void {
+                $config->mercure = [
+                    'publisherKey'            => 'publisher-test-secret-at-least-32-bytes',
+                    'subscriberKey'           => 'subscriber-test-secret-at-least-32-bytes',
+                    'publisherTopicSelectors' => ['*'],
                 ];
             },
         ];

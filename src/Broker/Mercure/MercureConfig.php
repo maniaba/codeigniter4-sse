@@ -27,6 +27,7 @@ final readonly class MercureConfig
         public int $publisherTokenTtl,
         public int $subscriberTokenTtl,
         public array $publisherTopicSelectors,
+        public bool $allowGlobalPublisherSelector,
         public float $connectTimeout,
         public float $timeout,
         public bool|string $verifyTls,
@@ -79,6 +80,16 @@ final readonly class MercureConfig
         if ($this->publisherTopicSelectors === []) {
             throw new MercureConfigurationException(
                 'Mercure publisherTopicSelectors must contain at least one selector.',
+            );
+        }
+
+        if (
+            in_array('*', $this->publisherTopicSelectors, true)
+            && ! $this->allowGlobalPublisherSelector
+        ) {
+            throw new MercureConfigurationException(
+                'The global Mercure publisher selector "*" is disabled. '
+                . 'Enable it explicitly only when required.',
             );
         }
 
