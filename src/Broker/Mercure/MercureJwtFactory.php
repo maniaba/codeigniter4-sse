@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Maniaba\CodeIgniterSse\Broker\Mercure;
 
-use JsonException;
 use Maniaba\CodeIgniterSse\Broker\Mercure\Exception\MercureConfigurationException;
 use Random\RandomException;
 
@@ -20,6 +19,11 @@ final class MercureJwtFactory
     private const AUDIENCE           = 'mercure';
     private const PUBLISHER_SUBJECT  = 'mercure-publisher';
     private const SUBSCRIBER_SUBJECT = 'mercure-subscriber';
+
+    public function __construct(
+        private readonly ?MercureJwtCodec $codec = null,
+    ) {
+    }
 
     /**
      * @param array{publish?: list<string>, subscribe?: list<string>} $mercure
@@ -50,8 +54,8 @@ final class MercureJwtFactory
         }
 
         $issuedAt ??= time();
-        $header = $this->encode(['alg' => $algorithm, 'typ' => 'JWT']);
-        $claims = $this->encode([
+        $codec    = $this->codec ?? new MercureJwtCodec();
+        $unsigned = $codec->unsigned(['alg' => $algorithm, 'typ' => 'JWT'], [
             'iss'     => self::ISSUER,
             'aud'     => self::AUDIENCE,
             'sub'     => self::subject($mercure),
@@ -60,28 +64,9 @@ final class MercureJwtFactory
             'exp'     => $issuedAt + $ttl,
             'mercure' => $mercure,
         ]);
-        $unsigned  = $header . '.' . $claims;
         $signature = hash_hmac($hash, $unsigned, $key, true);
 
-        return $unsigned . '.' . self::base64UrlEncode($signature);
-    }
-
-    /**
-     * @param array<string, mixed> $value
-     */
-    private function encode(array $value): string
-    {
-        try {
-            return self::base64UrlEncode(
-                json_encode($value, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES),
-            );
-        } catch (JsonException $exception) {
-            throw new MercureConfigurationException(
-                'The Mercure JWT claims could not be encoded.',
-                0,
-                $exception,
-            );
-        }
+        return $unsigned . '.' . $codec->encodeBytes($signature);
     }
 
     /**
@@ -111,10 +96,5 @@ final class MercureJwtFactory
                 $exception,
             );
         }
-    }
-
-    private static function base64UrlEncode(string $value): string
-    {
-        return rtrim(strtr(base64_encode($value), '+/', '-_'), '=');
     }
 }

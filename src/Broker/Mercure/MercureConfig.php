@@ -101,6 +101,10 @@ final readonly class MercureConfig
             }
         }
 
+        if ($this->publisherJwt !== null) {
+            $this->assertPublisherJwt($this->publisherJwt);
+        }
+
         if ($this->connectTimeout <= 0.0 || $this->timeout <= 0.0) {
             throw new MercureConfigurationException(
                 'Mercure HTTP timeouts must be greater than zero.',
@@ -140,6 +144,64 @@ final readonly class MercureConfig
             throw new MercureConfigurationException(
                 'Mercure SameSite=None cookies must be secure.',
             );
+        }
+    }
+
+    private function assertPublisherJwt(string $jwt): void
+    {
+        $codec                           = new MercureJwtCodec();
+        [$encodedHeader, $encodedClaims] = $codec->split($jwt, 'publisherJwt');
+        $header                          = $codec->decodeJsonObjectSegment($encodedHeader, 'publisherJwt header');
+        $claims                          = $codec->decodeJsonObjectSegment($encodedClaims, 'publisherJwt payload');
+
+        $algorithm = $header['alg'] ?? null;
+
+        if (! is_string($algorithm) || ! in_array($algorithm, self::ALGORITHMS, true)) {
+            throw new MercureConfigurationException(
+                sprintf('Mercure publisherJwt alg must be one of %s.', implode(', ', self::ALGORITHMS)),
+            );
+        }
+
+        $expiresAt = $claims['exp'] ?? null;
+
+        if (! is_int($expiresAt) && ! is_float($expiresAt)) {
+            throw new MercureConfigurationException('Mercure publisherJwt must contain an exp claim.');
+        }
+
+        if ($expiresAt <= time()) {
+            throw new MercureConfigurationException('Mercure publisherJwt has expired.');
+        }
+
+        $mercure = $claims['mercure'] ?? null;
+        $publish = is_array($mercure) ? ($mercure['publish'] ?? null) : null;
+
+        if (! is_array($publish) || $publish === []) {
+            throw new MercureConfigurationException('Mercure publisherJwt must contain mercure.publish rights.');
+        }
+
+        foreach ($publish as $selector) {
+            if (! is_string($selector) || $selector === '' || strpbrk($selector, "\r\n\0") !== false) {
+                throw new MercureConfigurationException(
+                    'Mercure publisherJwt publish selectors must be non-empty single-line strings.',
+                );
+            }
+
+            if ($selector === '*') {
+                if (! $this->allowGlobalPublisherSelector) {
+                    throw new MercureConfigurationException(
+                        'The global Mercure publisher selector "*" is disabled. '
+                        . 'Enable it explicitly only when required.',
+                    );
+                }
+
+                continue;
+            }
+
+            if (! str_starts_with($selector, $this->topicPrefix)) {
+                throw new MercureConfigurationException(
+                    'Mercure publisherJwt publish selectors must stay within topicPrefix.',
+                );
+            }
         }
     }
 
