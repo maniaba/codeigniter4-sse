@@ -16,6 +16,7 @@ final readonly class MercureBrokerAdapter implements BrokerAdapterInterface, Hea
         private MercureConfig $config,
         private PublisherInterface $publisher,
         private SubscriptionEndpointInterface $endpoint,
+        private ?bool $hasCurl = null,
     ) {
     }
 
@@ -31,7 +32,7 @@ final readonly class MercureBrokerAdapter implements BrokerAdapterInterface, Hea
 
     public function healthCheck(): HealthCheckResult
     {
-        if (! function_exists('curl_version')) {
+        if (! ($this->hasCurl ?? function_exists('curl_version'))) {
             return HealthCheckResult::failed('The Mercure publisher requires the PHP cURL extension.');
         }
 

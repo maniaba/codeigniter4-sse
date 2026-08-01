@@ -16,9 +16,6 @@ use Maniaba\CodeIgniterSse\Stream\SseConnectionManager;
 
 final readonly class LocalBrokerAdapterFactory implements BrokerAdapterFactoryInterface
 {
-    /**
-     * @param class-string<PublisherInterface&SubscriberInterface> $brokerClass
-     */
     public function __construct(
         private string $brokerClass,
     ) {
