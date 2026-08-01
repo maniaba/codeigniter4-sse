@@ -9,11 +9,12 @@ use InvalidArgumentException;
 use LogicException;
 use Maniaba\CodeIgniterSse\Authorization\NullUserResolver;
 use Maniaba\CodeIgniterSse\Authorization\PublicChannelAuthorizer;
-use Maniaba\CodeIgniterSse\Broker\InMemoryBroker;
-use Maniaba\CodeIgniterSse\Broker\Mercure\MercurePublisher;
-use Maniaba\CodeIgniterSse\Broker\NullBroker;
-use Maniaba\CodeIgniterSse\Broker\Redis\RedisPublisher;
-use Maniaba\CodeIgniterSse\Broker\Redis\RedisSubscriber;
+use Maniaba\CodeIgniterSse\Broker\InMemoryBrokerAdapterFactory;
+use Maniaba\CodeIgniterSse\Broker\Mercure\MercureBrokerAdapterFactory;
+use Maniaba\CodeIgniterSse\Broker\NullBrokerAdapterFactory;
+use Maniaba\CodeIgniterSse\Broker\Redis\RedisBrokerAdapterFactory;
+use Maniaba\CodeIgniterSse\Contracts\BrokerAdapterFactoryInterface;
+use Maniaba\CodeIgniterSse\Contracts\BrokerAdapterInterface;
 use Maniaba\CodeIgniterSse\Contracts\ChannelAuthorizerInterface;
 use Maniaba\CodeIgniterSse\Contracts\PublisherInterface;
 use Maniaba\CodeIgniterSse\Contracts\SubscriberInterface;
@@ -119,7 +120,9 @@ class Sse extends BaseConfig
 
     /**
      * @var array<string, array{
-     *     publisher: callable(self): PublisherInterface|class-string<PublisherInterface>,
+     *     factory?: BrokerAdapterFactoryInterface|callable(): BrokerAdapterFactoryInterface|class-string<BrokerAdapterFactoryInterface>,
+     *     adapter?: BrokerAdapterInterface|callable(self): BrokerAdapterInterface|class-string<BrokerAdapterInterface>,
+     *     publisher?: callable(self): PublisherInterface|class-string<PublisherInterface>,
      *     subscriber?: callable(self): SubscriberInterface|class-string<SubscriberInterface>,
      *     transport?: 'mercure'|'php',
      *     shared?: bool
@@ -127,22 +130,19 @@ class Sse extends BaseConfig
      */
     public array $brokers = [
         'redis' => [
-            'publisher'  => RedisPublisher::class,
-            'subscriber' => RedisSubscriber::class,
+            'factory' => RedisBrokerAdapterFactory::class,
         ],
         'mercure' => [
-            'publisher' => MercurePublisher::class,
+            'factory'   => MercureBrokerAdapterFactory::class,
             'transport' => 'mercure',
         ],
         'memory' => [
-            'publisher'  => InMemoryBroker::class,
-            'subscriber' => InMemoryBroker::class,
-            'shared'     => true,
+            'factory' => InMemoryBrokerAdapterFactory::class,
+            'shared'  => true,
         ],
         'null' => [
-            'publisher'  => NullBroker::class,
-            'subscriber' => NullBroker::class,
-            'shared'     => true,
+            'factory' => NullBrokerAdapterFactory::class,
+            'shared'  => true,
         ],
     ];
 

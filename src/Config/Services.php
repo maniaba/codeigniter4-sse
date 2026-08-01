@@ -6,6 +6,7 @@ namespace Maniaba\CodeIgniterSse\Config;
 
 use CodeIgniter\Config\BaseService;
 use LogicException;
+use Maniaba\CodeIgniterSse\Contracts\BrokerAdapterInterface;
 use Maniaba\CodeIgniterSse\Contracts\PublisherInterface;
 use Maniaba\CodeIgniterSse\Event\EventFactory;
 use Maniaba\CodeIgniterSse\Factory\BrokerFactory;
@@ -57,6 +58,31 @@ class Services extends BaseService
         $config ??= Sse::discover();
         $config->validate();
 
-        return (new BrokerFactory())->publisher($config);
+        return (new BrokerFactory())->publisherFromAdapter(
+            $config,
+            static::sseBrokerAdapter($config, $getShared),
+        );
+    }
+
+    public static function sseBrokerAdapter(
+        ?Sse $config = null,
+        bool $getShared = true,
+    ): BrokerAdapterInterface {
+        if ($getShared) {
+            $service = static::getSharedInstance('sseBrokerAdapter', $config);
+
+            if (! $service instanceof BrokerAdapterInterface) {
+                throw new LogicException(
+                    'The shared sseBrokerAdapter service must implement ' . BrokerAdapterInterface::class . '.',
+                );
+            }
+
+            return $service;
+        }
+
+        $config ??= Sse::discover();
+        $config->validate();
+
+        return (new BrokerFactory())->adapter($config);
     }
 }

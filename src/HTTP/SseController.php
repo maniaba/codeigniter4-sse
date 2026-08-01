@@ -7,14 +7,16 @@ namespace Maniaba\CodeIgniterSse\HTTP;
 use CodeIgniter\HTTP\ResponseInterface;
 use CodeIgniter\RESTful\ResourceController;
 use Maniaba\CodeIgniterSse\Config\Sse as SseConfig;
-use Maniaba\CodeIgniterSse\Contracts\SseOutputInterface;
+use Maniaba\CodeIgniterSse\Contracts\BrokerAdapterInterface;
+use Maniaba\CodeIgniterSse\Contracts\PreflightSubscriptionEndpointInterface;
+use Maniaba\CodeIgniterSse\Contracts\SubscriptionEndpointInterface;
 use Maniaba\CodeIgniterSse\Exception\InvalidChannelException;
 use Maniaba\CodeIgniterSse\Exception\InvalidChannelRequestException;
 use Maniaba\CodeIgniterSse\Exception\InvalidOriginException;
 use Maniaba\CodeIgniterSse\Exception\UnauthorizedChannelException;
 use Maniaba\CodeIgniterSse\Factory\AuthorizationFactory;
+use Maniaba\CodeIgniterSse\Factory\BrokerFactory;
 use Maniaba\CodeIgniterSse\Factory\ConnectionManagerFactory;
-use Maniaba\CodeIgniterSse\Factory\MercureConfigFactory;
 use Maniaba\CodeIgniterSse\Factory\MercureSubscriptionFactory;
 use Maniaba\CodeIgniterSse\Stream\SseConnectionManager;
 
@@ -27,6 +29,7 @@ final class SseController extends ResourceController
         private readonly ?ConnectionManagerFactory $connectionManagers = null,
         private readonly ?MercureSubscriptionFactory $mercureSubscriptions = null,
         private readonly ?SseConfig $config = null,
+        private readonly ?BrokerFactory $brokers = null,
     ) {
     }
 
@@ -42,19 +45,14 @@ final class SseController extends ResourceController
             return $this->error(403, 'origin_forbidden', $exception->getMessage());
         }
 
-        if ($config->streamTransport() === 'mercure') {
-            return $cors->apply($this->mercure($config), $origin);
-        }
+        $endpoint = $this->subscriptionEndpoint($config);
 
-        if ($config->requireAcceptHeader && ! $this->acceptsEventStream()) {
-            return $cors->apply(
-                $this->error(
-                    406,
-                    'not_acceptable',
-                    'This endpoint requires Accept: text/event-stream.',
-                ),
-                $origin,
-            );
+        if ($endpoint instanceof PreflightSubscriptionEndpointInterface) {
+            $preflight = $endpoint->preflight($this->request, $this->response);
+
+            if ($preflight !== null) {
+                return $cors->apply($preflight, $origin);
+            }
         }
 
         try {
@@ -71,65 +69,10 @@ final class SseController extends ResourceController
             );
         }
 
-        $manager = $this->manager
-            ?? ($this->connectionManagers ?? new ConnectionManagerFactory())->create($config);
-        $factory = $this->responseFactory ?? new SseResponseFactory($this->response);
-
-        $response = $factory->create(
-            static function (SseOutputInterface $output) use ($manager, $channels): void {
-                $manager->stream($output, $channels);
-            },
+        return $cors->apply(
+            $endpoint->respond($this->request, $this->response, $channels),
+            $origin,
         );
-        $response->setHeader('X-Content-Type-Options', 'nosniff');
-
-        return $cors->apply($response, $origin);
-    }
-
-    private function mercure(SseConfig $config): ResponseInterface
-    {
-        try {
-            $channels = $this->authorizeChannels($config);
-        } catch (InvalidChannelException|InvalidChannelRequestException $exception) {
-            return $this->error(400, 'invalid_channels', $exception->getMessage());
-        } catch (UnauthorizedChannelException $exception) {
-            return $this->error(403, 'channel_forbidden', $exception->getMessage());
-        }
-
-        $subscription = ($this->mercureSubscriptions ?? new MercureSubscriptionFactory())
-            ->create($config, $channels);
-        $mercure  = (new MercureConfigFactory())->create($config);
-        $response = $this->response
-            ->setStatusCode(200)
-            ->setJSON([
-                'transport' => 'mercure',
-                'hub'       => $subscription->hubUrl,
-                'topics'    => $subscription->topics,
-                'expiresAt' => $subscription->expiresAt,
-            ])
-            ->setHeader('Cache-Control', 'private, no-store')
-            ->setHeader('Link', sprintf('<%s>; rel="mercure"', $subscription->hubUrl))
-            ->setHeader('X-Content-Type-Options', 'nosniff');
-
-        if ($subscription->token !== null) {
-            $response->setCookie(
-                name: $mercure->cookieName,
-                value: $subscription->token,
-                expire: $mercure->subscriberTokenTtl,
-                domain: $mercure->cookieDomain,
-                path: $mercure->cookiePath,
-                secure: $mercure->cookieSecure,
-                httponly: $mercure->cookieHttpOnly,
-                samesite: $mercure->cookieSameSite,
-            );
-        } else {
-            $response->deleteCookie(
-                $mercure->cookieName,
-                $mercure->cookieDomain,
-                $mercure->cookiePath,
-            );
-        }
-
-        return $response;
     }
 
     /**
@@ -149,23 +92,37 @@ final class SseController extends ResourceController
         return $authorization->authorizeAll($userResolver->resolve(), $channels);
     }
 
-    private function acceptsEventStream(): bool
+    private function subscriptionEndpoint(SseConfig $config): SubscriptionEndpointInterface
     {
-        $accept = strtolower($this->request->getHeaderLine('Accept'));
-
-        if ($accept === '') {
-            return false;
+        if ($this->manager !== null) {
+            return new LocalSseSubscriptionEndpoint(
+                $this->manager,
+                $config->requireAcceptHeader,
+                $this->responseFactory,
+            );
         }
 
-        foreach (explode(',', $accept) as $mediaRange) {
-            $mediaType = trim(explode(';', $mediaRange, 2)[0]);
+        if ($this->connectionManagers !== null) {
+            return new LocalSseSubscriptionEndpoint(
+                $this->connectionManagers->create($config),
+                $config->requireAcceptHeader,
+                $this->responseFactory,
+            );
+        }
 
-            if ($mediaType === 'text/event-stream' || $mediaType === '*/*') {
-                return true;
+        if ($this->mercureSubscriptions !== null && $config->streamTransport() === 'mercure') {
+            return new MercureSubscriptionEndpoint($config, $this->mercureSubscriptions);
+        }
+
+        if ($this->config === null && $this->brokers === null) {
+            $adapter = service('sseBrokerAdapter');
+
+            if ($adapter instanceof BrokerAdapterInterface) {
+                return $adapter->subscriptionEndpoint();
             }
         }
 
-        return false;
+        return ($this->brokers ?? new BrokerFactory())->subscriptionEndpoint($config);
     }
 
     private function error(int $status, string $code, string $message): ResponseInterface
