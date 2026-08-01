@@ -13,7 +13,7 @@
         <link rel="canonical" href="https://maniaba.github.io/codeigniter4-sse/latest/browser-client/">
       
       
-        <link rel="prev" href="../channels-and-authorization/">
+        <link rel="prev" href="../custom-brokers/">
       
       
         <link rel="next" href="../mercure/">
@@ -464,6 +464,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../custom-brokers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom brokers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -609,10 +637,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#mercure-transport" class="md-nav__link">
+  <a href="#adapters" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Mercure transport
+        Adapters
       
     </span>
   </a>
@@ -1138,10 +1166,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#mercure-transport" class="md-nav__link">
+  <a href="#adapters" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Mercure transport
+        Adapters
       
     </span>
   </a>
@@ -1273,8 +1301,9 @@
 
 
 <h1 id="browser-client">Browser client</h1>
-<p><code>resources/js/sse-client.js</code> is a dependency-free ES module around the native
-browser <code>EventSource</code>.</p>
+<p><code>resources/js/sse-client.js</code> is a dependency-free ES module that wraps native
+browser <code>EventSource</code>. Broker-specific stream resolution lives in small
+adapter classes.</p>
 <p>It provides:</p>
 <ul>
 <li>named event dispatch;</li>
@@ -1283,19 +1312,19 @@ browser <code>EventSource</code>.</p>
 <li>safe JSON parsing;</li>
 <li>channel and custom query parameters;</li>
 <li>credential configuration;</li>
-<li>direct Mercure Hub transport with cookie authorization;</li>
+<li>explicit frontend adapters for Redis, Mercure, local, and in-memory brokers;</li>
 <li>explicit <code>connect()</code> and <code>close()</code>;</li>
 <li>a hook for an application-defined fallback.</li>
 </ul>
-<p>It deliberately does not implement a second reconnect timer. Native
-<code>EventSource</code> follows the server's SSE <code>retry</code> value and reconnects
-automatically.</p>
+<p>After EventSource opens, native <code>EventSource</code> follows the server's SSE <code>retry</code>
+value and reconnects automatically.</p>
 <h2 id="import">Import</h2>
 <p>Install the browser client from npm when the application already has a frontend
 build:</p>
 <pre class="highlight"><code class="language-bash">npm install @maniaba/codeigniter4-sse-browser</code></pre>
 <p>Then import it through the package export:</p>
 <pre class="highlight"><code class="language-javascript">import {
+    RedisSseAdapter,
     SseClient,
     SseClientStatus,
 } from '@maniaba/codeigniter4-sse-browser';</code></pre>
@@ -1311,25 +1340,27 @@ build:</p>
 <p>Without npm, copy the module to a public asset path or include it directly from
 published package assets:</p>
 <pre class="highlight"><code class="language-javascript">import {
+    RedisSseAdapter,
     SseClient,
     SseClientStatus,
 } from '/vendor/codeigniter4-sse/sse-client.js';</code></pre>
 <p>The direct asset module also provides a default export:</p>
 <pre class="highlight"><code class="language-javascript">import SseClient from '/vendor/codeigniter4-sse/sse-client.js';</code></pre>
 <p>The package ships TypeScript declarations next to the module:</p>
-<pre class="highlight"><code class="language-text">resources/js/sse-client.d.ts</code></pre>
-<p>When <code>php spark sse:install</code> publishes browser assets, it copies both
-<code>sse-client.js</code> and <code>sse-client.d.ts</code>.</p>
+<pre class="highlight"><code class="language-text">resources/js/sse-client.d.ts
+resources/js/adapters/*.d.ts</code></pre>
+<p>When <code>php spark sse:install</code> publishes browser assets, it copies
+<code>sse-client.js</code>, <code>sse-client.d.ts</code>, and the adapter files.</p>
 <h2 id="constructor">Constructor</h2>
 <pre class="highlight"><code class="language-javascript">const live = new SseClient({
     endpoint: '/sse',
+    adapter: new RedisSseAdapter(),
     channels: ['users.42', 'orders.918'],
     query: {
         locale: document.documentElement.lang,
         source: 'orders-page',
     },
     withCredentials: true,
-    transport: 'eventsource',
     fallback: null,
 });</code></pre>
 <table>
@@ -1347,6 +1378,11 @@ published package assets:</p>
 <td>Absolute or browser-relative SSE URL.</td>
 </tr>
 <tr>
+<td><code>adapter</code></td>
+<td><code>new DirectSseAdapter()</code></td>
+<td>Object that resolves the final EventSource URL.</td>
+</tr>
+<tr>
 <td><code>channels</code></td>
 <td><code>[]</code></td>
 <td>Unique logical channel names, sent comma-separated.</td>
@@ -1359,27 +1395,17 @@ published package assets:</p>
 <tr>
 <td><code>withCredentials</code></td>
 <td><code>true</code></td>
-<td>Passed to the native <code>EventSource</code> constructor.</td>
-</tr>
-<tr>
-<td><code>transport</code></td>
-<td><code>eventsource</code></td>
-<td>Use <code>eventsource</code> for the PHP stream or <code>mercure</code> for Hub bootstrap.</td>
+<td>Enables cross-origin credentials for EventSource and adapter requests.</td>
 </tr>
 <tr>
 <td><code>fallback</code></td>
 <td><code>null</code></td>
-<td>Optional outage/unsupported-browser hook.</td>
+<td>Optional adapter-error, connection-error, or unsupported-browser hook.</td>
 </tr>
 <tr>
 <td><code>eventSourceFactory</code></td>
 <td>native</td>
 <td>Test seam for supplying an EventSource-compatible object.</td>
-</tr>
-<tr>
-<td><code>fetchFactory</code></td>
-<td>native</td>
-<td>Test seam for the Mercure authorization request.</td>
 </tr>
 </tbody>
 </table>
@@ -1387,26 +1413,53 @@ published package assets:</p>
 object values are omitted. The <code>channels</code> option wins over an existing
 <code>channels</code> value in the endpoint or query object.</p>
 <p>Do not use query parameters for bearer tokens or secrets.</p>
-<h2 id="mercure-transport">Mercure transport</h2>
-<p>When Mercure is the configured broker, <code>endpoint</code> is the short CodeIgniter
-authorization route rather than the Hub stream itself:</p>
-<pre class="highlight"><code class="language-javascript">const live = new SseClient({
+<h2 id="adapters">Adapters</h2>
+<p>Choose the adapter that matches the configured server broker:</p>
+<pre class="highlight"><code class="language-javascript">import {
+    RedisSseAdapter,
+    SseClient,
+} from '@maniaba/codeigniter4-sse-browser';
+
+const live = new SseClient({
     endpoint: '/sse',
-    transport: 'mercure',
+    adapter: new RedisSseAdapter(),
+    channels: ['users.42'],
+});</code></pre>
+<p><code>RedisSseAdapter</code>, <code>LocalSseAdapter</code>, and <code>InMemorySseAdapter</code> are semantic
+direct adapters. They open EventSource against <code>endpoint</code> after <code>SseClient</code>
+adds channels and query parameters.</p>
+<p>Mercure uses an authorization step before EventSource opens:</p>
+<pre class="highlight"><code class="language-javascript">import {
+    MercureSseAdapter,
+    SseClient,
+} from '@maniaba/codeigniter4-sse-browser';
+
+const live = new SseClient({
+    endpoint: '/sse',
+    adapter: new MercureSseAdapter(),
     channels: ['users.42'],
     withCredentials: true,
 });</code></pre>
-<p><code>connect()</code> fetches authorized Hub topics, receives the subscriber JWT through
-an HttpOnly cookie, then opens EventSource directly against the returned Hub
-URL. The authorization request is asynchronous; observe <code>status</code> when the UI
-needs to know when the Hub connection reaches <code>open</code>.</p>
+<p><code>MercureSseAdapter</code> calls the CodeIgniter endpoint with
+<code>Accept: application/json</code>, receives <code>{ hub, topics, expiresAt }</code>, then opens
+EventSource directly against the Hub URL with repeated <code>topic</code> parameters.</p>
 <p>The client refreshes a time-limited Mercure authorization before it expires.
 Channel changes request a new token scoped to the new topic list. See
 <a href="../mercure/">Mercure Hub</a> for server, cookie, CORS, and reverse-proxy setup.</p>
+<p>Custom adapters implement <code>resolve()</code> and may implement <code>cancel()</code>:</p>
+<pre class="highlight"><code class="language-javascript">const adapter = {
+    resolve({ url }) {
+        return { url, expiresAt: null };
+    },
+    cancel() {
+        // Optional: abort an in-flight async resolve.
+    },
+};</code></pre>
 <h2 id="channels">Channels</h2>
 <p>Initial channels are passed to the constructor:</p>
 <pre class="highlight"><code class="language-javascript">const live = new SseClient({
     endpoint: '/sse',
+    adapter: new RedisSseAdapter(),
     channels: ['users.42'],
 });</code></pre>
 <p>Channels can also be changed later:</p>
@@ -1419,9 +1472,9 @@ live.setChannels(['users.42', 'orders.918']);</code></pre>
 <p><code>subscribe()</code>, <code>unsubscribe()</code>, and <code>setChannels()</code> return the client for
 chaining.</p>
 <p>Native <code>EventSource</code> cannot change its URL after it is opened. When channels
-change on an active client, the wrapper closes the current source and opens a
-new one with the updated <code>channels</code> query parameter. Removing the last channel
-closes the stream.</p>
+change on an active client, the wrapper closes the current source, asks the
+adapter for a new connection, and opens it with the updated <code>channels</code> query
+parameter. Removing the last channel closes the stream.</p>
 <h2 id="named-events">Named events</h2>
 <p>Register a handler before or after connecting:</p>
 <pre class="highlight"><code class="language-javascript">const updateOrder = ({ data }) =&gt; {
@@ -1452,8 +1505,8 @@ the server attempts to emit <code>sse.error</code> before the browser reconnects
         showTemporaryLiveWarning();
     }
 });</code></pre>
-<p>Transport state should still be taken from the <code>status</code> handler. Heartbeats are
-SSE comments and never dispatch a JavaScript event.</p>
+<p>Connection state should still be taken from the <code>status</code> handler. Heartbeats
+are SSE comments and never dispatch a JavaScript event.</p>
 <h2 id="message-shape">Message shape</h2>
 <p>The server sends a JSON envelope. Handlers receive a normalized object:</p>
 <pre class="highlight"><code class="language-javascript">live.on('order.updated', (message) =&gt; {
@@ -1534,6 +1587,7 @@ per widget.</p>
 fallback when EventSource is unavailable or a connection reports an error:</p>
 <pre class="highlight"><code class="language-javascript">const live = new SseClient({
     endpoint: '/sse',
+    adapter: new RedisSseAdapter(),
     channels: ['public.status'],
     fallback: ({ reason, client }) =&gt; {
         if (reason === 'unsupported') {
@@ -1560,24 +1614,26 @@ fallback when EventSource is unavailable or a connection reports an error:</p>
     client,
 }</code></pre>
 <p>Reasons are <code>unsupported</code>, <code>construction-error</code>, <code>connection-error</code>, and
-<code>authorization-error</code>. The last value means the Mercure bootstrap request
-failed or returned invalid data. The hook runs once per reconnect cycle; a
-successful native <code>open</code> resets it.
-Browsers report the server's expected finite-lifetime rotation through the
+<code>adapter-error</code>. The last value means the selected adapter failed or returned
+invalid connection data. The hook runs once per reconnect cycle; a successful
+native <code>open</code> resets it.</p>
+<p>Browsers report the server's expected finite-lifetime rotation through the
 same native <code>error</code> event as a network outage, so <code>connection-error</code> alone
 must not immediately start polling. Debounce an outage fallback and cancel it
 when the next <code>open</code> arrives. The <code>unsupported</code> reason is definitive and can
 start a fallback immediately.</p>
-<p>If no fallback is provided and the browser has no <code>EventSource</code>, <code>connect()</code>
-throws a clear error.</p>
+<p>Direct adapters require only <code>EventSource</code>. <code>MercureSseAdapter</code> also requires
+<code>fetch</code>; missing <code>fetch</code> is reported as <code>adapter-error</code>.</p>
 <h2 id="credentials-and-cors">Credentials and CORS</h2>
 <pre class="highlight"><code class="language-javascript">const live = new SseClient({
     endpoint: 'https://api.example.com/sse',
+    adapter: new RedisSseAdapter(),
     channels: ['users.42'],
     withCredentials: true,
 });</code></pre>
-<p>For cross-origin cookies, the server must return the exact allowed origin and
-<code>Access-Control-Allow-Credentials: true</code>. Cookie <code>Domain</code>, <code>Secure</code>, and
+<p>For cross-origin cookies, adapter requests and EventSource responses must
+return the exact allowed origin and the
+<code>Access-Control-Allow-Credentials: true</code> header. Cookie <code>Domain</code>, <code>Secure</code>, and
 <code>SameSite</code> attributes must also permit the request.</p>
 <p>Standard browser EventSource does not accept arbitrary request headers.</p>
 
@@ -1615,7 +1671,7 @@ throws a clear error.</p>
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../channels-and-authorization/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Channels and authorization">
+          <a href="../custom-brokers/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Custom brokers">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
@@ -1625,7 +1681,7 @@ throws a clear error.</p>
                 Previous
               </span>
               <div class="md-ellipsis">
-                Channels and authorization
+                Custom brokers
               </div>
             </div>
           </a>

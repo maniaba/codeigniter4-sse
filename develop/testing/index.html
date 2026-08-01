@@ -464,6 +464,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../custom-brokers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom brokers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1217,7 +1245,7 @@ remain independent of an application checkout.</p>
 Subscriber contract
 Pattern subscription contract, when supported</code></pre>
 <p><code>InMemoryBroker</code> is useful for one-process unit tests:</p>
-<pre class="highlight"><code class="language-php">use Maniaba\CodeIgniterSse\Broker\InMemoryBroker;
+<pre class="highlight"><code class="language-php">use Maniaba\CodeIgniterSse\Broker\InMemory\InMemoryBroker;
 
 $broker = new InMemoryBroker();</code></pre>
 <p>It is not a Redis substitute for an end-to-end HTTP test. Separate PHP
@@ -1269,7 +1297,7 @@ repository's integration test and are not read by the Spark command.</p>
 <p>Feature tests should verify:</p>
 <ul>
 <li><code>GET /sse</code> route discovery;</li>
-<li>required <code>Accept: text/event-stream</code>;</li>
+<li>required <code>Accept: text/event-stream</code> for direct streams and JSON Mercure authorization;</li>
 <li>missing, invalid, duplicate, and excessive channels;</li>
 <li>default <code>public.*</code> access;</li>
 <li>rejection of unauthorized private channels;</li>
@@ -1282,12 +1310,18 @@ repository's integration test and are not read by the Spark command.</p>
 <p>Use recording implementations of <code>SubscriberInterface</code> and
 <code>SseOutputInterface</code> so feature tests do not block.</p>
 <h2 id="browser-client-tests">Browser client tests</h2>
-<p><code>SseClient</code> accepts <code>eventSourceFactory</code> specifically so tests can supply a
-small fake:</p>
-<pre class="highlight"><code class="language-javascript">const source = new FakeEventSource();
+<p><code>SseClient</code> accepts <code>eventSourceFactory</code>, and <code>MercureSseAdapter</code> accepts
+<code>fetchFactory</code>, so tests can supply small deterministic fakes:</p>
+<pre class="highlight"><code class="language-javascript">import {
+    RedisSseAdapter,
+    SseClient,
+} from '@maniaba/codeigniter4-sse-browser';
+
+const source = new FakeEventSource();
 
 const live = new SseClient({
     endpoint: 'https://example.test/sse',
+    adapter: new RedisSseAdapter(),
     channels: ['public.test'],
     eventSourceFactory: (url, options) =&gt; {
         expect(url).toContain('channels=public.test');

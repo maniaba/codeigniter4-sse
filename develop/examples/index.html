@@ -464,6 +464,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../custom-brokers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom brokers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1108,8 +1136,14 @@ services, and workers publish events without touching Redis directly.</p>
     ],
 );</code></pre>
 <p>Listen in the browser:</p>
-<pre class="highlight"><code class="language-javascript">const live = new SseClient({
+<pre class="highlight"><code class="language-javascript">import {
+    RedisSseAdapter,
+    SseClient,
+} from '/vendor/codeigniter4-sse/sse-client.js';
+
+const live = new SseClient({
     endpoint: '/sse',
+    adapter: new RedisSseAdapter(),
     channels: [`users.${currentUserId}`],
 });
 

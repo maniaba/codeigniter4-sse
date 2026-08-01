@@ -464,6 +464,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../custom-brokers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom brokers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -894,6 +922,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#custom-broker-is-not-loaded" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Custom broker is not loaded
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#mercure-publish-fails" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -916,10 +955,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#mercure-client-reports-authorization-error" class="md-nav__link">
+  <a href="#browser-client-reports-adapter-error" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Mercure client reports authorization-error
+        Browser client reports adapter-error
       
     </span>
   </a>
@@ -1213,6 +1252,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#custom-broker-is-not-loaded" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Custom broker is not loaded
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#mercure-publish-fails" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1235,10 +1285,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#mercure-client-reports-authorization-error" class="md-nav__link">
+  <a href="#browser-client-reports-adapter-error" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Mercure client reports authorization-error
+        Browser client reports adapter-error
       
     </span>
   </a>
@@ -1372,7 +1422,8 @@ php spark routes</code></pre>
 </ul>
 <p>If the route was customized, use that path in the browser client.</p>
 <h2 id="the-endpoint-returns-406">The endpoint returns 406</h2>
-<p>The default configuration requires:</p>
+<p>The default Redis configuration requires this header for a direct PHP stream
+request:</p>
 <pre class="highlight"><code class="language-http">Accept: text/event-stream</code></pre>
 <p>Native browser <code>EventSource</code> sends it. Add the header when testing with curl:</p>
 <pre class="highlight"><code class="language-bash">curl -N \
@@ -1411,6 +1462,26 @@ authorizer that permits every channel.</p>
 </ul>
 <p>The package does not use PhpRedis, so installing that extension does not fix a
 TCP, TLS, ACL, or application configuration problem.</p>
+<h2 id="custom-broker-is-not-loaded">Custom broker is not loaded</h2>
+<p>The broker entry in <code>Sse::$brokers</code> must resolve to <code>BrokerAdapterInterface</code>.
+Use exactly one of:</p>
+<ul>
+<li><code>factory</code>: a <code>BrokerAdapterFactoryInterface</code> instance, class name, or
+  callable returning one;</li>
+<li><code>adapter</code>: a <code>BrokerAdapterInterface</code> instance, class name, or callable
+  returning one.</li>
+</ul>
+<p>If both keys are present, remove one so the resolver has a single construction
+path.</p>
+<p>If the error says the factory or adapter class does not exist, verify the
+namespace and Composer autoload, then run:</p>
+<pre class="highlight"><code class="language-bash">composer dump-autoload</code></pre>
+<p>If the error says the configured broker does not provide a PHP subscriber,
+either implement <code>SubscriberAwareBrokerAdapterInterface</code> plus
+<code>SubscriberInterface</code>, or return a custom <code>SubscriptionEndpointInterface</code> that
+does not need the PHP stream manager.</p>
+<p>See <a href="../custom-brokers/">Custom brokers</a> for the exact interfaces and minimal
+implementation.</p>
 <h2 id="mercure-publish-fails">Mercure publish fails</h2>
 <p>The Debug Toolbar and thrown <code>MercurePublishException</code> include the Hub status.
 Typical causes are:</p>
@@ -1438,20 +1509,21 @@ Mercure 0.24.2 or newer in the 0.x line.</p>
 <li><code>withCredentials</code> is enabled;</li>
 <li>Hub CORS lists the exact application origin.</li>
 </ul>
-<p>Inspect the authorization request in browser developer tools. The JSON must
-contain the expected topics and the response must set the subscriber cookie.
+<p>Inspect the authorization request in browser developer tools. The JSON
+<code>topics</code> array must contain the expected topics and the response must set the
+subscriber cookie.
 The cookie is HttpOnly, so it will not appear through <code>document.cookie</code>.</p>
-<h2 id="mercure-client-reports-authorization-error">Mercure client reports authorization-error</h2>
-<p>The browser client could not complete the short CodeIgniter bootstrap request.
-Inspect its HTTP status:</p>
+<h2 id="browser-client-reports-adapter-error">Browser client reports adapter-error</h2>
+<p>The selected frontend adapter could not resolve the EventSource URL. For
+Mercure, inspect the short CodeIgniter authorization request:</p>
 <ul>
 <li><code>400</code> means the channel list is invalid;</li>
 <li><code>403</code> means channel policy or application CORS denied the request;</li>
-<li><code>5xx</code> usually means Mercure signing configuration is incomplete;</li>
+<li><code>5xx</code> means the active broker could not build its authorization response;</li>
 <li>an invalid JSON shape means a proxy or custom controller replaced the
   package response.</li>
 </ul>
-<p>This error occurs before EventSource connects to the Hub.</p>
+<p>This error occurs before EventSource connects to the external Hub.</p>
 <h2 id="the-connection-opens-but-no-events-arrive">The connection opens but no events arrive</h2>
 <p>Check:</p>
 <ol>

@@ -16,7 +16,7 @@
         <link rel="prev" href="../configuration/">
       
       
-        <link rel="next" href="../browser-client/">
+        <link rel="next" href="../custom-brokers/">
       
       
         
@@ -596,6 +596,34 @@
   
 </nav>
       
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../custom-brokers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom brokers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
     </li>
   
 
@@ -1283,9 +1311,10 @@ rate/concurrency filter through <code>Config\Sse::$route['filters']</code>. Auth
 filters reject unauthenticated requests early; concurrency limits prevent one
 user or reconnect loop from consuming an unbounded number of PHP workers.
 Neither replaces per-channel authorization.</p>
-<p>With Mercure, the same route filters and authorizer protect the short
-bootstrap request. The resulting subscriber JWT contains only approved
-Mercure topics. The long-lived Hub connection does not occupy a PHP worker,
+<p>The same route filters and authorizer protect direct EventSource requests and
+Mercure authorization requests. With Redis, authorization happens before the
+PHP stream opens. With Mercure, the resulting subscriber JWT contains only
+approved topics. The long-lived Hub connection does not occupy a PHP worker,
 but rate limiting still protects token issuance and reconnect churn.</p>
 <p>For zero-argument implementations, select both classes in the package config:</p>
 <pre class="highlight"><code class="language-php">namespace Config;
@@ -1334,21 +1363,29 @@ but a request can contain up to <code>maxChannelsPerConnection</code> channels.<
 one unindexed query per channel.</p>
 <h2 id="pattern-subscriptions">Pattern subscriptions</h2>
 <p>Pattern subscriptions are disabled by default:</p>
-<pre class="highlight"><code class="language-php">public bool $allowPatternSubscriptions = false;</code></pre>
+<pre class="highlight"><code class="language-php">public array $redis = [
+    'allowPatternSubscriptions' =&gt; false,
+];</code></pre>
 <p>Enabling them allows glob-style Redis subscription patterns. A pattern can
 cover a much larger data set than its text suggests, so the authorizer must
 recognize and explicitly approve patterns. Never enable them for ordinary
 users merely because the corresponding exact channel would be allowed.</p>
 <p>Redis may report the same publication through overlapping exact and pattern
-subscriptions. The adapter suppresses recently seen event IDs using
-<code>redis['deduplicationCapacity']</code>; avoid unnecessary overlap so correctness does
-not depend on a bounded deduplication window.</p>
+subscriptions. The adapter suppresses recently seen channel/event ID pairs
+using <code>redis['deduplicationCapacity']</code>; avoid unnecessary overlap so
+correctness does not depend on a bounded deduplication window.</p>
 <h2 id="browser-authentication">Browser authentication</h2>
 <p>Native <code>EventSource</code> supports cookies through <code>withCredentials</code>, but does not
 provide a standard way to set arbitrary authorization headers.</p>
 <p>Prefer same-site secure session cookies:</p>
-<pre class="highlight"><code class="language-javascript">new SseClient({
+<pre class="highlight"><code class="language-javascript">import {
+    RedisSseAdapter,
+    SseClient,
+} from '/vendor/codeigniter4-sse/sse-client.js';
+
+new SseClient({
     endpoint: '/sse',
+    adapter: new RedisSseAdapter(),
     channels: ['users.42'],
     withCredentials: true,
 });</code></pre>
@@ -1431,13 +1468,13 @@ payloads by default.</p>
         
         
           
-          <a href="../browser-client/" class="md-footer__link md-footer__link--next" aria-label="Next: Browser client">
+          <a href="../custom-brokers/" class="md-footer__link md-footer__link--next" aria-label="Next: Custom brokers">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                Browser client
+                Custom brokers
               </div>
             </div>
             <div class="md-footer__button md-icon">

@@ -464,6 +464,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../custom-brokers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom brokers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1216,8 +1244,8 @@ long-lived browser connections out of PHP:</p>
 Browser
     ├─ fetch GET /sse?channels=...
     └─ EventSource ───────────────────► Mercure Hub</code></pre>
-<p>The <code>/sse</code> CodeIgniter route is a short authorization/bootstrap request in
-this mode. It does not emit an event stream and does not reserve a PHP worker.
+<p>The <code>/sse</code> CodeIgniter route is a short authorization request in this mode. It
+does not emit an event stream and does not reserve a PHP worker.
 The Hub owns heartbeats, reconnects, history, and the live SSE response.</p>
 <p>The adapter targets the stable Mercure 0.x protocol used by Mercure 0.24.2:
 <code>topic</code> subscription parameters, <code>mercure.publish</code> and <code>mercure.subscribe</code> JWT
@@ -1329,12 +1357,15 @@ same way as with Redis:</p>
 <p>The Debug Toolbar collector records Mercure publishes through the same
 publisher decorator used for every broker.</p>
 <h2 id="browser-client">Browser client</h2>
-<p>Set the client transport to <code>mercure</code>:</p>
-<pre class="highlight"><code class="language-javascript">import { SseClient } from '@maniaba/codeigniter4-sse-browser';
+<p>Use <code>MercureSseAdapter</code> when the server broker is configured for Mercure:</p>
+<pre class="highlight"><code class="language-javascript">import {
+    MercureSseAdapter,
+    SseClient,
+} from '@maniaba/codeigniter4-sse-browser';
 
 const live = new SseClient({
     endpoint: '/sse',
-    transport: 'mercure',
+    adapter: new MercureSseAdapter(),
     channels: [`users.${currentUserId}`],
     withCredentials: true,
 });
@@ -1350,7 +1381,6 @@ Accept: application/json</code></pre>
 <p>CodeIgniter validates and authorizes every channel, sets an HttpOnly
 <code>mercureAuthorization</code> cookie, and returns:</p>
 <pre class="highlight"><code class="language-json">{
-  "transport": "mercure",
   "hub": "https://app.example.com/.well-known/mercure",
   "topics": ["urn:storefront:sse:users.42"],
   "expiresAt": 1785520800
@@ -1360,6 +1390,9 @@ client opens the Hub URL with one repeated <code>topic</code> parameter per auth
 channel. It refreshes authorization and reconnects shortly before the token
 expires. Calling <code>subscribe()</code>, <code>unsubscribe()</code>, or <code>setChannels()</code> obtains a
 new token restricted to the new topic list.</p>
+<p>Use one <code>SseClient</code> per page and combine its channels. Mercure authorization is
+stored in one cookie, so separate clients on the same cookie scope can replace
+each other's exact-topic authorization during authorization or reconnect.</p>
 <h2 id="authorization-rules">Authorization rules</h2>
 <p>Mercure authorization adds a second enforcement layer; it does not replace the
 application policy:</p>
@@ -1373,7 +1406,7 @@ application policy:</p>
 </ol>
 <p>Keep <code>private = true</code> for user, tenant, order, and project data. Setting
 <code>private = false</code> publishes updates publicly at the Hub even if CodeIgniter
-protected the bootstrap route.</p>
+protected the authorization route.</p>
 <p>For a completely public Hub, both of these must be intentional:</p>
 <pre class="highlight"><code class="language-php">public array $mercure = [
     'private'              =&gt; false,
@@ -1521,9 +1554,9 @@ token issued by an external system, but dynamic subscriber authorization still
 requires the configured HMAC subscriber key. Applications using an external
 OAuth/JWKS issuer should replace the authorization controller rather than
 exposing signing keys to the browser.</p>
-<p>The adapter currently maps exact logical channels. Keep
-<code>allowPatternSubscriptions = false</code>; Redis glob patterns are not accepted by
-the Mercure transport.</p>
+<p>The adapter currently maps exact logical channels. Redis glob patterns are not
+accepted by the Mercure transport; pattern selectors remain a Redis adapter
+option.</p>
 
 
 

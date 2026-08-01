@@ -464,6 +464,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../custom-brokers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom brokers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1232,11 +1260,12 @@
 <p>An SSE response stays open and flushes frames incrementally. Web servers,
 reverse proxies, compression middleware, CDNs, and PHP worker limits must be
 configured for that behavior.</p>
-<p>This page primarily describes the built-in PHP stream used with Redis. When
-the Mercure broker is active, the CodeIgniter route is a short authorization
-request and the Hub owns the long-lived response. PHP-FPM stream capacity,
-heartbeat, and buffering requirements then apply to the Hub deployment, not
-the <code>/sse</code> bootstrap route. See <a href="../mercure/">Mercure Hub</a>.</p>
+<p>This page primarily describes the built-in PHP stream used with Redis. Direct
+frontend adapters open EventSource on the CodeIgniter route. With Mercure, the
+CodeIgniter route is only a short authorization request and the Hub owns the
+long-lived response. PHP-FPM stream capacity, heartbeat, and buffering
+requirements then apply to the Hub deployment, not the <code>/sse</code> authorization
+route. See <a href="../mercure/">Mercure Hub</a>.</p>
 <h2 id="response-headers">Response headers</h2>
 <p>The endpoint uses at least:</p>
 <pre class="highlight"><code class="language-http">Content-Type: text/event-stream

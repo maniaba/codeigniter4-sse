@@ -588,6 +588,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../custom-brokers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom brokers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1183,7 +1211,9 @@ commands through Composer.</p>
 <p>The command creates:</p>
 <pre class="highlight"><code class="language-text">app/Config/Sse.php
 public/vendor/codeigniter4-sse/sse-client.js
-public/vendor/codeigniter4-sse/sse-client.d.ts</code></pre>
+public/vendor/codeigniter4-sse/sse-client.d.ts
+public/vendor/codeigniter4-sse/adapters/*.js
+public/vendor/codeigniter4-sse/adapters/*.d.ts</code></pre>
 <p>Existing files are skipped. Use <code>--force</code> only when they should be replaced,
 or <code>--no-assets</code> to publish only the PHP config:</p>
 <pre class="highlight"><code class="language-bash">php spark sse:install --no-assets</code></pre>
@@ -1233,14 +1263,17 @@ documented under <a href="../mercure/">Mercure Hub</a>.</p>
 <pre class="highlight"><code class="language-javascript">import { SseClient } from '@maniaba/codeigniter4-sse-browser';</code></pre>
 <p>The package includes TypeScript declarations.</p>
 <p>Without npm, the installer publishes the source ES module from:</p>
-<pre class="highlight"><code class="language-text">vendor/maniaba/codeigniter4-sse/resources/js/sse-client.js</code></pre>
+<pre class="highlight"><code class="language-text">vendor/maniaba/codeigniter4-sse/resources/js/sse-client.js
+vendor/maniaba/codeigniter4-sse/resources/js/adapters/</code></pre>
 <p>The default public import is:</p>
 <pre class="highlight"><code class="language-javascript">import { SseClient } from '/vendor/codeigniter4-sse/sse-client.js';</code></pre>
 <p>Alternatively, copy the source into an existing asset pipeline:</p>
 <pre class="highlight"><code class="language-bash">cp vendor/maniaba/codeigniter4-sse/resources/js/sse-client.js \
     public/assets/sse-client.js
 cp vendor/maniaba/codeigniter4-sse/resources/js/sse-client.d.ts \
-    public/assets/sse-client.d.ts</code></pre>
+    public/assets/sse-client.d.ts
+cp -R vendor/maniaba/codeigniter4-sse/resources/js/adapters \
+    public/assets/adapters</code></pre>
 <p>Then import it:</p>
 <pre class="highlight"><code class="language-javascript">import { SseClient } from '/assets/sse-client.js';</code></pre>
 <p>Do not serve the entire <code>vendor/</code> directory from the web root.</p>

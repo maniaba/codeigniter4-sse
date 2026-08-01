@@ -462,6 +462,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../custom-brokers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom brokers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1120,13 +1148,19 @@ and browser behavior separate.</p>
 <pre class="highlight"><code class="language-text">src/
 ├── Authorization/
 ├── Broker/
+│   ├── InMemory/
+│   ├── Local/
 │   ├── Mercure/
+│   ├── Null/
 │   └── Redis/
 ├── Commands/
 ├── Config/
 ├── Contracts/
+├── Endpoint/
 ├── Event/
 ├── Exception/
+├── Factory/
+├── Health/
 ├── HTTP/
 ├── Stream/
 └── Support/</code></pre>
@@ -1137,6 +1171,9 @@ and browser behavior separate.</p>
 <ul>
 <li><code>PublisherInterface</code></li>
 <li><code>SubscriberInterface</code></li>
+<li><code>BrokerAdapterInterface</code></li>
+<li><code>BrokerAdapterFactoryInterface</code></li>
+<li><code>SubscriptionEndpointInterface</code></li>
 <li><code>ChannelAuthorizerInterface</code></li>
 <li><code>UserResolverInterface</code></li>
 <li><code>EventInterface</code></li>
@@ -1147,24 +1184,36 @@ and browser behavior separate.</p>
 Publisher and subscriber connections are separate because Redis subscriptions
 are blocking.</p>
 <p><code>Broker\Mercure</code> contains the HTTP publisher, topic mapper, JWT issuer, and
-Hub configuration. Mercure has no PHP subscriber because browsers subscribe
-directly to the Hub.</p>
-<p><code>InMemoryBroker</code> is for tests and one-process examples. <code>NullBroker</code> is useful
-when applications want the API enabled without delivering live events.</p>
+Hub configuration and subscription endpoint. Mercure has no PHP subscriber
+because browsers subscribe directly to the Hub.</p>
+<p><code>Broker\InMemory</code> is for tests and one-process examples. <code>Broker\Null</code> is
+useful when applications want the API enabled without delivering live events.
+<code>Broker\Local</code> contains the reusable local adapter used by PHP-stream brokers.</p>
+<p>Custom broker implementations should live in their own folder and enter the
+package through <code>BrokerAdapterInterface</code> or <code>BrokerAdapterFactoryInterface</code>.
+See <a href="../custom-brokers/">Custom brokers</a>.</p>
 <h2 id="http-layer">HTTP layer</h2>
 <p><code>HTTP\SseController</code> parses the channel request, resolves the current user,
-and authorizes every channel. It either starts the Redis-backed PHP stream or
-returns Mercure bootstrap data and an HttpOnly subscriber cookie.</p>
+authorizes every channel, and delegates the response to the active broker
+adapter's subscription endpoint.</p>
+<p><code>Endpoint\LocalSseSubscriptionEndpoint</code> is the generic PHP stream endpoint
+used by local subscriber-aware brokers. It also provides the short JSON
+descriptor that points the browser back to that stream. Broker-specific
+endpoints, such as Mercure's Hub authorization endpoint, live beside their broker
+implementation and return the same generic descriptor shape.</p>
 <p><code>HTTP\SseResponseFactory</code> selects the output implementation at runtime:</p>
 <pre class="highlight"><code class="language-text">Current package streaming response
     └── LegacySseResponse</code></pre>
 <h2 id="stream-layer">Stream layer</h2>
 <p><code>SseConnectionManager</code> owns the long-running stream loop. It sends retry
 configuration, the optional connected event, broker events, idle heartbeats,
-and maximum-lifetime shutdown.</p>
+and maximum-lifetime shutdown. <code>BrowserEventEncoder</code> keeps the JSON payload
+sent to browser EventSource clients separate from broker transport
+serialization.</p>
 <h2 id="browser-asset">Browser asset</h2>
-<p><code>resources/js/sse-client.js</code> is a dependency-free wrapper around native
-<code>EventSource</code>. It is published to the host application by:</p>
+<p><code>resources/js/sse-client.js</code> wraps native <code>EventSource</code>; the files under
+<code>resources/js/adapters/</code> handle broker-specific connection resolution. They
+are published to the host application by:</p>
 <pre class="highlight"><code class="language-bash">php spark sse:install</code></pre>
 
 

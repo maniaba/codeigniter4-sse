@@ -577,6 +577,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../custom-brokers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom brokers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1232,10 +1260,14 @@ write SSE frames.</p>
 <code>PublishableEventInterface</code> and call <code>sse()-&gt;publish($object)</code>. The object
 provides the channel, event name or event object, and payload.</p>
 <h2 id="4-connect-from-the-browser">4. Connect from the browser</h2>
-<pre class="highlight"><code class="language-javascript">import { SseClient } from '/vendor/codeigniter4-sse/sse-client.js';
+<pre class="highlight"><code class="language-javascript">import {
+    RedisSseAdapter,
+    SseClient,
+} from '/vendor/codeigniter4-sse/sse-client.js';
 
 const live = new SseClient({
     endpoint: '/sse',
+    adapter: new RedisSseAdapter(),
     channels: [`users.${currentUserId}`],
     withCredentials: true,
 });
@@ -1250,7 +1282,7 @@ live.on('status', ({ status }) =&gt; {
 });
 
 live.connect();</code></pre>
-<p>The client requests:</p>
+<p>With the default Redis broker, the browser opens:</p>
 <pre class="highlight"><code class="language-http">GET /sse?channels=users.42
 Accept: text/event-stream</code></pre>
 <p>Session cookies are sent when allowed by the browser and CORS configuration.

@@ -464,6 +464,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../custom-brokers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom brokers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1129,8 +1157,13 @@ and retain a deserializer for previous versions where practical.</p>
 <h2 id="documentation-versions">Documentation versions</h2>
 <p>Documentation is published per package version. Use the version selector in
 the site header to match the installed Composer package version.</p>
-<p>For unreleased work, use the <code>develop</code> documentation channel. For installed
-releases, use the matching tag version such as <code>1.0.0</code>.</p>
+<p>Before the first stable release, documentation deploys without a package
+version publish the <code>develop</code> channel and move the <code>latest</code> alias/default
+redirect to <code>develop</code>.</p>
+<p>After any stable docs version exists, <code>develop</code> continues to publish as its own
+channel but never moves <code>latest</code> again. Tagged stable releases publish their
+tag version, such as <code>1.0.0</code>, and move <code>latest</code> to that release. Prereleases
+are published without changing <code>latest</code>.</p>
 
 
 

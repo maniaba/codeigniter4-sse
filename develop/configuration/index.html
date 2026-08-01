@@ -629,6 +629,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../custom-brokers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom brokers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1311,7 +1339,7 @@ final class Sse extends BaseSse
 <tr>
 <td><code>requireAcceptHeader</code></td>
 <td style="text-align: right;"><code>true</code></td>
-<td>Require <code>Accept: text/event-stream</code> for the PHP stream transport.</td>
+<td>Require <code>Accept: text/event-stream</code> for PHP-streamed brokers.</td>
 </tr>
 </tbody>
 </table>
@@ -1349,9 +1377,9 @@ route explicitly:</p>
 );</code></pre>
 <p><code>SseRoutes::register()</code> honors <code>route['enabled']</code>, so it is intended for automatic
 package discovery rather than bypassing a disabled route. Keep the request
-method <code>GET</code>. With Redis it is the event stream; with Mercure it is a short
-authorization/bootstrap request used before the browser connects directly to
-the Hub.</p>
+method <code>GET</code>. Direct frontend adapters open EventSource on this route. The
+Mercure frontend adapter first requests JSON authorization from this route and
+then connects directly to the authorized Hub URL.</p>
 <h2 id="stream-behavior">Stream behavior</h2>
 <table>
 <thead>
@@ -1469,17 +1497,12 @@ other sensitive fields.</p>
 <tr>
 <td><code>brokers</code></td>
 <td style="text-align: right;">built-in Redis, Mercure, memory, null definitions</td>
-<td>Publisher/subscriber class or factory map.</td>
+<td>Broker adapter or broker adapter factory map.</td>
 </tr>
 <tr>
 <td><code>channelPrefix</code></td>
 <td style="text-align: right;"><code>app:sse:</code></td>
 <td>Prefix added to logical Redis channels.</td>
-</tr>
-<tr>
-<td><code>allowPatternSubscriptions</code></td>
-<td style="text-align: right;"><code>false</code></td>
-<td>Permit Redis-style pattern requests.</td>
 </tr>
 </tbody>
 </table>
@@ -1488,18 +1511,32 @@ message between separate HTTP requests or workers. <code>null</code> is a messag
 it discards published events but an enabled SSE route still keeps each stream
 open until disconnect or maximum lifetime. Set <code>route['enabled'] = false</code> to
 disable the HTTP endpoint.</p>
-<p><code>mercure</code> has a publisher but no PHP subscriber. Its broker definition uses
-<code>transport = mercure</code>, so the package route issues subscriber authorization
-instead of creating <code>SseConnectionManager</code>. See <a href="../mercure/">Mercure Hub</a> for
-the complete configuration.</p>
+<p><code>mercure</code> has a publisher but no PHP subscriber. Its broker adapter supplies a
+Mercure HTTP subscription endpoint, so the package route issues subscriber
+authorization instead of creating a PHP stream. See <a href="../mercure/">Mercure Hub</a>
+for the complete configuration.</p>
 <p>Do not use an empty shared prefix when several applications publish to the
 same Redis instance.</p>
 <p>Redis Pub/Sub is global across numbered Redis databases. <code>redis['database']</code>
 therefore does not separate SSE traffic; <code>channelPrefix</code> is the isolation
 boundary.</p>
-<p>Custom brokers are added by registering a new key in <code>brokers</code>:</p>
-<pre class="highlight"><code class="language-php">use App\Sse\CustomPublisher;
-use App\Sse\CustomSubscriber;
+<p>Custom brokers are added by registering a new key in <code>brokers</code>. A broker
+definition must provide exactly one of <code>factory</code> or <code>adapter</code>:</p>
+<ul>
+<li><code>factory</code>: <code>BrokerAdapterFactoryInterface</code>, callable returning one, or class
+  name implementing it;</li>
+<li><code>adapter</code>: <code>BrokerAdapterInterface</code>, callable returning one, or class name
+  implementing it.</li>
+</ul>
+<p>The adapter owns publishing and the HTTP subscription endpoint. If the broker
+can stream through PHP, implement <code>SubscriberAwareBrokerAdapterInterface</code> too.
+See <a href="../custom-brokers/">Custom brokers</a> for implementation examples and
+troubleshooting.</p>
+<pre class="highlight"><code class="language-php">use App\Sse\CustomBrokerAdapterFactory;
+use Maniaba\CodeIgniterSse\Broker\InMemory\InMemoryBrokerAdapterFactory;
+use Maniaba\CodeIgniterSse\Broker\Mercure\MercureBrokerAdapterFactory;
+use Maniaba\CodeIgniterSse\Broker\Null\NullBrokerAdapterFactory;
+use Maniaba\CodeIgniterSse\Broker\Redis\RedisBrokerAdapterFactory;
 
 final class Sse extends BaseSse
 {
@@ -1507,41 +1544,24 @@ final class Sse extends BaseSse
 
     public array $brokers = [
         'redis' =&gt; [
-            'publisher'  =&gt; \Maniaba\CodeIgniterSse\Broker\Redis\RedisPublisher::class,
-            'subscriber' =&gt; \Maniaba\CodeIgniterSse\Broker\Redis\RedisSubscriber::class,
+            'factory' =&gt; RedisBrokerAdapterFactory::class,
         ],
         'mercure' =&gt; [
-            'publisher' =&gt; \Maniaba\CodeIgniterSse\Broker\Mercure\MercurePublisher::class,
-            'transport' =&gt; 'mercure',
+            'factory' =&gt; MercureBrokerAdapterFactory::class,
         ],
         'memory' =&gt; [
-            'publisher'  =&gt; \Maniaba\CodeIgniterSse\Broker\InMemoryBroker::class,
-            'subscriber' =&gt; \Maniaba\CodeIgniterSse\Broker\InMemoryBroker::class,
-            'shared'     =&gt; true,
+            'factory' =&gt; InMemoryBrokerAdapterFactory::class,
+            'shared'  =&gt; true,
         ],
         'null' =&gt; [
-            'publisher'  =&gt; \Maniaba\CodeIgniterSse\Broker\NullBroker::class,
-            'subscriber' =&gt; \Maniaba\CodeIgniterSse\Broker\NullBroker::class,
-            'shared'     =&gt; true,
+            'factory' =&gt; NullBrokerAdapterFactory::class,
+            'shared'  =&gt; true,
         ],
         'custom' =&gt; [
-            'publisher'  =&gt; CustomPublisher::class,
-            'subscriber' =&gt; CustomSubscriber::class,
+            'factory' =&gt; CustomBrokerAdapterFactory::class,
         ],
     ];
 }</code></pre>
-<p>When a broker needs application services or constructor arguments, use factory
-closures:</p>
-<pre class="highlight"><code class="language-php">public array $brokers = [
-    'redis' =&gt; [
-        'publisher'  =&gt; \Maniaba\CodeIgniterSse\Broker\Redis\RedisPublisher::class,
-        'subscriber' =&gt; \Maniaba\CodeIgniterSse\Broker\Redis\RedisSubscriber::class,
-    ],
-    'custom' =&gt; [
-        'publisher'  =&gt; static fn (): PublisherInterface =&gt; service('customSsePublisher'),
-        'subscriber' =&gt; static fn (): SubscriberInterface =&gt; service('customSseSubscriber'),
-    ],
-];</code></pre>
 <h2 id="mercure">Mercure</h2>
 <p>Mercure options live in one array, parallel to Redis:</p>
 <pre class="highlight"><code class="language-php">public string $broker = 'mercure';
@@ -1568,8 +1588,8 @@ public array $mercure = [
 <pre class="highlight"><code class="language-dotenv">sse.mercure.publisherKey = replace-with-the-hub-publisher-key
 sse.mercure.subscriberKey = replace-with-the-hub-subscriber-key</code></pre>
 <p>Keep Hub signing keys out of source control. The package validates Mercure
-configuration when that broker is selected. The full key reference and
-deployment guidance are in <a href="../mercure/">Mercure Hub</a>.</p>
+configuration when the Mercure adapter factory builds the broker. The full key
+reference and deployment guidance are in <a href="../mercure/">Mercure Hub</a>.</p>
 <h2 id="redis-connection">Redis connection</h2>
 <p>All Redis options live under one config property:</p>
 <pre class="highlight"><code class="language-php">public array $redis = [
@@ -1589,6 +1609,7 @@ deployment guidance are in <a href="../mercure/">Mercure Hub</a>.</p>
     'maxPayloadBytes'            =&gt; 1_048_576,
     'maxResponseElements'        =&gt; 1024,
     'maxResponseDepth'           =&gt; 8,
+    'allowPatternSubscriptions'  =&gt; false,
     'clientName'                 =&gt; null,
     'streamContext'              =&gt; [],
 ];</code></pre>
@@ -1664,7 +1685,7 @@ deployment guidance are in <a href="../mercure/">Mercure Hub</a>.</p>
 <tr>
 <td><code>deduplicationCapacity</code></td>
 <td style="text-align: right;"><code>1024</code></td>
-<td>Recent event IDs retained to suppress duplicates after reconnects or overlapping subscriptions.</td>
+<td>Recent channel/event ID pairs retained to suppress duplicates from overlapping exact and pattern subscriptions.</td>
 </tr>
 <tr>
 <td><code>maxPayloadBytes</code></td>
@@ -1680,6 +1701,11 @@ deployment guidance are in <a href="../mercure/">Mercure Hub</a>.</p>
 <td><code>maxResponseDepth</code></td>
 <td style="text-align: right;"><code>8</code></td>
 <td>Maximum accepted RESP nesting depth.</td>
+</tr>
+<tr>
+<td><code>allowPatternSubscriptions</code></td>
+<td style="text-align: right;"><code>false</code></td>
+<td>Permit Redis-style pattern requests.</td>
 </tr>
 <tr>
 <td><code>clientName</code></td>
