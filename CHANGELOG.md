@@ -13,7 +13,8 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
   Server-Sent Events through Redis Pub/Sub.
 - Channel authorization and authenticated-user resolution contracts.
 - Streaming response support for supported CodeIgniter releases.
-- Framework-independent browser `SseClient` ES module.
+- Framework-independent browser `SseClient` ES module with server-selected,
+  broker-neutral stream bootstrap.
 - Redis subscriber health PINGs, bounded reconnects, payload/RESP safety
   limits, and event-ID deduplication.
 - Mercure 0.x Hub publisher, exact topic mapping, private subscriber JWT

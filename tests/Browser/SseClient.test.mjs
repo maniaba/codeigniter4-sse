@@ -35,7 +35,18 @@ class FakeEventSource {
     }
 }
 
-test('builds the URL, dispatches envelopes, reports status, and closes', () => {
+const directBootstrap = async () => ({
+    ok: true,
+    status: 200,
+    json: async () => ({ url: null, expiresAt: null }),
+});
+
+const nextTurn = () => new Promise((resolve) => setImmediate(resolve));
+const wait = (milliseconds) => new Promise((resolve) => {
+    setTimeout(resolve, milliseconds);
+});
+
+test('builds the URL, dispatches envelopes, reports status, and closes', async () => {
     const source = new FakeEventSource();
     const statuses = [];
     const named = [];
@@ -47,6 +58,7 @@ test('builds the URL, dispatches envelopes, reports status, and closes', () => {
         endpoint: 'https://example.test/sse?locale=bs',
         channels: ['users.42', 'orders.918', 'users.42'],
         query: { tenant: 7 },
+        fetchFactory: directBootstrap,
         eventSourceFactory: (url, options) => {
             receivedUrl = url;
             receivedOptions = options;
@@ -61,6 +73,9 @@ test('builds the URL, dispatches envelopes, reports status, and closes', () => {
         .onMessage((message) => globalMessages.push(message))
         .connect();
 
+    await nextTurn();
+
+    assert.equal(Object.hasOwn(client, 'transport'), false);
     const url = new URL(receivedUrl);
     assert.equal(url.searchParams.get('channels'), 'users.42,orders.918');
     assert.equal(url.searchParams.get('tenant'), '7');
@@ -104,15 +119,17 @@ test('builds the URL, dispatches envelopes, reports status, and closes', () => {
     ]);
 });
 
-test('preserves invalid JSON and invokes unsupported fallback once', () => {
+test('preserves invalid JSON and invokes unsupported fallback once', async () => {
     const source = new FakeEventSource();
     const messages = [];
     const client = new SseClient({
         endpoint: 'https://example.test/sse',
+        fetchFactory: directBootstrap,
         eventSourceFactory: () => source,
     });
 
     client.onMessage((message) => messages.push(message)).connect();
+    await nextTurn();
     source.dispatch('message', { data: 'not-json', lastEventId: '' });
 
     assert.equal(messages[0].parsed, false);
@@ -133,7 +150,7 @@ test('preserves invalid JSON and invokes unsupported fallback once', () => {
     assert.equal(fallbackCalls, 1);
 });
 
-test('subscribes and unsubscribes channels by reconnecting active sources', () => {
+test('subscribes and unsubscribes channels by reconnecting active sources', async () => {
     const sources = [];
     const urls = [];
     const statuses = [];
@@ -141,6 +158,7 @@ test('subscribes and unsubscribes channels by reconnecting active sources', () =
     const client = new SseClient({
         endpoint: 'https://example.test/sse',
         channels: ['public.news'],
+        fetchFactory: directBootstrap,
         eventSourceFactory: (url) => {
             const source = new FakeEventSource();
 
@@ -152,10 +170,12 @@ test('subscribes and unsubscribes channels by reconnecting active sources', () =
     });
 
     client.on('status', ({ status }) => statuses.push(status)).connect();
+    await nextTurn();
     sources[0].readyState = 1;
     sources[0].dispatch('open', { type: 'open' });
 
     client.subscribe(['users.42', 'public.news']);
+    await nextTurn();
 
     assert.equal(sources.length, 2);
     assert.equal(sources[0].closed, true);
@@ -169,6 +189,7 @@ test('subscribes and unsubscribes channels by reconnecting active sources', () =
     sources[1].dispatch('open', { type: 'open' });
 
     client.unsubscribe('public.news');
+    await nextTurn();
 
     assert.equal(sources.length, 3);
     assert.equal(sources[1].closed, true);
@@ -190,7 +211,225 @@ test('subscribes and unsubscribes channels by reconnecting active sources', () =
     ]);
 });
 
-test('authorizes Mercure channels and opens EventSource directly on the Hub', async () => {
+test('restarts an in-flight bootstrap when channels change', async () => {
+    const bootstrapUrls = [];
+    const signals = [];
+    const sourceUrls = [];
+    const client = new SseClient({
+        endpoint: 'https://example.test/sse',
+        channels: ['public.news'],
+        fetchFactory: async (url, { signal }) => {
+            bootstrapUrls.push(url);
+            signals.push(signal);
+
+            if (bootstrapUrls.length === 1) {
+                return new Promise((resolve, reject) => {
+                    signal.addEventListener('abort', () => {
+                        reject(new Error('aborted'));
+                    }, { once: true });
+                });
+            }
+
+            return directBootstrap();
+        },
+        eventSourceFactory: (url) => {
+            sourceUrls.push(url);
+
+            return new FakeEventSource();
+        },
+    });
+
+    client.connect();
+    client.subscribe('users.42');
+    await nextTurn();
+
+    assert.equal(bootstrapUrls.length, 2);
+    assert.equal(signals[0].aborted, true);
+    assert.equal(sourceUrls.length, 1);
+    assert.equal(
+        new URL(sourceUrls[0]).searchParams.get('channels'),
+        'public.news,users.42',
+    );
+
+    client.close();
+});
+
+test('close aborts an in-flight bootstrap without opening EventSource', async () => {
+    let bootstrapSignal;
+    let eventSourceCalls = 0;
+    let fallbackCalls = 0;
+    const client = new SseClient({
+        endpoint: 'https://example.test/sse',
+        fetchFactory: async (url, { signal }) => {
+            bootstrapSignal = signal;
+
+            return new Promise((resolve, reject) => {
+                signal.addEventListener('abort', () => {
+                    reject(new Error('aborted'));
+                }, { once: true });
+            });
+        },
+        eventSourceFactory: () => {
+            eventSourceCalls++;
+
+            return new FakeEventSource();
+        },
+        fallback: () => {
+            fallbackCalls++;
+        },
+    });
+
+    client.connect();
+    client.close();
+    await nextTurn();
+
+    assert.equal(bootstrapSignal.aborted, true);
+    assert.equal(eventSourceCalls, 0);
+    assert.equal(fallbackCalls, 0);
+    assert.equal(client.status, SseClientStatus.CLOSED);
+});
+
+test('retries a transient bootstrap failure', async () => {
+    let bootstrapCalls = 0;
+    const sources = [];
+    const fallbackReasons = [];
+    const client = new SseClient({
+        endpoint: 'https://example.test/sse',
+        channels: ['public.news'],
+        fetchFactory: async () => {
+            bootstrapCalls++;
+
+            if (bootstrapCalls === 1) {
+                throw new Error('temporary network failure');
+            }
+
+            return directBootstrap();
+        },
+        eventSourceFactory: () => {
+            const source = new FakeEventSource();
+            sources.push(source);
+
+            return source;
+        },
+        fallback: ({ reason }) => fallbackReasons.push(reason),
+    });
+
+    client.connect();
+    await nextTurn();
+
+    assert.equal(client.status, SseClientStatus.RECONNECTING);
+    assert.equal(bootstrapCalls, 1);
+
+    await wait(1100);
+    await nextTurn();
+
+    assert.equal(bootstrapCalls, 2);
+    assert.equal(sources.length, 1);
+    assert.equal(client.status, SseClientStatus.CONNECTING);
+    assert.deepEqual(fallbackReasons, ['bootstrap-error']);
+
+    client.close();
+});
+
+test('refreshes an expiring stream even before EventSource opens', async () => {
+    let bootstrapCalls = 0;
+    const sources = [];
+    const client = new SseClient({
+        endpoint: 'https://example.test/sse',
+        channels: ['public.news'],
+        fetchFactory: async () => {
+            bootstrapCalls++;
+
+            return {
+                ok: true,
+                status: 200,
+                json: async () => ({
+                    url: null,
+                    expiresAt: Math.floor(Date.now() / 1000) + 30,
+                }),
+            };
+        },
+        eventSourceFactory: () => {
+            const source = new FakeEventSource();
+            sources.push(source);
+
+            return source;
+        },
+    });
+
+    client.connect();
+    await nextTurn();
+    await wait(1100);
+    await nextTurn();
+
+    assert.equal(bootstrapCalls, 2);
+    assert.equal(sources.length, 2);
+    assert.equal(sources[0].closed, true);
+    assert.equal(client.status, SseClientStatus.CONNECTING);
+
+    client.close();
+});
+
+test('rejects expired bootstrap authorization without opening EventSource', async () => {
+    let eventSourceCalls = 0;
+    const fallbackReasons = [];
+    const client = new SseClient({
+        endpoint: 'https://example.test/sse',
+        channels: ['public.news'],
+        fetchFactory: async () => ({
+            ok: true,
+            status: 200,
+            json: async () => ({
+                url: null,
+                expiresAt: Math.floor(Date.now() / 1000) - 1,
+            }),
+        }),
+        eventSourceFactory: () => {
+            eventSourceCalls++;
+
+            return new FakeEventSource();
+        },
+        fallback: ({ reason }) => fallbackReasons.push(reason),
+    });
+
+    client.connect();
+    await nextTurn();
+
+    assert.equal(eventSourceCalls, 0);
+    assert.equal(client.status, SseClientStatus.CLOSED);
+    assert.deepEqual(fallbackReasons, ['bootstrap-error']);
+});
+
+test('clamps long-lived stream refresh timers', async () => {
+    let bootstrapCalls = 0;
+    const client = new SseClient({
+        endpoint: 'https://example.test/sse',
+        channels: ['public.news'],
+        fetchFactory: async () => {
+            bootstrapCalls++;
+
+            return {
+                ok: true,
+                status: 200,
+                json: async () => ({
+                    url: null,
+                    expiresAt: Number.MAX_SAFE_INTEGER,
+                }),
+            };
+        },
+        eventSourceFactory: () => new FakeEventSource(),
+    });
+
+    client.connect();
+    await nextTurn();
+    await wait(20);
+
+    assert.equal(bootstrapCalls, 1);
+
+    client.close();
+});
+
+test('uses the server bootstrap to open EventSource directly on the Hub', async () => {
     const source = new FakeEventSource();
     const fetchCalls = [];
     let receivedHubUrl;
@@ -198,7 +437,6 @@ test('authorizes Mercure channels and opens EventSource directly on the Hub', as
 
     const client = new SseClient({
         endpoint: 'https://app.example.test/sse',
-        transport: 'mercure',
         channels: ['users.42', 'projects.7'],
         fetchFactory: async (url, options) => {
             fetchCalls.push({ url, options });
@@ -207,12 +445,13 @@ test('authorizes Mercure channels and opens EventSource directly on the Hub', as
                 ok: true,
                 status: 200,
                 json: async () => ({
-                    transport: 'mercure',
-                    hub: 'https://hub.example.test/.well-known/mercure?custom=1',
-                    topics: [
-                        'urn:example:sse:users.42',
-                        'urn:example:sse:projects.7',
-                    ],
+                    url: 'https://hub.example.test/.well-known/mercure?custom=1',
+                    query: {
+                        topic: [
+                            'urn:example:sse:users.42',
+                            'urn:example:sse:projects.7',
+                        ],
+                    },
                     expiresAt: null,
                 }),
             };
@@ -227,7 +466,7 @@ test('authorizes Mercure channels and opens EventSource directly on the Hub', as
 
     client.connect();
     client.connect();
-    await new Promise((resolve) => setImmediate(resolve));
+    await nextTurn();
 
     assert.equal(fetchCalls.length, 1);
     assert.equal(
@@ -255,12 +494,11 @@ test('authorizes Mercure channels and opens EventSource directly on the Hub', as
     client.close();
 });
 
-test('reports Mercure authorization failures without opening EventSource', async () => {
+test('reports bootstrap failures without opening EventSource', async () => {
     let eventSourceCalls = 0;
     const fallbackReasons = [];
     const client = new SseClient({
         endpoint: 'https://app.example.test/sse',
-        transport: 'mercure',
         channels: ['users.42'],
         fetchFactory: async () => ({
             ok: false,
@@ -276,26 +514,56 @@ test('reports Mercure authorization failures without opening EventSource', async
     });
 
     client.connect();
-    await new Promise((resolve) => setImmediate(resolve));
+    await nextTurn();
 
     assert.equal(eventSourceCalls, 0);
     assert.equal(client.status, SseClientStatus.CLOSED);
-    assert.deepEqual(fallbackReasons, ['authorization-error']);
+    assert.deepEqual(fallbackReasons, ['bootstrap-error']);
 });
 
-test('keeps Mercure EventSource construction errors distinct from authorization', async () => {
+test('rejects invalid bootstrap connection data', async () => {
+    let eventSourceCalls = 0;
     const fallbackReasons = [];
     const client = new SseClient({
         endpoint: 'https://app.example.test/sse',
-        transport: 'mercure',
         channels: ['users.42'],
         fetchFactory: async () => ({
             ok: true,
             status: 200,
             json: async () => ({
-                transport: 'mercure',
-                hub: 'https://hub.example.test/.well-known/mercure',
-                topics: ['urn:example:sse:users.42'],
+                url: 'javascript:alert(1)',
+                expiresAt: null,
+            }),
+        }),
+        eventSourceFactory: () => {
+            eventSourceCalls++;
+
+            return new FakeEventSource();
+        },
+        fallback: ({ reason }) => fallbackReasons.push(reason),
+    });
+
+    client.connect();
+    await nextTurn();
+
+    assert.equal(eventSourceCalls, 0);
+    assert.equal(client.status, SseClientStatus.CLOSED);
+    assert.deepEqual(fallbackReasons, ['bootstrap-error']);
+});
+
+test('keeps EventSource construction errors distinct from bootstrap errors', async () => {
+    const fallbackReasons = [];
+    const client = new SseClient({
+        endpoint: 'https://app.example.test/sse',
+        channels: ['users.42'],
+        fetchFactory: async () => ({
+            ok: true,
+            status: 200,
+            json: async () => ({
+                url: 'https://hub.example.test/.well-known/mercure',
+                query: {
+                    topic: ['urn:example:sse:users.42'],
+                },
                 expiresAt: null,
             }),
         }),
@@ -306,7 +574,7 @@ test('keeps Mercure EventSource construction errors distinct from authorization'
     });
 
     client.connect();
-    await new Promise((resolve) => setImmediate(resolve));
+    await nextTurn();
 
     assert.equal(client.status, SseClientStatus.CLOSED);
     assert.deepEqual(fallbackReasons, ['construction-error']);

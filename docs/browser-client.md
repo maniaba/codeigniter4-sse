@@ -1,7 +1,8 @@
 # Browser client
 
-`resources/js/sse-client.js` is a dependency-free ES module around the native
-browser `EventSource`.
+`resources/js/sse-client.js` is a dependency-free ES module that resolves the
+configured stream through the package endpoint and then opens a native browser
+`EventSource`.
 
 It provides:
 
@@ -11,13 +12,15 @@ It provides:
 - safe JSON parsing;
 - channel and custom query parameters;
 - credential configuration;
+- automatic stream resolution without exposing the configured broker;
 - direct Mercure Hub transport with cookie authorization;
 - explicit `connect()` and `close()`;
 - a hook for an application-defined fallback.
 
-It deliberately does not implement a second reconnect timer. Native
-`EventSource` follows the server's SSE `retry` value and reconnects
-automatically.
+After EventSource opens, native `EventSource` follows the server's SSE `retry`
+value and reconnects automatically. Before it opens, transient bootstrap
+network failures and retryable HTTP responses use a bounded exponential
+backoff.
 
 ## Import
 
@@ -90,7 +93,6 @@ const live = new SseClient({
         source: 'orders-page',
     },
     withCredentials: true,
-    transport: 'eventsource',
     fallback: null,
 });
 ```
@@ -100,11 +102,10 @@ const live = new SseClient({
 | `endpoint` | required | Absolute or browser-relative SSE URL. |
 | `channels` | `[]` | Unique logical channel names, sent comma-separated. |
 | `query` | `{}` | Object or `URLSearchParams` merged into the endpoint. |
-| `withCredentials` | `true` | Passed to the native `EventSource` constructor. |
-| `transport` | `eventsource` | Use `eventsource` for the PHP stream or `mercure` for Hub bootstrap. |
-| `fallback` | `null` | Optional outage/unsupported-browser hook. |
+| `withCredentials` | `true` | Enables cross-origin credentials for bootstrap and EventSource requests. |
+| `fallback` | `null` | Optional bootstrap, connection-error, or unsupported-browser hook. |
 | `eventSourceFactory` | native | Test seam for supplying an EventSource-compatible object. |
-| `fetchFactory` | native | Test seam for the Mercure authorization request. |
+| `fetchFactory` | native | Test seam for the short stream-resolution request. |
 
 Array query values are appended as repeated parameters. `null` and `undefined`
 object values are omitted. The `channels` option wins over an existing
@@ -112,15 +113,32 @@ object values are omitted. The `channels` option wins over an existing
 
 Do not use query parameters for bearer tokens or secrets.
 
-## Mercure transport
+## Automatic stream resolution
 
-When Mercure is the configured broker, `endpoint` is the short CodeIgniter
-authorization route rather than the Hub stream itself:
+The browser does not select Redis, Mercure, or another broker. `connect()`
+first requests a generic connection descriptor from `endpoint` with
+`Accept: application/json`. The server decides where the EventSource should
+connect.
+
+For a PHP stream, `url: null` tells the client to reuse the original endpoint:
+
+```json
+{
+  "url": null,
+  "expiresAt": null
+}
+```
+
+For an external Hub, the response supplies its URL, query parameters, and an
+optional authorization expiry. The client treats both forms identically and
+does not expose a transport option.
+
+When Mercure is configured, `endpoint` remains the short CodeIgniter
+authorization route:
 
 ```javascript
 const live = new SseClient({
     endpoint: '/sse',
-    transport: 'mercure',
     channels: ['users.42'],
     withCredentials: true,
 });
@@ -161,9 +179,9 @@ live.setChannels(['users.42', 'orders.918']);
 chaining.
 
 Native `EventSource` cannot change its URL after it is opened. When channels
-change on an active client, the wrapper closes the current source and opens a
-new one with the updated `channels` query parameter. Removing the last channel
-closes the stream.
+change on an active client, the wrapper closes the current source, resolves a
+new authorized stream URL, and opens it with the updated `channels` query
+parameter. Removing the last channel closes the stream.
 
 ## Named events
 
@@ -211,8 +229,8 @@ live.on('sse.error', ({ data }) => {
 });
 ```
 
-Transport state should still be taken from the `status` handler. Heartbeats are
-SSE comments and never dispatch a JavaScript event.
+Connection state should still be taken from the `status` handler. Heartbeats
+are SSE comments and never dispatch a JavaScript event.
 
 ## Message shape
 
@@ -365,17 +383,25 @@ The hook receives:
 ```
 
 Reasons are `unsupported`, `construction-error`, `connection-error`, and
-`authorization-error`. The last value means the Mercure bootstrap request
-failed or returned invalid data. The hook runs once per reconnect cycle; a
-successful native `open` resets it.
+`bootstrap-error`. The last value means the stream-resolution request failed
+or returned invalid data. The hook runs once per reconnect cycle; a successful
+native `open` resets it.
+
+Network failures and HTTP `408`, `425`, `429`, or `5xx` bootstrap responses are
+retried automatically with a capped exponential delay. `close()` cancels both
+an in-flight bootstrap request and a scheduled retry. Other bootstrap failures
+close the client because retrying cannot repair an invalid request or response
+contract.
+
 Browsers report the server's expected finite-lifetime rotation through the
 same native `error` event as a network outage, so `connection-error` alone
 must not immediately start polling. Debounce an outage fallback and cancel it
 when the next `open` arrives. The `unsupported` reason is definitive and can
 start a fallback immediately.
 
-If no fallback is provided and the browser has no `EventSource`, `connect()`
-throws a clear error.
+The client requires both `fetch` and `EventSource`. If no fallback is provided
+and the browser has no `EventSource`, `connect()` throws a clear error. A
+missing `fetch` is reported as `bootstrap-error`.
 
 ## Credentials and CORS
 
@@ -387,8 +413,9 @@ const live = new SseClient({
 });
 ```
 
-For cross-origin cookies, the server must return the exact allowed origin and
-`Access-Control-Allow-Credentials: true`. Cookie `Domain`, `Secure`, and
+For cross-origin cookies, both the bootstrap response and EventSource response
+must return the exact allowed origin and the
+`Access-Control-Allow-Credentials: true` header. Cookie `Domain`, `Secure`, and
 `SameSite` attributes must also permit the request.
 
 Standard browser EventSource does not accept arbitrary request headers.

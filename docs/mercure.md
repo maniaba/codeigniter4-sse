@@ -160,14 +160,15 @@ publisher decorator used for every broker.
 
 ## Browser client
 
-Set the client transport to `mercure`:
+The browser client uses the same configuration for every broker. When the
+server is configured for Mercure, its generic bootstrap descriptor points the
+client to the authorized Hub URL:
 
 ```javascript
 import { SseClient } from '@maniaba/codeigniter4-sse-browser';
 
 const live = new SseClient({
     endpoint: '/sse',
-    transport: 'mercure',
     channels: [`users.${currentUserId}`],
     withCredentials: true,
 });
@@ -191,9 +192,10 @@ CodeIgniter validates and authorizes every channel, sets an HttpOnly
 
 ```json
 {
-  "transport": "mercure",
-  "hub": "https://app.example.com/.well-known/mercure",
-  "topics": ["urn:storefront:sse:users.42"],
+  "url": "https://app.example.com/.well-known/mercure",
+  "query": {
+    "topic": ["urn:storefront:sse:users.42"]
+  },
   "expiresAt": 1785520800
 }
 ```

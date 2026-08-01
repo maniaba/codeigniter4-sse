@@ -20,7 +20,8 @@ If the route was customized, use that path in the browser client.
 
 ## The endpoint returns 406
 
-The default configuration requires:
+The default configuration accepts the browser client's JSON bootstrap request
+or requires this header for a direct PHP stream request:
 
 ```http
 Accept: text/event-stream
@@ -149,22 +150,24 @@ Verify:
 - `withCredentials` is enabled;
 - Hub CORS lists the exact application origin.
 
-Inspect the authorization request in browser developer tools. The JSON must
-contain the expected topics and the response must set the subscriber cookie.
+Inspect the authorization request in browser developer tools. The JSON
+`query.topic` array must contain the expected topics and the response must set
+the subscriber cookie.
 The cookie is HttpOnly, so it will not appear through `document.cookie`.
 
-## Mercure client reports authorization-error
+## Browser client reports bootstrap-error
 
-The browser client could not complete the short CodeIgniter bootstrap request.
-Inspect its HTTP status:
+The browser client could not resolve the EventSource URL through the short
+CodeIgniter bootstrap request. Inspect its HTTP status:
 
 - `400` means the channel list is invalid;
 - `403` means channel policy or application CORS denied the request;
-- `5xx` usually means Mercure signing configuration is incomplete;
+- `5xx` means the active broker could not build its connection descriptor;
 - an invalid JSON shape means a proxy or custom controller replaced the
   package response.
 
-This error occurs before EventSource connects to the Hub.
+This error occurs before EventSource connects to the PHP stream or external
+Hub.
 
 ## The connection opens but no events arrive
 

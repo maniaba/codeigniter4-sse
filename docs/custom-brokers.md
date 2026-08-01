@@ -233,8 +233,9 @@ query parameter.
 
 ## Implement the subscription endpoint
 
-For Hub-style brokers, return bootstrap data that the browser client can use
-to connect to the external service:
+For Hub-style brokers, return the generic stream descriptor understood by the
+browser client. The frontend does not need a broker name or custom transport
+switch:
 
 ```php
 use CodeIgniter\HTTP\RequestInterface;
@@ -265,9 +266,9 @@ final readonly class AcmeSubscriptionEndpoint implements
         return $response
             ->setStatusCode(200)
             ->setJSON([
-                'transport' => 'acme',
-                'endpoint'  => $this->publicEndpoint,
-                'channels'  => $channels,
+                'url'       => $this->publicEndpoint,
+                'query'     => ['channel' => $channels],
+                'expiresAt' => null,
             ])
             ->setHeader('Cache-Control', 'private, no-store')
             ->setHeader('X-Content-Type-Options', 'nosniff');
@@ -276,7 +277,9 @@ final readonly class AcmeSubscriptionEndpoint implements
 ```
 
 The package authorizes channels before `respond()` is called. The endpoint
-receives only approved channel selectors.
+receives only approved channel selectors. `url` is the EventSource target,
+`query` contains parameters merged into that URL, and `expiresAt` is either a
+Unix timestamp for refreshing short-lived authorization or `null`.
 
 ## PHP-stream brokers
 

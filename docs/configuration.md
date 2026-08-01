@@ -37,7 +37,7 @@ final class Sse extends BaseSse
 | `route['method']` | `stream` | Controller method used by the route. |
 | `route['filters']` | `[]` | CI4 filter aliases applied to the route. |
 | `route['options']` | `[]` | Additional CI4 route options. |
-| `requireAcceptHeader` | `true` | Require `Accept: text/event-stream` for the PHP stream transport. |
+| `requireAcceptHeader` | `true` | Require `Accept: text/event-stream` for a PHP stream; JSON bootstrap requests remain supported. |
 
 Example:
 
@@ -84,9 +84,9 @@ $routes->get(
 
 `SseRoutes::register()` honors `route['enabled']`, so it is intended for automatic
 package discovery rather than bypassing a disabled route. Keep the request
-method `GET`. With Redis it is the event stream; with Mercure it is a short
-authorization/bootstrap request used before the browser connects directly to
-the Hub.
+method `GET`. The browser first requests a broker-neutral JSON stream
+descriptor. With Redis, EventSource then reconnects to the same route for the
+PHP stream; with Mercure, it connects directly to the authorized Hub URL.
 
 ## Stream behavior
 

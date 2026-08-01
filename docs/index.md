@@ -62,6 +62,9 @@ live.on('notification.created', ({ data }) => {
 live.connect();
 ```
 
+The endpoint selects the actual stream URL, so this frontend code stays the
+same for Redis, Mercure, and compatible custom brokers.
+
 Private channels are denied until the application supplies an authorizer. Start
 with the [Quick start](quick-start.md), then configure
 [channels and authorization](channels-and-authorization.md).

@@ -133,10 +133,12 @@ filters reject unauthenticated requests early; concurrency limits prevent one
 user or reconnect loop from consuming an unbounded number of PHP workers.
 Neither replaces per-channel authorization.
 
-With Mercure, the same route filters and authorizer protect the short
-bootstrap request. The resulting subscriber JWT contains only approved
-Mercure topics. The long-lived Hub connection does not occupy a PHP worker,
-but rate limiting still protects token issuance and reconnect churn.
+The same route filters and authorizer protect the browser's short bootstrap
+request for every broker. With Redis, the following EventSource request is
+authorized again before the PHP stream opens. With Mercure, the resulting
+subscriber JWT contains only approved topics. The long-lived Hub connection
+does not occupy a PHP worker, but rate limiting still protects token issuance
+and reconnect churn.
 
 For zero-argument implementations, select both classes in the package config:
 

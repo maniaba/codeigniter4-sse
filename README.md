@@ -96,6 +96,9 @@ live.on('status', ({ status }) => {
 live.connect();
 ```
 
+`SseClient` first asks `/sse` for the server-selected stream URL, then opens
+EventSource. Frontend configuration is unchanged when the broker changes.
+
 The browser's native `EventSource` automatically reconnects when a connection
 ends. With Redis, the package intentionally limits the PHP stream lifetime.
 With Mercure, the browser streams directly from the Hub.
@@ -195,10 +198,12 @@ browser client connects directly to the Hub:
 ```javascript
 const live = new SseClient({
     endpoint: '/sse',
-    transport: 'mercure',
     channels: [`users.${currentUserId}`],
 });
 ```
+
+The client asks the package endpoint for a generic stream descriptor, so
+frontend code is unchanged when the configured broker changes.
 
 Mercure can replay retained Hub history through `Last-Event-ID`. See
 [Mercure Hub](docs/mercure.md) for Docker, signing keys, authorization,

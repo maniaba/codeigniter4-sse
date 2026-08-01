@@ -40,13 +40,13 @@ final readonly class MercureSubscriptionEndpoint implements SubscriptionEndpoint
         $response = $response
             ->setStatusCode(200)
             ->setJSON([
-                'transport' => 'mercure',
-                'hub'       => $subscription->hubUrl,
-                'topics'    => $subscription->topics,
+                'url'       => $subscription->hubUrl,
+                'query'     => ['topic' => $subscription->topics],
                 'expiresAt' => $subscription->expiresAt,
             ])
             ->setHeader('Cache-Control', 'private, no-store')
             ->setHeader('Link', sprintf('<%s>; rel="mercure"', $subscription->hubUrl))
+            ->appendHeader('Vary', 'Accept')
             ->setHeader('X-Content-Type-Options', 'nosniff');
 
         if ($subscription->token !== null) {

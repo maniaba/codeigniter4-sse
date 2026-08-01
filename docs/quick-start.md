@@ -146,7 +146,14 @@ live.on('status', ({ status }) => {
 live.connect();
 ```
 
-The client requests:
+The client first resolves the server-selected stream:
+
+```http
+GET /sse?channels=users.42
+Accept: application/json
+```
+
+With the default Redis broker, it then opens:
 
 ```http
 GET /sse?channels=users.42

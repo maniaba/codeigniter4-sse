@@ -19,6 +19,14 @@ const GLOBAL_MESSAGE_EVENT = 'message';
 const STATUS_EVENT = 'status';
 const RESERVED_NATIVE_EVENTS = new Set(['open', 'error']);
 
+class BootstrapRequestError extends Error {
+    constructor(message, retryable, cause = null) {
+        super(message, cause === null ? undefined : { cause });
+        this.name = 'BootstrapRequestError';
+        this.retryable = retryable;
+    }
+}
+
 /**
  * @typedef {Object} SseMessage
  * @property {string|null} id
@@ -39,7 +47,6 @@ const RESERVED_NATIVE_EVENTS = new Set(['open', 'error']);
  * @property {string[]} [channels]
  * @property {Object|URLSearchParams} [query]
  * @property {boolean} [withCredentials]
- * @property {'eventsource'|'mercure'} [transport]
  * @property {Function|null} [fallback]
  * @property {Function|null} [eventSourceFactory]
  * @property {Function|null} [fetchFactory]
@@ -54,7 +61,6 @@ export class SseClient {
         channels = [],
         query = {},
         withCredentials = true,
-        transport = 'eventsource',
         fallback = null,
         eventSourceFactory = null,
         fetchFactory = null,
@@ -82,12 +88,6 @@ export class SseClient {
             throw new TypeError('SseClient fallback must be a function or null.');
         }
 
-        if (!['eventsource', 'mercure'].includes(transport)) {
-            throw new TypeError(
-                'SseClient transport must be "eventsource" or "mercure".',
-            );
-        }
-
         if (
             eventSourceFactory !== null
             && typeof eventSourceFactory !== 'function'
@@ -107,7 +107,6 @@ export class SseClient {
         this.channels = this._normalizeChannels(channels);
         this.query = query;
         this.withCredentials = Boolean(withCredentials);
-        this.transport = transport;
 
         this._queryIsUrlSearchParams = queryIsUrlSearchParams;
         this._fallback = fallback;
@@ -122,6 +121,9 @@ export class SseClient {
         this._fallbackInvoked = false;
         this._connectionGeneration = 0;
         this._refreshTimer = null;
+        this._bootstrapController = null;
+        this._bootstrapRetryTimer = null;
+        this._bootstrapRetryAttempt = 0;
 
         this._handleOpen = this._handleOpen.bind(this);
         this._handleError = this._handleError.bind(this);
@@ -306,12 +308,26 @@ export class SseClient {
             return this;
         }
 
+        this._startConnection();
+
+        return this;
+    }
+
+    _startConnection(isRetry = false) {
+        this._abortBootstrap();
+        this._clearBootstrapRetryTimer();
+
         if (this._source !== null) {
             this._teardownSource();
         }
 
         this._manuallyClosed = false;
-        this._fallbackInvoked = false;
+
+        if (!isRetry) {
+            this._fallbackInvoked = false;
+            this._bootstrapRetryAttempt = 0;
+        }
+
         const generation = ++this._connectionGeneration;
 
         const factory = this._resolveEventSourceFactory();
@@ -335,21 +351,20 @@ export class SseClient {
                 );
             }
 
-            return this;
+            return;
         }
 
         this._currentUrl = this._buildUrl();
         this._setStatus(SseClientStatus.CONNECTING);
 
-        if (this.transport === 'mercure') {
-            this._connectMercure(factory, generation);
-
-            return this;
+        if (
+            generation !== this._connectionGeneration
+            || this._manuallyClosed
+        ) {
+            return;
         }
 
-        this._openSource(factory, this._currentUrl);
-
-        return this;
+        this._connectThroughBootstrap(factory, generation);
     }
 
     /**
@@ -494,49 +509,42 @@ export class SseClient {
         return globalThis.fetch.bind(globalThis);
     }
 
+    _createAbortController() {
+        if (
+            typeof globalThis === 'undefined'
+            || typeof globalThis.AbortController !== 'function'
+        ) {
+            return null;
+        }
+
+        return new globalThis.AbortController();
+    }
+
     /**
      * @param {Function} eventSourceFactory
      * @param {number} generation
      */
-    _connectMercure(eventSourceFactory, generation) {
+    _connectThroughBootstrap(eventSourceFactory, generation) {
         const fetchFactory = this._resolveFetchFactory();
 
         if (fetchFactory === null) {
-            this._handleMercureAuthorizationError(
-                new Error('Fetch is required by the Mercure transport.'),
+            this._handleBootstrapError(
+                new Error('Fetch is required to resolve the SSE stream.'),
                 generation,
+                false,
             );
 
             return;
         }
 
-        Promise.resolve(fetchFactory(this._currentUrl, {
-            method: 'GET',
-            headers: {
-                Accept: 'application/json',
-            },
-            credentials: this.withCredentials ? 'include' : 'same-origin',
-            cache: 'no-store',
-        }))
-            .then(async (response) => {
-                if (
-                    response === null
-                    || typeof response !== 'object'
-                    || typeof response.json !== 'function'
-                ) {
-                    throw new TypeError(
-                        'The Mercure authorization endpoint returned an invalid response.',
-                    );
-                }
+        const controller = this._createAbortController();
+        this._bootstrapController = controller;
 
-                if (response.ok !== true) {
-                    throw new Error(
-                        `Mercure authorization failed with HTTP ${response.status ?? 0}.`,
-                    );
-                }
-
-                return response.json();
-            })
+        Promise.resolve(this._requestBootstrap(
+            fetchFactory,
+            this._currentUrl,
+            controller?.signal,
+        ))
             .then((bootstrap) => {
                 if (
                     generation !== this._connectionGeneration
@@ -545,90 +553,184 @@ export class SseClient {
                     return;
                 }
 
-                const authorization = this._normalizeMercureBootstrap(bootstrap);
-                const hubUrl = this._buildMercureHubUrl(
-                    authorization.hub,
-                    authorization.topics,
+                const connection = this._normalizeBootstrap(bootstrap);
+                const streamUrl = this._buildStreamUrl(
+                    connection.url,
+                    connection.query,
                 );
 
-                this._currentUrl = hubUrl;
+                this._bootstrapRetryAttempt = 0;
+                this._currentUrl = streamUrl;
                 const opened = this._openSource(
                     eventSourceFactory,
-                    hubUrl,
+                    streamUrl,
                     false,
                 );
 
                 if (opened) {
-                    this._scheduleMercureRefresh(
-                        authorization.expiresAt,
+                    this._scheduleRefresh(
+                        connection.expiresAt,
                         generation,
                     );
                 }
             })
             .catch((error) => {
-                this._handleMercureAuthorizationError(error, generation);
+                this._handleBootstrapError(
+                    error,
+                    generation,
+                    error instanceof BootstrapRequestError && error.retryable,
+                );
+            })
+            .finally(() => {
+                if (this._bootstrapController === controller) {
+                    this._bootstrapController = null;
+                }
             });
+    }
+
+    async _requestBootstrap(fetchFactory, url, signal) {
+        let response;
+
+        try {
+            response = await fetchFactory(url, {
+                method: 'GET',
+                headers: {
+                    Accept: 'application/json',
+                },
+                credentials: this.withCredentials ? 'include' : 'same-origin',
+                cache: 'no-store',
+                ...(signal === undefined ? {} : { signal }),
+            });
+        } catch (error) {
+            throw new BootstrapRequestError(
+                'The SSE bootstrap request failed.',
+                true,
+                error,
+            );
+        }
+
+        if (
+            response === null
+            || typeof response !== 'object'
+            || typeof response.json !== 'function'
+        ) {
+            throw new BootstrapRequestError(
+                'The SSE bootstrap endpoint returned an invalid response.',
+                false,
+            );
+        }
+
+        if (response.ok !== true) {
+            const status = Number.isInteger(response.status)
+                ? response.status
+                : 0;
+
+            throw new BootstrapRequestError(
+                `SSE bootstrap failed with HTTP ${status}.`,
+                status === 0
+                    || status === 408
+                    || status === 425
+                    || status === 429
+                    || status >= 500,
+            );
+        }
+
+        try {
+            return await response.json();
+        } catch (error) {
+            throw new BootstrapRequestError(
+                'The SSE bootstrap endpoint returned invalid JSON.',
+                false,
+                error,
+            );
+        }
     }
 
     /**
      * @param {*} bootstrap
-     * @returns {{hub: string, topics: string[], expiresAt: number|null}}
+     * @returns {{url: string, query: Object, expiresAt: number|null}}
      */
-    _normalizeMercureBootstrap(bootstrap) {
+    _normalizeBootstrap(bootstrap) {
+        const hasUrl = (
+            bootstrap !== null
+            && typeof bootstrap === 'object'
+            && Object.prototype.hasOwnProperty.call(bootstrap, 'url')
+        );
+        const query = bootstrap?.query ?? {};
+        const expiresAt = bootstrap?.expiresAt ?? null;
+
         if (
-            bootstrap === null
-            || typeof bootstrap !== 'object'
-            || bootstrap.transport !== 'mercure'
-            || typeof bootstrap.hub !== 'string'
-            || bootstrap.hub.trim() === ''
-            || !Array.isArray(bootstrap.topics)
-            || bootstrap.topics.length === 0
-            || bootstrap.topics.some((topic) => (
-                typeof topic !== 'string' || topic.trim() === ''
-            ))
+            !hasUrl
             || (
-                bootstrap.expiresAt !== null
-                && bootstrap.expiresAt !== undefined
-                && !Number.isInteger(bootstrap.expiresAt)
+                bootstrap.url !== null
+                && (
+                    typeof bootstrap.url !== 'string'
+                    || bootstrap.url.trim() === ''
+                )
+            )
+            || query === null
+            || typeof query !== 'object'
+            || Array.isArray(query)
+            || Object.values(query).some((value) => !this._isQueryValue(value))
+            || (
+                expiresAt !== null
+                && (
+                    !Number.isSafeInteger(expiresAt)
+                    || expiresAt <= Math.floor(Date.now() / 1000)
+                )
             )
         ) {
             throw new TypeError(
-                'The Mercure authorization endpoint returned invalid bootstrap data.',
+                'The SSE bootstrap endpoint returned invalid connection data.',
             );
         }
 
         return {
-            hub: bootstrap.hub.trim(),
-            topics: [...new Set(
-                bootstrap.topics.map((topic) => topic.trim()),
-            )],
-            expiresAt: Number.isInteger(bootstrap.expiresAt)
-                ? bootstrap.expiresAt
-                : null,
+            url: bootstrap.url === null
+                ? this._currentUrl
+                : bootstrap.url.trim(),
+            query,
+            expiresAt,
         };
     }
 
     /**
-     * @param {string} hub
-     * @param {string[]} topics
+     * @param {string} endpoint
+     * @param {Object} query
      * @returns {string}
      */
-    _buildMercureHubUrl(hub, topics) {
+    _buildStreamUrl(endpoint, query) {
         let url;
 
         try {
-            url = new URL(hub);
+            url = new URL(endpoint, this._currentUrl);
         } catch (error) {
             throw new TypeError(
-                'The Mercure Hub URL must be absolute.',
+                'The SSE bootstrap endpoint returned an invalid stream URL.',
                 { cause: error },
             );
         }
 
-        url.searchParams.delete('topic');
+        if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+            throw new TypeError(
+                'The SSE stream URL must use HTTP or HTTPS.',
+            );
+        }
 
-        for (const topic of topics) {
-            url.searchParams.append('topic', topic);
+        for (const [name, value] of Object.entries(query)) {
+            if (value === null || value === undefined) {
+                continue;
+            }
+
+            url.searchParams.delete(name);
+
+            if (Array.isArray(value)) {
+                for (const item of value) {
+                    url.searchParams.append(name, String(item));
+                }
+            } else {
+                url.searchParams.set(name, String(value));
+            }
         }
 
         url.hash = '';
@@ -640,14 +742,17 @@ export class SseClient {
      * @param {number|null} expiresAt
      * @param {number} generation
      */
-    _scheduleMercureRefresh(expiresAt, generation) {
+    _scheduleRefresh(expiresAt, generation) {
         this._clearRefreshTimer();
 
         if (expiresAt === null) {
             return;
         }
 
-        const delay = Math.max(1000, (expiresAt * 1000) - Date.now() - 30000);
+        const delay = Math.min(
+            2_147_483_647,
+            Math.max(1000, (expiresAt * 1000) - Date.now() - 30000),
+        );
 
         this._refreshTimer = setTimeout(() => {
             if (
@@ -657,8 +762,7 @@ export class SseClient {
                 return;
             }
 
-            this._teardownSource();
-            this.connect();
+            this._startConnection();
         }, delay);
 
         this._refreshTimer?.unref?.();
@@ -668,7 +772,7 @@ export class SseClient {
      * @param {*} error
      * @param {number} generation
      */
-    _handleMercureAuthorizationError(error, generation) {
+    _handleBootstrapError(error, generation, retryable) {
         if (
             generation !== this._connectionGeneration
             || this._manuallyClosed
@@ -677,13 +781,61 @@ export class SseClient {
         }
 
         this._source = null;
+
+        if (retryable) {
+            this._bootstrapRetryAttempt++;
+            this._setStatus(SseClientStatus.RECONNECTING, {
+                reason: 'bootstrap-error',
+                error,
+            });
+
+            const handled = this._invokeFallback(
+                'bootstrap-error',
+                null,
+                error,
+            );
+
+            if (
+                generation !== this._connectionGeneration
+                || this._manuallyClosed
+            ) {
+                return;
+            }
+
+            const delay = Math.min(
+                30000,
+                1000 * (2 ** Math.min(this._bootstrapRetryAttempt - 1, 5)),
+            );
+
+            this._bootstrapRetryTimer = setTimeout(() => {
+                this._bootstrapRetryTimer = null;
+
+                if (
+                    generation !== this._connectionGeneration
+                    || this._manuallyClosed
+                ) {
+                    return;
+                }
+
+                this._startConnection(true);
+            }, delay);
+
+            this._bootstrapRetryTimer?.unref?.();
+
+            if (!handled && this._bootstrapRetryAttempt === 1) {
+                this._reportHandlerError(error);
+            }
+
+            return;
+        }
+
         this._setStatus(SseClientStatus.CLOSED, {
-            reason: 'authorization-error',
+            reason: 'bootstrap-error',
             error,
         });
 
         const handled = this._invokeFallback(
-            'authorization-error',
+            'bootstrap-error',
             null,
             error,
         );
@@ -700,10 +852,8 @@ export class SseClient {
         return (
             (
                 this._source !== null
-                || (
-                    this.transport === 'mercure'
-                    && this._status === SseClientStatus.CONNECTING
-                )
+                || this._status === SseClientStatus.CONNECTING
+                || this._bootstrapRetryTimer !== null
             )
             && this._status !== SseClientStatus.CLOSED
             && this._status !== SseClientStatus.UNSUPPORTED
@@ -715,10 +865,9 @@ export class SseClient {
             return;
         }
 
-        this._connectionGeneration++;
-        this._teardownSource();
-
         if (this.channels.length === 0) {
+            this._connectionGeneration++;
+            this._teardownSource();
             this._setStatus(SseClientStatus.CLOSED, {
                 reason: 'channels-empty',
             });
@@ -726,7 +875,7 @@ export class SseClient {
             return;
         }
 
-        this.connect();
+        this._startConnection();
     }
 
     /**
@@ -783,6 +932,26 @@ export class SseClient {
         url.hash = '';
 
         return url.toString();
+    }
+
+    /**
+     * @param {*} value
+     * @returns {boolean}
+     */
+    _isQueryValue(value) {
+        if (Array.isArray(value)) {
+            return value.every((item) => (
+                !Array.isArray(item) && this._isQueryValue(item)
+            ));
+        }
+
+        return (
+            value === null
+            || value === undefined
+            || typeof value === 'string'
+            || typeof value === 'boolean'
+            || (typeof value === 'number' && Number.isFinite(value))
+        );
     }
 
     /**
@@ -1028,6 +1197,8 @@ export class SseClient {
     }
 
     _teardownSource() {
+        this._abortBootstrap();
+        this._clearBootstrapRetryTimer();
         this._clearRefreshTimer();
 
         if (this._source === null) {
@@ -1059,6 +1230,20 @@ export class SseClient {
 
         clearTimeout(this._refreshTimer);
         this._refreshTimer = null;
+    }
+
+    _abortBootstrap() {
+        this._bootstrapController?.abort();
+        this._bootstrapController = null;
+    }
+
+    _clearBootstrapRetryTimer() {
+        if (this._bootstrapRetryTimer === null) {
+            return;
+        }
+
+        clearTimeout(this._bootstrapRetryTimer);
+        this._bootstrapRetryTimer = null;
     }
 
     /**

@@ -60,11 +60,80 @@ final class SubscriptionEndpointTest extends CIUnitTestCase
 
         yield 'event stream with parameters' => ['text/event-stream; charset=utf-8', true];
 
-        yield 'text wildcard' => ['application/json, text/*;q=0.5', true];
+        yield 'text wildcard' => ['text/*;q=0.5', true];
 
-        yield 'wildcard' => ['application/json, */*', true];
+        yield 'wildcard' => ['*/*', true];
 
         yield 'accept header disabled' => [null, false];
+    }
+
+    public function testLocalEndpointReturnsBrowserBootstrapForJsonRequests(): void
+    {
+        [$request, $response] = $this->http('application/json');
+        $endpoint             = new LocalSseSubscriptionEndpoint($this->manager());
+
+        $this->assertNull($endpoint->preflight($request, $response));
+
+        $result = $endpoint->respond($request, $response, ['public.news']);
+        $body   = $result->getBody();
+
+        $this->assertSame(200, $result->getStatusCode());
+        $this->assertStringStartsWith('application/json', $result->getHeaderLine('Content-Type'));
+        $this->assertStringContainsString('no-store', $result->getHeaderLine('Cache-Control'));
+        $this->assertSame('Accept', $result->getHeaderLine('Vary'));
+        $this->assertSame('nosniff', $result->getHeaderLine('X-Content-Type-Options'));
+        $this->assertIsString($body);
+        $this->assertSame(
+            ['url' => null, 'expiresAt' => null],
+            json_decode($body, true, 512, JSON_THROW_ON_ERROR),
+        );
+    }
+
+    #[DataProvider('provideLocalEndpointHonorsPreferredRepresentation')]
+    public function testLocalEndpointHonorsPreferredRepresentation(
+        string $accept,
+        bool $expectsBootstrap,
+    ): void {
+        [$request, $response] = $this->http($accept);
+        $endpoint             = new LocalSseSubscriptionEndpoint($this->manager());
+
+        $this->assertNull($endpoint->preflight($request, $response));
+
+        $result = $endpoint->respond($request, $response, ['public.news']);
+
+        if ($expectsBootstrap) {
+            $this->assertStringStartsWith('application/json', $result->getHeaderLine('Content-Type'));
+
+            return;
+        }
+
+        $this->assertInstanceOf(LegacySseResponse::class, $result);
+    }
+
+    /**
+     * @return iterable<string, array{string, bool}>
+     */
+    public static function provideLocalEndpointHonorsPreferredRepresentation(): iterable
+    {
+        yield 'stream has higher quality' => [
+            'application/json;q=0.1, text/event-stream;q=1',
+            false,
+        ];
+
+        yield 'bootstrap has higher quality' => [
+            'application/json;q=1, text/event-stream;q=0.1',
+            true,
+        ];
+
+        yield 'stream wins equal quality by order' => [
+            'text/event-stream, application/json',
+            false,
+        ];
+
+        yield 'bootstrap wins equal quality by order' => [
+            'application/json, text/event-stream',
+            true,
+        ];
     }
 
     #[DataProvider('provideLocalEndpointRejectsUnacceptableEventStreamRequests')]
@@ -88,6 +157,8 @@ final class SubscriptionEndpointTest extends CIUnitTestCase
 
         yield 'wildcard q zero' => ['*/*;q=0'];
 
+        yield 'bootstrap q zero' => ['application/json;q=0'];
+
         yield 'specific q zero wins over wildcard' => ['text/event-stream;q=0, */*;q=1'];
 
         yield 'text wildcard q zero wins over wildcard' => ['text/*;q=0, */*;q=1'];
@@ -101,6 +172,7 @@ final class SubscriptionEndpointTest extends CIUnitTestCase
         $result = $endpoint->respond($request, $response, ['public.news']);
 
         $this->assertInstanceOf(LegacySseResponse::class, $result);
+        $this->assertSame('Accept', $result->getHeaderLine('Vary'));
         $this->assertSame('nosniff', $result->getHeaderLine('X-Content-Type-Options'));
 
         $result->pretend();
@@ -146,12 +218,15 @@ final class SubscriptionEndpointTest extends CIUnitTestCase
             $result->getHeaderLine('Link'),
         );
         $this->assertSame('nosniff', $result->getHeaderLine('X-Content-Type-Options'));
+        $this->assertSame('Accept', $result->getHeaderLine('Vary'));
         $this->assertIsString($body);
 
         $decoded = json_decode($body, true, 512, JSON_THROW_ON_ERROR);
-        $this->assertSame('mercure', $decoded['transport']);
-        $this->assertSame('https://example.test/.well-known/mercure', $decoded['hub']);
-        $this->assertSame(['urn:example:sse:public.news'], $decoded['topics']);
+        $this->assertSame('https://example.test/.well-known/mercure', $decoded['url']);
+        $this->assertSame(
+            ['topic' => ['urn:example:sse:public.news']],
+            $decoded['query'],
+        );
         $this->assertIsInt($decoded['expiresAt']);
 
         $cookie = $result->getCookie('mercureAuthorization');

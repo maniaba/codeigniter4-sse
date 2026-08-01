@@ -28,14 +28,49 @@ use Support\Tests\RecordingSubscriber;
  */
 final class SseControllerTest extends CIUnitTestCase
 {
-    public function testRequiresEventStreamAcceptHeader(): void
+    public function testRejectsUnsupportedAcceptHeader(): void
     {
-        $result = $this->controllerResponse(null, 'application/json');
+        $result = $this->controllerResponse(null, 'text/html');
         $body   = $result->getBody();
 
         $this->assertSame(406, $result->getStatusCode());
         $this->assertIsString($body);
         $this->assertStringContainsString('not_acceptable', $body);
+    }
+
+    public function testLocalRouteReturnsBrowserBootstrapWithoutOpeningAPhpStream(): void
+    {
+        $manager = new SseConnectionManager(
+            new RecordingSubscriber(),
+            new EventFactory(new FixedEventIdGenerator('connected-id')),
+        );
+        $superglobals = service('superglobals');
+        $this->assertInstanceOf(Superglobals::class, $superglobals);
+        $previousGet = $superglobals->getGetArray();
+        $superglobals->setGetArray(['channels' => 'public.news']);
+
+        try {
+            $result = $this->controllerResponse(
+                null,
+                'application/json',
+                new BasicBrokerAdapter(
+                    endpoint: new LocalSseSubscriptionEndpoint($manager),
+                ),
+            );
+            $body = $result->getBody();
+
+            $this->assertSame(200, $result->getStatusCode());
+            $this->assertStringStartsWith('application/json', $result->getHeaderLine('Content-Type'));
+            $this->assertStringContainsString('no-store', $result->getHeaderLine('Cache-Control'));
+            $this->assertSame('Accept', $result->getHeaderLine('Vary'));
+            $this->assertIsString($body);
+            $this->assertSame(
+                ['url' => null, 'expiresAt' => null],
+                json_decode($body, true, 512, JSON_THROW_ON_ERROR),
+            );
+        } finally {
+            $superglobals->setGetArray($previousGet);
+        }
     }
 
     public function testRejectsUnknownOriginBeforeContentNegotiation(): void
@@ -146,10 +181,18 @@ final class SseControllerTest extends CIUnitTestCase
             );
             $this->assertIsString($body);
             $decoded = json_decode($body, true, 512, JSON_THROW_ON_ERROR);
-            $this->assertSame('mercure', $decoded['transport']);
             $this->assertSame(
-                ['urn:example:sse:public.news', 'urn:example:sse:public.status'],
-                $decoded['topics'],
+                'https://example.test/.well-known/mercure',
+                $decoded['url'],
+            );
+            $this->assertSame(
+                [
+                    'topic' => [
+                        'urn:example:sse:public.news',
+                        'urn:example:sse:public.status',
+                    ],
+                ],
+                $decoded['query'],
             );
             $this->assertIsInt($decoded['expiresAt']);
 

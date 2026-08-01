@@ -70,8 +70,10 @@ authorizes every channel, and delegates the response to the active broker
 adapter's subscription endpoint.
 
 `Endpoint\LocalSseSubscriptionEndpoint` is the generic PHP stream endpoint
-used by local subscriber-aware brokers. Broker-specific endpoints, such as
-Mercure's bootstrap endpoint, live beside their broker implementation.
+used by local subscriber-aware brokers. It also provides the short JSON
+descriptor that points the browser back to that stream. Broker-specific
+endpoints, such as Mercure's Hub bootstrap endpoint, live beside their broker
+implementation and return the same generic descriptor shape.
 
 `HTTP\SseResponseFactory` selects the output implementation at runtime:
 
@@ -90,8 +92,9 @@ serialization.
 
 ## Browser asset
 
-`resources/js/sse-client.js` is a dependency-free wrapper around native
-`EventSource`. It is published to the host application by:
+`resources/js/sse-client.js` resolves the server-selected stream URL and wraps
+native `EventSource` without exposing broker selection to frontend code. It is
+published to the host application by:
 
 ```bash
 php spark sse:install
