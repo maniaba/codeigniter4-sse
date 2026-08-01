@@ -86,6 +86,7 @@ nav:
   - Configuration:
       - Overview: configuration.md
       - Channels and authorization: channels-and-authorization.md
+      - Custom brokers: custom-brokers.md
   - Usage:
       - Browser client: browser-client.md
       - Mercure Hub: mercure.md

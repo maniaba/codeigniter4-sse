@@ -16,6 +16,7 @@ Application publisher ──┤                                    ├─ EventS
 - versioned JSON event envelopes with stable event IDs;
 - Redis Pub/Sub over an internal RESP2 stream client;
 - Mercure publishing, topic JWT authorization, and direct Hub streaming;
+- custom broker adapters through stable package contracts;
 - logical channel validation, limits, and server-side authorization;
 - heartbeats, disconnect detection, and maximum connection lifetime;
 - an SSE response adapter for current CodeIgniter applications;
@@ -64,6 +65,8 @@ live.connect();
 Private channels are denied until the application supplies an authorizer. Start
 with the [Quick start](quick-start.md), then configure
 [channels and authorization](channels-and-authorization.md).
+If Redis or Mercure is not the right transport, see
+[Custom brokers](custom-brokers.md).
 
 ## Delivery model
 

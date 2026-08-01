@@ -83,6 +83,31 @@ Then verify:
 The package does not use PhpRedis, so installing that extension does not fix a
 TCP, TLS, ACL, or application configuration problem.
 
+## Custom broker is not loaded
+
+The broker entry in `Sse::$brokers` must resolve to `BrokerAdapterInterface`.
+Use either:
+
+- `factory`: a `BrokerAdapterFactoryInterface` instance, class name, or
+  callable returning one;
+- `adapter`: a `BrokerAdapterInterface` instance, class name, or callable
+  returning one.
+
+If the error says the factory or adapter class does not exist, verify the
+namespace and Composer autoload, then run:
+
+```bash
+composer dump-autoload
+```
+
+If the error says the configured broker does not provide a PHP subscriber,
+either implement `SubscriberAwareBrokerAdapterInterface` plus
+`SubscriberInterface`, or return a custom `SubscriptionEndpointInterface` that
+does not need the PHP stream manager.
+
+See [Custom brokers](custom-brokers.md) for the exact interfaces and minimal
+implementation.
+
 ## Mercure publish fails
 
 The Debug Toolbar and thrown `MercurePublishException` include the Hub status.

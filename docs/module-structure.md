@@ -33,6 +33,9 @@ For typed integrations, depend on:
 
 - `PublisherInterface`
 - `SubscriberInterface`
+- `BrokerAdapterInterface`
+- `BrokerAdapterFactoryInterface`
+- `SubscriptionEndpointInterface`
 - `ChannelAuthorizerInterface`
 - `UserResolverInterface`
 - `EventInterface`
@@ -50,6 +53,10 @@ because browsers subscribe directly to the Hub.
 
 `InMemoryBroker` is for tests and one-process examples. `NullBroker` is useful
 when applications want the API enabled without delivering live events.
+
+Custom broker implementations should live in their own folder and enter the
+package through `BrokerAdapterInterface` or `BrokerAdapterFactoryInterface`.
+See [Custom brokers](custom-brokers.md).
 
 ## HTTP layer
 

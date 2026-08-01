@@ -180,7 +180,7 @@ therefore does not separate SSE traffic; `channelPrefix` is the isolation
 boundary.
 
 Custom brokers are added by registering a new key in `brokers`. A broker
-definition must provide either:
+definition must provide either `factory` or `adapter`:
 
 - `factory`: `BrokerAdapterFactoryInterface`, callable returning one, or class
   name implementing it;
@@ -189,6 +189,8 @@ definition must provide either:
 
 The adapter owns publishing and the HTTP subscription endpoint. If the broker
 can stream through PHP, implement `SubscriberAwareBrokerAdapterInterface` too.
+See [Custom brokers](custom-brokers.md) for implementation examples and
+troubleshooting.
 
 ```php
 use App\Sse\CustomBrokerAdapterFactory;
@@ -221,24 +223,6 @@ final class Sse extends BaseSse
         ],
     ];
 }
-```
-
-When a broker needs application services or constructor arguments, use factory
-closures:
-
-```php
-use Maniaba\CodeIgniterSse\Config\Sse;
-use Maniaba\CodeIgniterSse\Contracts\BrokerAdapterInterface;
-use Maniaba\CodeIgniterSse\Factory\BrokerBuildContext;
-
-public array $brokers = [
-    'custom' => [
-        'adapter' => static fn (
-            Sse $config,
-            BrokerBuildContext $context,
-        ): BrokerAdapterInterface => service('customSseBrokerAdapter'),
-    ],
-];
 ```
 
 ## Mercure
