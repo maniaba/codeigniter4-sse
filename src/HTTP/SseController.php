@@ -6,10 +6,13 @@ namespace Maniaba\CodeIgniterSse\HTTP;
 
 use CodeIgniter\HTTP\ResponseInterface;
 use CodeIgniter\RESTful\ResourceController;
+use Maniaba\CodeIgniterSse\Config\Services as SseServices;
 use Maniaba\CodeIgniterSse\Config\Sse as SseConfig;
 use Maniaba\CodeIgniterSse\Contracts\BrokerAdapterInterface;
+use Maniaba\CodeIgniterSse\Contracts\ChannelSelectorValidatorProviderInterface;
 use Maniaba\CodeIgniterSse\Contracts\PreflightSubscriptionEndpointInterface;
 use Maniaba\CodeIgniterSse\Contracts\SubscriptionEndpointInterface;
+use Maniaba\CodeIgniterSse\Endpoint\LocalSseSubscriptionEndpoint;
 use Maniaba\CodeIgniterSse\Exception\InvalidChannelException;
 use Maniaba\CodeIgniterSse\Exception\InvalidChannelRequestException;
 use Maniaba\CodeIgniterSse\Exception\InvalidOriginException;
@@ -17,7 +20,6 @@ use Maniaba\CodeIgniterSse\Exception\UnauthorizedChannelException;
 use Maniaba\CodeIgniterSse\Factory\AuthorizationFactory;
 use Maniaba\CodeIgniterSse\Factory\BrokerFactory;
 use Maniaba\CodeIgniterSse\Factory\ConnectionManagerFactory;
-use Maniaba\CodeIgniterSse\Factory\MercureSubscriptionFactory;
 use Maniaba\CodeIgniterSse\Stream\SseConnectionManager;
 
 final class SseController extends ResourceController
@@ -27,7 +29,6 @@ final class SseController extends ResourceController
         private readonly ?SseResponseFactory $responseFactory = null,
         private readonly ?AuthorizationFactory $authorizations = null,
         private readonly ?ConnectionManagerFactory $connectionManagers = null,
-        private readonly ?MercureSubscriptionFactory $mercureSubscriptions = null,
         private readonly ?SseConfig $config = null,
         private readonly ?BrokerFactory $brokers = null,
     ) {
@@ -56,7 +57,7 @@ final class SseController extends ResourceController
         }
 
         try {
-            $channels = $this->authorizeChannels($config);
+            $channels = $this->authorizeChannels($config, $endpoint);
         } catch (InvalidChannelException|InvalidChannelRequestException $exception) {
             return $cors->apply(
                 $this->error(400, 'invalid_channels', $exception->getMessage()),
@@ -78,11 +79,14 @@ final class SseController extends ResourceController
     /**
      * @return list<string>
      */
-    private function authorizeChannels(SseConfig $config): array
+    private function authorizeChannels(SseConfig $config, SubscriptionEndpointInterface $endpoint): array
     {
+        $validator = $endpoint instanceof ChannelSelectorValidatorProviderInterface
+            ? $endpoint->channelSelectorValidator()
+            : null;
         $channels = (new ChannelRequestParser(
             $config->maxChannelsPerConnection,
-            $config->allowPatternSubscriptions,
+            $validator,
         ))->parse($this->request->getGet('channels'));
 
         $authorizations = $this->authorizations ?? new AuthorizationFactory();
@@ -110,10 +114,6 @@ final class SseController extends ResourceController
             );
         }
 
-        if ($this->mercureSubscriptions !== null && $config->streamTransport() === 'mercure') {
-            return new MercureSubscriptionEndpoint($config, $this->mercureSubscriptions);
-        }
-
         if ($this->config === null && $this->brokers === null) {
             $adapter = service('sseBrokerAdapter');
 
@@ -122,7 +122,11 @@ final class SseController extends ResourceController
             }
         }
 
-        return ($this->brokers ?? new BrokerFactory())->subscriptionEndpoint($config);
+        if ($this->brokers !== null) {
+            return $this->brokers->subscriptionEndpoint($config);
+        }
+
+        return SseServices::sseBrokerAdapter($config, false)->subscriptionEndpoint();
     }
 
     private function error(int $status, string $code, string $message): ResponseInterface

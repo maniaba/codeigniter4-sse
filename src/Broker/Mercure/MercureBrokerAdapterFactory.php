@@ -8,8 +8,6 @@ use Maniaba\CodeIgniterSse\Config\Sse;
 use Maniaba\CodeIgniterSse\Contracts\BrokerAdapterFactoryInterface;
 use Maniaba\CodeIgniterSse\Contracts\BrokerAdapterInterface;
 use Maniaba\CodeIgniterSse\Factory\BrokerBuildContext;
-use Maniaba\CodeIgniterSse\Factory\MercureConfigFactory;
-use Maniaba\CodeIgniterSse\HTTP\MercureSubscriptionEndpoint;
 
 final readonly class MercureBrokerAdapterFactory implements BrokerAdapterFactoryInterface
 {

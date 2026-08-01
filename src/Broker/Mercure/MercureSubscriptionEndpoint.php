@@ -2,22 +2,29 @@
 
 declare(strict_types=1);
 
-namespace Maniaba\CodeIgniterSse\HTTP;
+namespace Maniaba\CodeIgniterSse\Broker\Mercure;
 
 use CodeIgniter\HTTP\RequestInterface;
 use CodeIgniter\HTTP\ResponseInterface;
 use Maniaba\CodeIgniterSse\Config\Sse;
+use Maniaba\CodeIgniterSse\Contracts\ChannelSelectorValidatorInterface;
+use Maniaba\CodeIgniterSse\Contracts\ChannelSelectorValidatorProviderInterface;
 use Maniaba\CodeIgniterSse\Contracts\SubscriptionEndpointInterface;
-use Maniaba\CodeIgniterSse\Factory\MercureConfigFactory;
 use Maniaba\CodeIgniterSse\Factory\MercureSubscriptionFactory;
+use Maniaba\CodeIgniterSse\Support\ChannelNameValidator;
 
-final readonly class MercureSubscriptionEndpoint implements SubscriptionEndpointInterface
+final readonly class MercureSubscriptionEndpoint implements SubscriptionEndpointInterface, ChannelSelectorValidatorProviderInterface
 {
     public function __construct(
         private Sse $config,
         private ?MercureSubscriptionFactory $subscriptions = null,
         private ?MercureConfigFactory $configs = null,
     ) {
+    }
+
+    public function channelSelectorValidator(): ChannelSelectorValidatorInterface
+    {
+        return new ChannelNameValidator();
     }
 
     public function respond(

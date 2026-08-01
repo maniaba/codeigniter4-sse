@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace Maniaba\CodeIgniterSse\Factory;
+namespace Maniaba\CodeIgniterSse\Broker\Mercure;
 
-use Maniaba\CodeIgniterSse\Broker\Mercure\MercureConfig;
+use Maniaba\CodeIgniterSse\Broker\Config\AbstractBrokerConfigFactory;
 use Maniaba\CodeIgniterSse\Config\Sse;
 
-final class MercureConfigFactory
+final class MercureConfigFactory extends AbstractBrokerConfigFactory
 {
     public function create(Sse $config): MercureConfig
     {
         $mercure = $config->mercure();
-        $cookie  = is_array($mercure['cookie'] ?? null) ? $mercure['cookie'] : [];
+        $cookie  = self::arrayOption($mercure['cookie'] ?? null);
 
         return new MercureConfig(
             hubUrl: (string) $mercure['hubUrl'],
@@ -42,25 +42,5 @@ final class MercureConfigFactory
             cookieHttpOnly: (bool) ($cookie['httpOnly'] ?? true),
             cookieSameSite: (string) ($cookie['sameSite'] ?? 'Lax'),
         );
-    }
-
-    private static function nullableString(mixed $value): ?string
-    {
-        return is_string($value) && $value !== '' ? $value : null;
-    }
-
-    /**
-     * @return list<string>
-     */
-    private static function stringList(mixed $value): array
-    {
-        if (! is_array($value)) {
-            return [];
-        }
-
-        return array_values(array_filter(
-            $value,
-            is_string(...),
-        ));
     }
 }

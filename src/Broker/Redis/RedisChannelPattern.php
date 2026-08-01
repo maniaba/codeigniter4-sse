@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Maniaba\CodeIgniterSse\Support;
+namespace Maniaba\CodeIgniterSse\Broker\Redis;
 
 use Maniaba\CodeIgniterSse\Exception\InvalidChannelException;
 use Stringable;
 
-final readonly class ChannelPattern implements Stringable
+final readonly class RedisChannelPattern implements Stringable
 {
     private string $pattern;
 

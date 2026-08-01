@@ -8,15 +8,16 @@ use Maniaba\CodeIgniterSse\Broker\HealthCheckResult;
 use Maniaba\CodeIgniterSse\Broker\Redis\Exception\RedisConnectionException;
 use Maniaba\CodeIgniterSse\Broker\Redis\RedisBrokerAdapter;
 use Maniaba\CodeIgniterSse\Broker\Redis\RedisBrokerAdapterFactory;
+use Maniaba\CodeIgniterSse\Broker\Redis\RedisChannelSelectorValidator;
+use Maniaba\CodeIgniterSse\Broker\Redis\RedisConfigFactory;
 use Maniaba\CodeIgniterSse\Broker\Redis\RedisHealthChecker;
 use Maniaba\CodeIgniterSse\Broker\Redis\RedisPublisher;
 use Maniaba\CodeIgniterSse\Broker\Redis\RedisSubscriber;
 use Maniaba\CodeIgniterSse\Config\Sse;
+use Maniaba\CodeIgniterSse\Endpoint\LocalSseSubscriptionEndpoint;
 use Maniaba\CodeIgniterSse\Event\EventFactory;
 use Maniaba\CodeIgniterSse\Event\JsonEventSerializer;
 use Maniaba\CodeIgniterSse\Factory\BrokerBuildContext;
-use Maniaba\CodeIgniterSse\Factory\RedisConfigFactory;
-use Maniaba\CodeIgniterSse\HTTP\LocalSseSubscriptionEndpoint;
 use PHPUnit\Framework\TestCase;
 use Tests\Broker\Redis\Fixtures\FakeRedisConnection;
 use Tests\Broker\Redis\Fixtures\FakeRedisConnectionFactory;
@@ -97,8 +98,11 @@ final class RedisBrokerAdapterTest extends TestCase
 
     public function testFactoryCreatesRedisAdapterWithoutOpeningAConnection(): void
     {
-        $config                       = new Sse();
-        $config->redis                = ['host' => 'redis.internal'];
+        $config        = new Sse();
+        $config->redis = [
+            'host'                      => 'redis.internal',
+            'allowPatternSubscriptions' => true,
+        ];
         $config->requireAcceptHeader  = false;
         $config->emitConnectedEvent   = false;
         $config->retryMilliseconds    = 1500;
@@ -113,6 +117,12 @@ final class RedisBrokerAdapterTest extends TestCase
         $this->assertInstanceOf(RedisBrokerAdapter::class, $adapter);
         $this->assertInstanceOf(RedisPublisher::class, $adapter->publisher());
         $this->assertInstanceOf(RedisSubscriber::class, $adapter->subscriber());
-        $this->assertInstanceOf(LocalSseSubscriptionEndpoint::class, $adapter->subscriptionEndpoint());
+        $endpoint = $adapter->subscriptionEndpoint();
+
+        $this->assertInstanceOf(LocalSseSubscriptionEndpoint::class, $endpoint);
+        $this->assertInstanceOf(
+            RedisChannelSelectorValidator::class,
+            $endpoint->channelSelectorValidator(),
+        );
     }
 }

@@ -4,15 +4,15 @@ declare(strict_types=1);
 
 namespace Maniaba\CodeIgniterSse\HTTP;
 
+use Maniaba\CodeIgniterSse\Contracts\ChannelSelectorValidatorInterface;
 use Maniaba\CodeIgniterSse\Exception\InvalidChannelRequestException;
-use Maniaba\CodeIgniterSse\Support\Channel;
-use Maniaba\CodeIgniterSse\Support\ChannelPattern;
+use Maniaba\CodeIgniterSse\Support\ChannelNameValidator;
 
 final readonly class ChannelRequestParser
 {
     public function __construct(
         private int $maximumChannels = 20,
-        private bool $allowPatterns = false,
+        private ?ChannelSelectorValidatorInterface $validator = null,
     ) {
         if ($maximumChannels < 1) {
             throw new InvalidChannelRequestException('At least one requested channel must be allowed.');
@@ -59,14 +59,10 @@ final readonly class ChannelRequestParser
             );
         }
 
+        $validator = $this->validator ?? new ChannelNameValidator();
+
         foreach ($parts as $part) {
-            if ($this->allowPatterns && strpbrk($part, '*?[') !== false) {
-                new ChannelPattern($part);
-
-                continue;
-            }
-
-            Channel::from($part);
+            $validator->assertValid($part);
         }
 
         return $parts;

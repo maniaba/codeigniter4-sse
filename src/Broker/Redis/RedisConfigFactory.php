@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Maniaba\CodeIgniterSse\Factory;
+namespace Maniaba\CodeIgniterSse\Broker\Redis;
 
-use Maniaba\CodeIgniterSse\Broker\Redis\RedisConfig;
+use Maniaba\CodeIgniterSse\Broker\Config\AbstractBrokerConfigFactory;
 use Maniaba\CodeIgniterSse\Config\Sse;
 
-final class RedisConfigFactory
+final class RedisConfigFactory extends AbstractBrokerConfigFactory
 {
     public function create(Sse $config): RedisConfig
     {
@@ -29,16 +29,11 @@ final class RedisConfigFactory
             maxPayloadBytes: (int) $redis['maxPayloadBytes'],
             maxResponseElements: (int) $redis['maxResponseElements'],
             maxResponseDepth: (int) $redis['maxResponseDepth'],
-            allowPatternSubscriptions: $config->allowPatternSubscriptions,
+            allowPatternSubscriptions: (bool) $redis['allowPatternSubscriptions'],
             username: self::nullableString($redis['username'] ?? null),
             scheme: (string) $redis['scheme'],
-            streamContext: is_array($redis['streamContext']) ? $redis['streamContext'] : [],
+            streamContext: self::arrayOption($redis['streamContext'] ?? null),
             clientName: self::nullableString($redis['clientName'] ?? null),
         );
-    }
-
-    private static function nullableString(mixed $value): ?string
-    {
-        return is_string($value) ? $value : null;
     }
 }

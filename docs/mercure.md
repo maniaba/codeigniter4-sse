@@ -305,6 +305,6 @@ requires the configured HMAC subscriber key. Applications using an external
 OAuth/JWKS issuer should replace the authorization controller rather than
 exposing signing keys to the browser.
 
-The adapter currently maps exact logical channels. Keep
-`allowPatternSubscriptions = false`; Redis glob patterns are not accepted by
-the Mercure transport.
+The adapter currently maps exact logical channels. Redis glob patterns are not
+accepted by the Mercure transport; pattern selectors remain a Redis adapter
+option.

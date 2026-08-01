@@ -7,10 +7,10 @@ namespace Maniaba\CodeIgniterSse\Broker\Redis;
 use Maniaba\CodeIgniterSse\Config\Sse;
 use Maniaba\CodeIgniterSse\Contracts\BrokerAdapterFactoryInterface;
 use Maniaba\CodeIgniterSse\Contracts\BrokerAdapterInterface;
+use Maniaba\CodeIgniterSse\Endpoint\LocalSseSubscriptionEndpoint;
 use Maniaba\CodeIgniterSse\Factory\BrokerBuildContext;
-use Maniaba\CodeIgniterSse\Factory\RedisConfigFactory;
-use Maniaba\CodeIgniterSse\HTTP\LocalSseSubscriptionEndpoint;
 use Maniaba\CodeIgniterSse\Stream\SseConnectionManager;
+use Maniaba\CodeIgniterSse\Stream\SseConnectionOptions;
 
 final readonly class RedisBrokerAdapterFactory implements BrokerAdapterFactoryInterface
 {
@@ -29,17 +29,18 @@ final readonly class RedisBrokerAdapterFactory implements BrokerAdapterFactoryIn
             $subscriber,
             $context->serializer,
             $context->events,
-            $config->heartbeatInterval,
-            $config->maxConnectionSeconds,
-            $config->retryMilliseconds,
-            $config->emitConnectedEvent,
+            SseConnectionOptions::fromConfig($config),
         );
 
         return new RedisBrokerAdapter(
             $redis,
             $publisher,
             $subscriber,
-            new LocalSseSubscriptionEndpoint($manager, $config->requireAcceptHeader),
+            new LocalSseSubscriptionEndpoint(
+                $manager,
+                $config->requireAcceptHeader,
+                channelSelectorValidator: new RedisChannelSelectorValidator($redis),
+            ),
             new RedisHealthChecker(new RedisConnectionFactory($redis)),
         );
     }

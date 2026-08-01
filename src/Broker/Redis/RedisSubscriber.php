@@ -14,7 +14,6 @@ use Maniaba\CodeIgniterSse\Contracts\SubscriberInterface;
 use Maniaba\CodeIgniterSse\Event\BrokerMessage;
 use Maniaba\CodeIgniterSse\Exception\InvalidChannelException;
 use Maniaba\CodeIgniterSse\Support\Channel;
-use Maniaba\CodeIgniterSse\Support\ChannelPattern;
 
 final class RedisSubscriber implements SubscriberInterface
 {
@@ -146,7 +145,7 @@ final class RedisSubscriber implements SubscriberInterface
             }
 
             if ($this->isPattern($channel)) {
-                $channel                                           = (new ChannelPattern($channel))->value();
+                $channel                                           = (new RedisChannelPattern($channel))->value();
                 $patterns[$this->config->channelPrefix . $channel] = true;
 
                 continue;

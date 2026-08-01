@@ -10,9 +10,10 @@ use Maniaba\CodeIgniterSse\Contracts\BrokerAdapterFactoryInterface;
 use Maniaba\CodeIgniterSse\Contracts\BrokerAdapterInterface;
 use Maniaba\CodeIgniterSse\Contracts\PublisherInterface;
 use Maniaba\CodeIgniterSse\Contracts\SubscriberInterface;
+use Maniaba\CodeIgniterSse\Endpoint\LocalSseSubscriptionEndpoint;
 use Maniaba\CodeIgniterSse\Factory\BrokerBuildContext;
-use Maniaba\CodeIgniterSse\HTTP\LocalSseSubscriptionEndpoint;
 use Maniaba\CodeIgniterSse\Stream\SseConnectionManager;
+use Maniaba\CodeIgniterSse\Stream\SseConnectionOptions;
 
 final readonly class LocalBrokerAdapterFactory implements BrokerAdapterFactoryInterface
 {
@@ -39,10 +40,7 @@ final readonly class LocalBrokerAdapterFactory implements BrokerAdapterFactoryIn
             $broker,
             $context->serializer,
             $context->events,
-            $config->heartbeatInterval,
-            $config->maxConnectionSeconds,
-            $config->retryMilliseconds,
-            $config->emitConnectedEvent,
+            SseConnectionOptions::fromConfig($config),
         );
 
         return new LocalBrokerAdapter(

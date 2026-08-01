@@ -8,13 +8,15 @@ use CodeIgniter\Cookie\Cookie;
 use CodeIgniter\HTTP\RequestInterface;
 use CodeIgniter\HTTP\ResponseInterface;
 use CodeIgniter\Test\CIUnitTestCase;
+use Maniaba\CodeIgniterSse\Broker\Mercure\MercureSubscriptionEndpoint;
 use Maniaba\CodeIgniterSse\Config\Sse;
+use Maniaba\CodeIgniterSse\Contracts\ChannelSelectorValidatorInterface;
+use Maniaba\CodeIgniterSse\Endpoint\LocalSseSubscriptionEndpoint;
 use Maniaba\CodeIgniterSse\Event\EventFactory;
 use Maniaba\CodeIgniterSse\Event\JsonEventSerializer;
 use Maniaba\CodeIgniterSse\HTTP\LegacySseResponse;
-use Maniaba\CodeIgniterSse\HTTP\LocalSseSubscriptionEndpoint;
-use Maniaba\CodeIgniterSse\HTTP\MercureSubscriptionEndpoint;
 use Maniaba\CodeIgniterSse\Stream\SseConnectionManager;
+use Maniaba\CodeIgniterSse\Support\ChannelNameValidator;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\Support\FixedEventIdGenerator;
 use Tests\Support\RecordingSubscriber;
@@ -86,6 +88,21 @@ final class SubscriptionEndpointTest extends CIUnitTestCase
         $this->assertStringContainsString('"channels":["public.news"]', $output);
     }
 
+    public function testLocalEndpointExposesConfiguredChannelSelectorValidator(): void
+    {
+        $validator = new class () implements ChannelSelectorValidatorInterface {
+            public function assertValid(string $selector): void
+            {
+            }
+        };
+        $endpoint = new LocalSseSubscriptionEndpoint(
+            $this->manager(),
+            channelSelectorValidator: $validator,
+        );
+
+        $this->assertSame($validator, $endpoint->channelSelectorValidator());
+    }
+
     public function testMercureEndpointReturnsBootstrapPayloadAndCookie(): void
     {
         [$request, $response] = $this->http();
@@ -136,6 +153,13 @@ final class SubscriptionEndpointTest extends CIUnitTestCase
         $cookie = $result->getCookie('mercureAuthorization');
         $this->assertInstanceOf(Cookie::class, $cookie);
         $this->assertSame('', $cookie->getValue());
+    }
+
+    public function testMercureEndpointUsesPlainChannelNameSelectors(): void
+    {
+        $endpoint = new MercureSubscriptionEndpoint($this->mercureConfig());
+
+        $this->assertInstanceOf(ChannelNameValidator::class, $endpoint->channelSelectorValidator());
     }
 
     /**

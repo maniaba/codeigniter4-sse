@@ -23,8 +23,6 @@ final class BrokerAdapterResolver
     public function __construct(
         private readonly ?SerializerInterface $serializer = null,
         private readonly ?EventFactory $events = null,
-        private readonly ?RedisConfigFactory $redisConfigs = null,
-        private readonly ?MercureConfigFactory $mercureConfigs = null,
     ) {
     }
 
@@ -74,10 +72,9 @@ final class BrokerAdapterResolver
                 ->create($config, $this->context());
         }
 
-        return (new LegacyBrokerAdapterFactory(
-            $this->redisConfigs,
-            $this->mercureConfigs,
-        ))->create($config, $this->context());
+        throw new LogicException(
+            'The configured SSE broker definition must define either "factory" or "adapter".',
+        );
     }
 
     private function makeAdapter(Sse $config, mixed $definition): BrokerAdapterInterface

@@ -8,8 +8,8 @@ use CodeIgniter\CLI\BaseCommand;
 use CodeIgniter\CLI\CLI;
 use Maniaba\CodeIgniterSse\Broker\HealthCheckResult;
 use Maniaba\CodeIgniterSse\Config\Sse;
+use Maniaba\CodeIgniterSse\Contracts\BrokerAdapterInterface;
 use Maniaba\CodeIgniterSse\Contracts\HealthCheckableInterface;
-use Maniaba\CodeIgniterSse\Factory\BrokerFactory;
 
 final class HealthCheckCommand extends BaseCommand
 {
@@ -24,7 +24,13 @@ final class HealthCheckCommand extends BaseCommand
     public function run(array $params): int
     {
         $config  = Sse::discover();
-        $adapter = (new BrokerFactory())->adapter($config);
+        $adapter = service('sseBrokerAdapter', $config, false);
+
+        if (! $adapter instanceof BrokerAdapterInterface) {
+            CLI::error('The sseBrokerAdapter service must implement ' . BrokerAdapterInterface::class . '.');
+
+            return EXIT_ERROR;
+        }
 
         if (! $adapter instanceof HealthCheckableInterface) {
             CLI::write(

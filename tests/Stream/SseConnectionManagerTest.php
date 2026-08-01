@@ -11,6 +11,7 @@ use Maniaba\CodeIgniterSse\Event\EventFactory;
 use Maniaba\CodeIgniterSse\Event\JsonEventSerializer;
 use Maniaba\CodeIgniterSse\Event\SseEvent;
 use Maniaba\CodeIgniterSse\Stream\SseConnectionManager;
+use Maniaba\CodeIgniterSse\Stream\SseConnectionOptions;
 use PHPUnit\Framework\TestCase;
 use Tests\Support\FixedEventIdGenerator;
 use Tests\Support\RecordingSseOutput;
@@ -96,7 +97,7 @@ final class SseConnectionManagerTest extends TestCase
             $subscriber,
             new JsonEventSerializer(),
             new EventFactory(new FixedEventIdGenerator()),
-            emitConnectedEvent: false,
+            new SseConnectionOptions(emitConnectedEvent: false),
         );
 
         $manager->stream($output, ['public.news']);

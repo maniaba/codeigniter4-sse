@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Maniaba\CodeIgniterSse\Factory;
 
+use Maniaba\CodeIgniterSse\Broker\Mercure\MercureConfigFactory;
 use Maniaba\CodeIgniterSse\Broker\Mercure\MercureJwtFactory;
 use Maniaba\CodeIgniterSse\Broker\Mercure\MercureSubscription;
 use Maniaba\CodeIgniterSse\Broker\Mercure\MercureTopicMapper;

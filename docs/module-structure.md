@@ -7,11 +7,13 @@ and browser behavior separate.
 src/
 ├── Authorization/
 ├── Broker/
+│   ├── Config/
 │   ├── Mercure/
 │   └── Redis/
 ├── Commands/
 ├── Config/
 ├── Contracts/
+├── Endpoint/
 ├── Event/
 ├── Exception/
 ├── HTTP/
@@ -43,8 +45,8 @@ Publisher and subscriber connections are separate because Redis subscriptions
 are blocking.
 
 `Broker\Mercure` contains the HTTP publisher, topic mapper, JWT issuer, and
-Hub configuration. Mercure has no PHP subscriber because browsers subscribe
-directly to the Hub.
+Hub configuration and subscription endpoint. Mercure has no PHP subscriber
+because browsers subscribe directly to the Hub.
 
 `InMemoryBroker` is for tests and one-process examples. `NullBroker` is useful
 when applications want the API enabled without delivering live events.
@@ -52,8 +54,12 @@ when applications want the API enabled without delivering live events.
 ## HTTP layer
 
 `HTTP\SseController` parses the channel request, resolves the current user,
-and authorizes every channel. It either starts the Redis-backed PHP stream or
-returns Mercure bootstrap data and an HttpOnly subscriber cookie.
+authorizes every channel, and delegates the response to the active broker
+adapter's subscription endpoint.
+
+`Endpoint\LocalSseSubscriptionEndpoint` is the generic PHP stream endpoint
+used by local subscriber-aware brokers. Broker-specific endpoints, such as
+Mercure's bootstrap endpoint, live beside their broker implementation.
 
 `HTTP\SseResponseFactory` selects the output implementation at runtime:
 

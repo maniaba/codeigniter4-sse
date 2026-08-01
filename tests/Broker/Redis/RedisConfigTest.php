@@ -6,6 +6,8 @@ namespace Tests\Broker\Redis;
 
 use Maniaba\CodeIgniterSse\Broker\Redis\Exception\RedisConfigurationException;
 use Maniaba\CodeIgniterSse\Broker\Redis\RedisConfig;
+use Maniaba\CodeIgniterSse\Broker\Redis\RedisConfigFactory;
+use Maniaba\CodeIgniterSse\Config\Sse;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
@@ -29,6 +31,56 @@ final class RedisConfigTest extends TestCase
 
         $this->assertNull($config->password);
         $this->assertNull($config->username);
+    }
+
+    public function testFactoryMapsRedisOptions(): void
+    {
+        $config                = new Sse();
+        $config->channelPrefix = 'tenant:sse:';
+        $config->redis         = [
+            'scheme'                     => 'tls',
+            'host'                       => 'redis.internal',
+            'port'                       => 6380,
+            'username'                   => 'app',
+            'password'                   => 'secret',
+            'database'                   => 2,
+            'connectTimeout'             => 1.5,
+            'readTimeout'                => 2.5,
+            'pollInterval'               => 0.5,
+            'pingInterval'               => 10.0,
+            'reconnectAttempts'          => 3,
+            'reconnectDelayMilliseconds' => 100,
+            'deduplicationCapacity'      => 64,
+            'maxPayloadBytes'            => 2048,
+            'maxResponseElements'        => 32,
+            'maxResponseDepth'           => 3,
+            'allowPatternSubscriptions'  => true,
+            'clientName'                 => 'ci-sse',
+            'streamContext'              => ['ssl' => ['verify_peer' => true]],
+        ];
+
+        $redis = (new RedisConfigFactory())->create($config);
+
+        $this->assertSame('tls', $redis->scheme);
+        $this->assertSame('redis.internal', $redis->host);
+        $this->assertSame(6380, $redis->port);
+        $this->assertSame('app', $redis->username);
+        $this->assertSame('secret', $redis->password);
+        $this->assertSame(2, $redis->database);
+        $this->assertSame(1.5, $redis->connectTimeout);
+        $this->assertSame(2.5, $redis->readTimeout);
+        $this->assertSame('tenant:sse:', $redis->channelPrefix);
+        $this->assertSame(0.5, $redis->pollIntervalSeconds);
+        $this->assertSame(10.0, $redis->subscriberPingIntervalSeconds);
+        $this->assertSame(3, $redis->maxReconnectAttempts);
+        $this->assertSame(100, $redis->reconnectDelayMilliseconds);
+        $this->assertSame(64, $redis->deduplicationCapacity);
+        $this->assertSame(2048, $redis->maxPayloadBytes);
+        $this->assertSame(32, $redis->maxResponseElements);
+        $this->assertSame(3, $redis->maxResponseDepth);
+        $this->assertTrue($redis->allowPatternSubscriptions);
+        $this->assertSame('ci-sse', $redis->clientName);
+        $this->assertSame(['ssl' => ['verify_peer' => true]], $redis->streamContext);
     }
 
     #[DataProvider('provideRejectsInvalidConfiguration')]

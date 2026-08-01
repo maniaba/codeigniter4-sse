@@ -17,7 +17,7 @@ use Maniaba\CodeIgniterSse\Event\EventFactory;
 
 final class BrokerFactory
 {
-    public function __construct(private readonly ?SerializerInterface $serializer = null, private readonly ?RedisConfigFactory $redisConfigs = null, private readonly ?MercureConfigFactory $mercureConfigs = null, private readonly ?bool $enableToolbarTracing = null, private readonly ?EventFactory $events = null, private ?BrokerAdapterResolver $resolver = null)
+    public function __construct(private readonly ?SerializerInterface $serializer = null, private readonly ?bool $enableToolbarTracing = null, private readonly ?EventFactory $events = null, private ?BrokerAdapterResolver $resolver = null)
     {
     }
 
@@ -58,8 +58,6 @@ final class BrokerFactory
             $this->resolver = new BrokerAdapterResolver(
                 $this->serializer,
                 $this->events,
-                $this->redisConfigs,
-                $this->mercureConfigs,
             );
         }
 

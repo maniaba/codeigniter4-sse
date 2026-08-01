@@ -203,7 +203,9 @@ one unindexed query per channel.
 Pattern subscriptions are disabled by default:
 
 ```php
-public bool $allowPatternSubscriptions = false;
+public array $redis = [
+    'allowPatternSubscriptions' => false,
+];
 ```
 
 Enabling them allows glob-style Redis subscription patterns. A pattern can

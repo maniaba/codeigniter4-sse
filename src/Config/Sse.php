@@ -16,10 +16,7 @@ use Maniaba\CodeIgniterSse\Broker\Redis\RedisBrokerAdapterFactory;
 use Maniaba\CodeIgniterSse\Contracts\BrokerAdapterFactoryInterface;
 use Maniaba\CodeIgniterSse\Contracts\BrokerAdapterInterface;
 use Maniaba\CodeIgniterSse\Contracts\ChannelAuthorizerInterface;
-use Maniaba\CodeIgniterSse\Contracts\PublisherInterface;
-use Maniaba\CodeIgniterSse\Contracts\SubscriberInterface;
 use Maniaba\CodeIgniterSse\Contracts\UserResolverInterface;
-use Maniaba\CodeIgniterSse\Factory\MercureConfigFactory;
 use Maniaba\CodeIgniterSse\HTTP\SseController;
 
 class Sse extends BaseConfig
@@ -44,6 +41,7 @@ class Sse extends BaseConfig
         'maxPayloadBytes'            => 1_048_576,
         'maxResponseElements'        => 1024,
         'maxResponseDepth'           => 8,
+        'allowPatternSubscriptions'  => false,
         'clientName'                 => null,
         'streamContext'              => [],
     ];
@@ -121,10 +119,7 @@ class Sse extends BaseConfig
     /**
      * @var array<string, array{
      *     factory?: BrokerAdapterFactoryInterface|callable(): BrokerAdapterFactoryInterface|class-string<BrokerAdapterFactoryInterface>,
-     *     adapter?: BrokerAdapterInterface|callable(self): BrokerAdapterInterface|class-string<BrokerAdapterInterface>,
-     *     publisher?: callable(self): PublisherInterface|class-string<PublisherInterface>,
-     *     subscriber?: callable(self): SubscriberInterface|class-string<SubscriberInterface>,
-     *     transport?: 'mercure'|'php',
+     *     adapter?: BrokerAdapterInterface|callable(self, mixed): BrokerAdapterInterface|class-string<BrokerAdapterInterface>,
      *     shared?: bool
      * }>
      */
@@ -133,8 +128,7 @@ class Sse extends BaseConfig
             'factory' => RedisBrokerAdapterFactory::class,
         ],
         'mercure' => [
-            'factory'   => MercureBrokerAdapterFactory::class,
-            'transport' => 'mercure',
+            'factory' => MercureBrokerAdapterFactory::class,
         ],
         'memory' => [
             'factory' => InMemoryBrokerAdapterFactory::class,
@@ -146,14 +140,13 @@ class Sse extends BaseConfig
         ],
     ];
 
-    public string $channelPrefix           = 'app:sse:';
-    public int $retryMilliseconds          = 3000;
-    public int $heartbeatInterval          = 15;
-    public int $maxConnectionSeconds       = 300;
-    public int $maxChannelsPerConnection   = 20;
-    public bool $allowPatternSubscriptions = false;
-    public bool $emitConnectedEvent        = true;
-    public bool $requireAcceptHeader       = true;
+    public string $channelPrefix         = 'app:sse:';
+    public int $retryMilliseconds        = 3000;
+    public int $heartbeatInterval        = 15;
+    public int $maxConnectionSeconds     = 300;
+    public int $maxChannelsPerConnection = 20;
+    public bool $emitConnectedEvent      = true;
+    public bool $requireAcceptHeader     = true;
 
     /**
      * CodeIgniter Debug Toolbar publisher tracing.
@@ -275,16 +268,6 @@ class Sse extends BaseConfig
                 'SSE toolbar maxEvents must be between 1 and 1000.',
             );
         }
-
-        if ($this->streamTransport() === 'mercure') {
-            if ($this->allowPatternSubscriptions) {
-                throw new InvalidArgumentException(
-                    'Pattern subscriptions are not supported by the Mercure adapter.',
-                );
-            }
-
-            (new MercureConfigFactory())->create($this);
-        }
     }
 
     /**
@@ -301,16 +284,6 @@ class Sse extends BaseConfig
     public function mercure(): array
     {
         return array_replace_recursive(self::DEFAULT_MERCURE, $this->mercure);
-    }
-
-    /**
-     * @return 'mercure'|'php'
-     */
-    public function streamTransport(): string
-    {
-        $transport = $this->brokers[$this->broker]['transport'] ?? 'php';
-
-        return $transport === 'mercure' ? 'mercure' : 'php';
     }
 
     /**

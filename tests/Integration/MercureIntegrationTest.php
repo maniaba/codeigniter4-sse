@@ -5,11 +5,11 @@ declare(strict_types=1);
 namespace Tests\Integration;
 
 use CurlMultiHandle;
+use Maniaba\CodeIgniterSse\Broker\Mercure\MercureConfigFactory;
 use Maniaba\CodeIgniterSse\Broker\Mercure\MercurePublisher;
 use Maniaba\CodeIgniterSse\Config\Sse;
 use Maniaba\CodeIgniterSse\Event\JsonEventSerializer;
 use Maniaba\CodeIgniterSse\Event\SseEvent;
-use Maniaba\CodeIgniterSse\Factory\MercureConfigFactory;
 use Maniaba\CodeIgniterSse\Factory\MercureSubscriptionFactory;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\TestCase;

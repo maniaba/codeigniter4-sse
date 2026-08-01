@@ -2,21 +2,31 @@
 
 declare(strict_types=1);
 
-namespace Maniaba\CodeIgniterSse\HTTP;
+namespace Maniaba\CodeIgniterSse\Endpoint;
 
 use CodeIgniter\HTTP\RequestInterface;
 use CodeIgniter\HTTP\ResponseInterface;
+use Maniaba\CodeIgniterSse\Contracts\ChannelSelectorValidatorInterface;
+use Maniaba\CodeIgniterSse\Contracts\ChannelSelectorValidatorProviderInterface;
 use Maniaba\CodeIgniterSse\Contracts\PreflightSubscriptionEndpointInterface;
 use Maniaba\CodeIgniterSse\Contracts\SseOutputInterface;
+use Maniaba\CodeIgniterSse\HTTP\SseResponseFactory;
 use Maniaba\CodeIgniterSse\Stream\SseConnectionManager;
+use Maniaba\CodeIgniterSse\Support\ChannelNameValidator;
 
-final readonly class LocalSseSubscriptionEndpoint implements PreflightSubscriptionEndpointInterface
+final readonly class LocalSseSubscriptionEndpoint implements PreflightSubscriptionEndpointInterface, ChannelSelectorValidatorProviderInterface
 {
     public function __construct(
         private SseConnectionManager $manager,
         private bool $requireAcceptHeader = true,
         private ?SseResponseFactory $responseFactory = null,
+        private ?ChannelSelectorValidatorInterface $channelSelectorValidator = null,
     ) {
+    }
+
+    public function channelSelectorValidator(): ChannelSelectorValidatorInterface
+    {
+        return $this->channelSelectorValidator ?? new ChannelNameValidator();
     }
 
     public function preflight(RequestInterface $request, ResponseInterface $response): ?ResponseInterface

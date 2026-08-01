@@ -8,8 +8,6 @@ use LogicException;
 use Maniaba\CodeIgniterSse\Config\Sse;
 use Maniaba\CodeIgniterSse\Contracts\BrokerAdapterFactoryInterface;
 use Maniaba\CodeIgniterSse\Contracts\BrokerAdapterInterface;
-use Maniaba\CodeIgniterSse\Event\EventFactory;
-use Maniaba\CodeIgniterSse\Event\JsonEventSerializer;
 use Maniaba\CodeIgniterSse\Factory\BrokerAdapterResolver;
 use Maniaba\CodeIgniterSse\Factory\BrokerBuildContext;
 use PHPUnit\Framework\TestCase;
@@ -208,19 +206,12 @@ final class BrokerAdapterResolverTest extends TestCase
         (new BrokerAdapterResolver())->resolve($config);
     }
 
-    public function testFallsBackToLegacyPublisherSubscriberDefinition(): void
+    public function testRejectsBrokerDefinitionsWithoutFactoryOrAdapter(): void
     {
-        $publisher  = (new BasicBrokerAdapter())->publisher();
-        $subscriber = (new BasicBrokerAdapter())->subscriber();
-        $config     = $this->config([
-            'publisher'  => static fn () => $publisher,
-            'subscriber' => static fn () => $subscriber,
-        ]);
+        $this->expectException(LogicException::class);
+        $this->expectExceptionMessage('must define either "factory" or "adapter"');
 
-        $adapter = (new BrokerAdapterResolver(new JsonEventSerializer(), new EventFactory()))->resolve($config);
-
-        $this->assertInstanceOf(BrokerAdapterInterface::class, $adapter);
-        $this->assertSame($publisher, $adapter->publisher());
+        (new BrokerAdapterResolver())->resolve($this->config([]));
     }
 
     /**

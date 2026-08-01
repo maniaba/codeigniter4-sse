@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Maniaba\CodeIgniterSse\Stream;
 
-use InvalidArgumentException;
 use Maniaba\CodeIgniterSse\Contracts\SerializerInterface;
 use Maniaba\CodeIgniterSse\Contracts\SseOutputInterface;
 use Maniaba\CodeIgniterSse\Contracts\SubscriberInterface;
@@ -18,22 +17,8 @@ final readonly class SseConnectionManager
         private SubscriberInterface $subscriber,
         private SerializerInterface $serializer,
         private EventFactory $events,
-        private int $heartbeatInterval = 15,
-        private int $maximumConnectionSeconds = 300,
-        private int $retryMilliseconds = 3000,
-        private bool $emitConnectedEvent = true,
+        private SseConnectionOptions $options = new SseConnectionOptions(),
     ) {
-        if ($heartbeatInterval < 1) {
-            throw new InvalidArgumentException('Heartbeat interval must be at least one second.');
-        }
-
-        if ($maximumConnectionSeconds < 1) {
-            throw new InvalidArgumentException('Maximum connection lifetime must be at least one second.');
-        }
-
-        if ($retryMilliseconds < 0) {
-            throw new InvalidArgumentException('Retry delay must not be negative.');
-        }
     }
 
     /**
@@ -45,13 +30,13 @@ final readonly class SseConnectionManager
         $lastHeartbeat = $startedAt;
         $state         = new SseConnectionState();
 
-        $state->stopWhen(! $output->retry($this->retryMilliseconds));
+        $state->stopWhen(! $output->retry($this->options->retryMilliseconds));
 
         if ($state->isStopped()) {
             return;
         }
 
-        if ($this->emitConnectedEvent) {
+        if ($this->options->emitConnectedEvent) {
             $connected = new BrokerMessage(
                 'sse.system',
                 $this->events->create('sse.connected', ['channels' => $channels]),
@@ -89,7 +74,7 @@ final readonly class SseConnectionManager
                     ));
                 },
                 shouldStop: fn (): bool => ! $output->isClientConnected()
-                        || microtime(true) - $startedAt >= $this->maximumConnectionSeconds
+                        || microtime(true) - $startedAt >= $this->options->maximumConnectionSeconds
                         || $state->isStopped(),
                 onIdle: function () use ($output, &$lastHeartbeat, $state): void {
                     if ($state->isStopped()) {
@@ -98,7 +83,7 @@ final readonly class SseConnectionManager
 
                     $now = microtime(true);
 
-                    if ($now - $lastHeartbeat < $this->heartbeatInterval) {
+                    if ($now - $lastHeartbeat < $this->options->heartbeatInterval) {
                         return;
                     }
 

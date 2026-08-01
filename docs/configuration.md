@@ -158,9 +158,8 @@ final class Sse extends BaseSse
 | Property | Default | Purpose |
 |---|---:|---|
 | `broker` | `redis` | Active key from `brokers`. |
-| `brokers` | built-in Redis, Mercure, memory, null definitions | Publisher/subscriber class or factory map. |
+| `brokers` | built-in Redis, Mercure, memory, null definitions | Broker adapter or broker adapter factory map. |
 | `channelPrefix` | `app:sse:` | Prefix added to logical Redis channels. |
-| `allowPatternSubscriptions` | `false` | Permit Redis-style pattern requests. |
 
 `memory` is useful for isolated tests in one PHP process. It cannot carry a
 message between separate HTTP requests or workers. `null` is a message sink:
@@ -168,10 +167,10 @@ it discards published events but an enabled SSE route still keeps each stream
 open until disconnect or maximum lifetime. Set `route['enabled'] = false` to
 disable the HTTP endpoint.
 
-`mercure` has a publisher but no PHP subscriber. Its broker definition uses
-`transport = mercure`, so the package route issues subscriber authorization
-instead of creating `SseConnectionManager`. See [Mercure Hub](mercure.md) for
-the complete configuration.
+`mercure` has a publisher but no PHP subscriber. Its broker adapter supplies a
+Mercure HTTP subscription endpoint, so the package route issues subscriber
+authorization instead of creating a PHP stream. See [Mercure Hub](mercure.md)
+for the complete configuration.
 
 Do not use an empty shared prefix when several applications publish to the
 same Redis instance.
@@ -180,11 +179,23 @@ Redis Pub/Sub is global across numbered Redis databases. `redis['database']`
 therefore does not separate SSE traffic; `channelPrefix` is the isolation
 boundary.
 
-Custom brokers are added by registering a new key in `brokers`:
+Custom brokers are added by registering a new key in `brokers`. A broker
+definition must provide either:
+
+- `factory`: `BrokerAdapterFactoryInterface`, callable returning one, or class
+  name implementing it;
+- `adapter`: `BrokerAdapterInterface`, callable returning one, or class name
+  implementing it.
+
+The adapter owns publishing and the HTTP subscription endpoint. If the broker
+can stream through PHP, implement `SubscriberAwareBrokerAdapterInterface` too.
 
 ```php
-use App\Sse\CustomPublisher;
-use App\Sse\CustomSubscriber;
+use App\Sse\CustomBrokerAdapterFactory;
+use Maniaba\CodeIgniterSse\Broker\InMemoryBrokerAdapterFactory;
+use Maniaba\CodeIgniterSse\Broker\Mercure\MercureBrokerAdapterFactory;
+use Maniaba\CodeIgniterSse\Broker\NullBrokerAdapterFactory;
+use Maniaba\CodeIgniterSse\Broker\Redis\RedisBrokerAdapterFactory;
 
 final class Sse extends BaseSse
 {
@@ -192,26 +203,21 @@ final class Sse extends BaseSse
 
     public array $brokers = [
         'redis' => [
-            'publisher'  => \Maniaba\CodeIgniterSse\Broker\Redis\RedisPublisher::class,
-            'subscriber' => \Maniaba\CodeIgniterSse\Broker\Redis\RedisSubscriber::class,
+            'factory' => RedisBrokerAdapterFactory::class,
         ],
         'mercure' => [
-            'publisher' => \Maniaba\CodeIgniterSse\Broker\Mercure\MercurePublisher::class,
-            'transport' => 'mercure',
+            'factory' => MercureBrokerAdapterFactory::class,
         ],
         'memory' => [
-            'publisher'  => \Maniaba\CodeIgniterSse\Broker\InMemoryBroker::class,
-            'subscriber' => \Maniaba\CodeIgniterSse\Broker\InMemoryBroker::class,
-            'shared'     => true,
+            'factory' => InMemoryBrokerAdapterFactory::class,
+            'shared'  => true,
         ],
         'null' => [
-            'publisher'  => \Maniaba\CodeIgniterSse\Broker\NullBroker::class,
-            'subscriber' => \Maniaba\CodeIgniterSse\Broker\NullBroker::class,
-            'shared'     => true,
+            'factory' => NullBrokerAdapterFactory::class,
+            'shared'  => true,
         ],
         'custom' => [
-            'publisher'  => CustomPublisher::class,
-            'subscriber' => CustomSubscriber::class,
+            'factory' => CustomBrokerAdapterFactory::class,
         ],
     ];
 }
@@ -221,14 +227,16 @@ When a broker needs application services or constructor arguments, use factory
 closures:
 
 ```php
+use Maniaba\CodeIgniterSse\Config\Sse;
+use Maniaba\CodeIgniterSse\Contracts\BrokerAdapterInterface;
+use Maniaba\CodeIgniterSse\Factory\BrokerBuildContext;
+
 public array $brokers = [
-    'redis' => [
-        'publisher'  => \Maniaba\CodeIgniterSse\Broker\Redis\RedisPublisher::class,
-        'subscriber' => \Maniaba\CodeIgniterSse\Broker\Redis\RedisSubscriber::class,
-    ],
     'custom' => [
-        'publisher'  => static fn (): PublisherInterface => service('customSsePublisher'),
-        'subscriber' => static fn (): SubscriberInterface => service('customSseSubscriber'),
+        'adapter' => static fn (
+            Sse $config,
+            BrokerBuildContext $context,
+        ): BrokerAdapterInterface => service('customSseBrokerAdapter'),
     ],
 ];
 ```
@@ -268,8 +276,8 @@ sse.mercure.subscriberKey = replace-with-the-hub-subscriber-key
 ```
 
 Keep Hub signing keys out of source control. The package validates Mercure
-configuration when that broker is selected. The full key reference and
-deployment guidance are in [Mercure Hub](mercure.md).
+configuration when the Mercure adapter factory builds the broker. The full key
+reference and deployment guidance are in [Mercure Hub](mercure.md).
 
 ## Redis connection
 
@@ -293,6 +301,7 @@ public array $redis = [
     'maxPayloadBytes'            => 1_048_576,
     'maxResponseElements'        => 1024,
     'maxResponseDepth'           => 8,
+    'allowPatternSubscriptions'  => false,
     'clientName'                 => null,
     'streamContext'              => [],
 ];
@@ -316,6 +325,7 @@ public array $redis = [
 | `maxPayloadBytes` | `1048576` | Maximum serialized event or inbound RESP bulk string size. |
 | `maxResponseElements` | `1024` | Maximum elements accepted in one RESP array. |
 | `maxResponseDepth` | `8` | Maximum accepted RESP nesting depth. |
+| `allowPatternSubscriptions` | `false` | Permit Redis-style pattern requests. |
 | `clientName` | `null` | Optional Redis connection name. |
 | `streamContext` | `[]` | PHP stream context options, usually under `ssl`. |
 
