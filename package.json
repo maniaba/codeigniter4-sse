@@ -1,6 +1,6 @@
 {
   "name": "@maniaba/codeigniter4-sse-browser",
-  "version": "1.0.0",
+  "version": "1.0.0-rc",
   "description": "Dependency-free browser EventSource client for maniaba/codeigniter4-sse.",
   "license": "MIT",
   "author": {
