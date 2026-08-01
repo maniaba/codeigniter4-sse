@@ -181,9 +181,11 @@ requirements.
 
 ## Larger deployments
 
-PHP-FPM is suitable for a bounded number of live users. At larger concurrency,
-keep the publisher API in CI4 and move long-lived connections to a dedicated
-gateway:
+PHP-FPM is suitable for a bounded number of live users when capacity is planned
+around one open worker per direct Redis stream. At larger concurrency, keep
+the publisher API in CI4 and move long-lived connections to a dedicated
+gateway. This is the recommended direction for applications with many active
+users, dashboards opened all day, or reconnect bursts during deploys.
 
 ```text
 CI4 application
@@ -206,7 +208,8 @@ Browser EventSource ─────────► Mercure Hub
 ```
 
 It removes long-lived browser streams from PHP without changing
-`sse()->publish(...)`.
+`sse()->publish(...)`. Prefer Mercure for larger environments unless there is
+a specific operational reason to run a custom gateway.
 
 ## Verification
 

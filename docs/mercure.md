@@ -17,6 +17,12 @@ The `/sse` CodeIgniter route is a short authorization request in this mode. It
 does not emit an event stream and does not reserve a PHP worker.
 The Hub owns heartbeats, reconnects, history, and the live SSE response.
 
+Mercure is the recommended built-in broker for larger environments and
+applications with many concurrent users. Redis is simpler and works well when
+PHP worker capacity is intentionally sized for live streams. Mercure is a
+better fit when the number of open browser connections can grow beyond that
+comfort zone, because idle SSE connections no longer consume PHP-FPM workers.
+
 The adapter targets the stable Mercure 0.x protocol used by Mercure 0.24.2:
 `topic` subscription parameters, `mercure.publish` and `mercure.subscribe` JWT
 claims, and the `mercureAuthorization` cookie.
@@ -108,6 +114,7 @@ final class Sse extends BaseSse
 Supply secrets through `.env`:
 
 ```dotenv
+sse.broker = mercure
 sse.mercure.publisherKey = replace-with-the-hub-publisher-key
 sse.mercure.subscriberKey = replace-with-the-hub-subscriber-key
 ```
@@ -123,6 +130,17 @@ problems:
 ```text
 https://app.example.com/.well-known/mercure → http://mercure/.well-known/mercure
 ```
+
+At minimum, production Mercure configuration should cover:
+
+- a Hub instance reachable from PHP through `hubUrl`;
+- a browser-facing Hub URL in `publicHubUrl`;
+- separate long random publisher and subscriber keys;
+- matching keys in the Hub environment and CodeIgniter `.env`;
+- `private = true` and `authorizeSubscribers = true` for user or tenant data;
+- HTTPS and secure cookies outside local development;
+- exact CORS origins when the frontend and Hub are cross-origin;
+- a reverse proxy or load balancer that supports long-lived Hub responses.
 
 ## Publish
 

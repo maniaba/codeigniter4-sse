@@ -174,6 +174,12 @@ Redis connection details and scalar package options can be supplied through
 `.env`. The exact options and production recommendations are documented under
 [Configuration](docs/configuration.md).
 
+Redis is the default broker and the easiest starting point. It uses Redis
+Pub/Sub while CodeIgniter holds the browser's SSE response open from `/sse`.
+For larger environments or applications with many concurrent users, prefer
+Mercure: PHP handles short authorization and publish requests, while the Hub
+owns the long-lived browser connections.
+
 ## Delivery semantics
 
 The first release deliberately uses raw Redis Pub/Sub:

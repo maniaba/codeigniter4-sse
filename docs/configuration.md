@@ -161,6 +161,31 @@ final class Sse extends BaseSse
 | `brokers` | built-in Redis, Mercure, memory, null definitions | Broker adapter or broker adapter factory map. |
 | `channelPrefix` | `app:sse:` | Prefix added to logical Redis channels. |
 
+## Choosing Redis or Mercure
+
+Use Redis when the deployment has a controlled number of simultaneous users
+and PHP-FPM capacity is sized for one open SSE response per connected browser.
+This is the simplest topology: CodeIgniter subscribes to Redis Pub/Sub and
+streams events directly from the `/sse` route.
+
+Use Mercure when the application expects larger concurrency, more active
+users, or frequent reconnect bursts. With Mercure, PHP only authorizes the
+requested channels and publishes events to the Hub. The browser's long-lived
+EventSource connection is held by Mercure, not by a PHP worker. This keeps
+normal page and API requests from competing with idle SSE streams for the
+same PHP-FPM pool.
+
+Recommended rule of thumb:
+
+| Deployment shape | Recommended broker | Reason |
+|---|---|---|
+| Local development, small internal tools, bounded traffic | `redis` | Fewer moving parts and easy debugging. |
+| Multi-instance PHP application with moderate SSE usage | `redis` or `mercure` | Redis works if PHP worker capacity is planned; Mercure reduces worker pressure. |
+| Public application, many concurrent users, multi-tenant dashboards, high reconnect churn | `mercure` | The Hub is built to own long-lived SSE connections and lets PHP handle short requests. |
+
+Publishing code does not change when switching between Redis and Mercure. The
+server-side `broker` and the browser adapter must match.
+
 `memory` is useful for isolated tests in one PHP process. It cannot carry a
 message between separate HTTP requests or workers. `null` is a message sink:
 it discards published events but an enabled SSE route still keeps each stream
@@ -227,7 +252,15 @@ final class Sse extends BaseSse
 
 ## Mercure
 
-Mercure options live in one array, parallel to Redis:
+Mercure options live in one array, parallel to Redis. A complete Mercure setup
+has four parts:
+
+1. run a Mercure Hub with publisher and subscriber JWT keys;
+2. select `public string $broker = 'mercure';`;
+3. configure `hubUrl`, `publicHubUrl`, keys, topic prefix, and cookie options;
+4. use `MercureSseAdapter` in the browser client.
+
+Example application config:
 
 ```php
 public string $broker = 'mercure';
@@ -259,11 +292,74 @@ sse.mercure.publisherKey = replace-with-the-hub-publisher-key
 sse.mercure.subscriberKey = replace-with-the-hub-subscriber-key
 ```
 
+For local plain HTTP only, also set:
+
+```dotenv
+sse.mercure.cookie.secure = false
+```
+
 Keep Hub signing keys out of source control. The package validates Mercure
 configuration when the Mercure adapter factory builds the broker. The full key
 reference and deployment guidance are in [Mercure Hub](mercure.md).
 
 ## Redis connection
+
+Redis setup has five parts:
+
+1. run Redis and make it reachable from PHP;
+2. keep `public string $broker = 'redis';`;
+3. set an application-specific `channelPrefix`;
+4. configure the `redis` connection array or `.env` overrides;
+5. use `RedisSseAdapter` in the browser client.
+
+Minimal local configuration:
+
+```php
+public string $broker = 'redis';
+public string $channelPrefix = 'myapp:sse:';
+
+public array $redis = [
+    'host'     => '127.0.0.1',
+    'port'     => 6379,
+    'database' => 0,
+];
+```
+
+Equivalent `.env` overrides:
+
+```dotenv
+sse.broker = redis
+sse.channelPrefix = myapp:sse:
+sse.redis.host = 127.0.0.1
+sse.redis.port = 6379
+sse.redis.database = 0
+```
+
+Then verify the connection:
+
+```bash
+redis-cli ping
+php spark sse:health-check
+```
+
+For the browser client, use the Redis adapter:
+
+```javascript
+import {
+    RedisSseAdapter,
+    SseClient,
+} from '/vendor/codeigniter4-sse/sse-client.js';
+
+const live = new SseClient({
+    endpoint: '/sse',
+    adapter: new RedisSseAdapter(),
+    channels: ['public.news'],
+});
+```
+
+When Redis is selected, `/sse` is the long-lived SSE response. Configure the
+web server and PHP-FPM as described in
+[Streaming and deployment](deployment.md).
 
 All Redis options live under one config property:
 

@@ -38,6 +38,11 @@ class Sse extends BaseSse
 
     /**
      * Built-in brokers: redis, mercure, memory, null.
+     *
+     * Redis is a good default when the application can afford one PHP worker
+     * per open SSE stream. For larger environments and applications with many
+     * concurrent users, prefer Mercure so long-lived browser connections are
+     * handled by the Hub instead of PHP-FPM.
      */
     public string $broker = 'redis';
 
@@ -65,11 +70,6 @@ class Sse extends BaseSse
      * Limit how many logical channels one browser connection can request.
      */
     public int $maxChannelsPerConnection = 20;
-
-    /**
-     * Keep disabled unless the application explicitly authorizes patterns.
-     */
-    public bool $allowPatternSubscriptions = false;
 
     /**
      * Sends an initial "sse.connected" event after authorization succeeds.
@@ -140,6 +140,11 @@ class Sse extends BaseSse
         'pingInterval'               => 15.0,
         'reconnectAttempts'          => 2,
         'reconnectDelayMilliseconds' => 250,
+        'deduplicationCapacity'      => 1024,
+        'maxPayloadBytes'            => 1_048_576,
+        'maxResponseElements'        => 1024,
+        'maxResponseDepth'           => 8,
+        'allowPatternSubscriptions'  => false,
         'clientName'                 => null,
         'streamContext'              => [],
     ];
