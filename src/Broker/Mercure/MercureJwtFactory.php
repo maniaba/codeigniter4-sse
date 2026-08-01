@@ -4,16 +4,26 @@ declare(strict_types=1);
 
 namespace Maniaba\CodeIgniterSse\Broker\Mercure;
 
-use JsonException;
 use Maniaba\CodeIgniterSse\Broker\Mercure\Exception\MercureConfigurationException;
+use Random\RandomException;
 
 final class MercureJwtFactory
 {
-    private const HASH_ALGORITHMS = [
+    private const MINIMUM_KEY_BYTES = 32;
+    private const HASH_ALGORITHMS   = [
         'HS256' => 'sha256',
         'HS384' => 'sha384',
         'HS512' => 'sha512',
     ];
+    private const ISSUER             = 'maniaba/codeigniter4-sse';
+    private const AUDIENCE           = 'mercure';
+    private const PUBLISHER_SUBJECT  = 'mercure-publisher';
+    private const SUBSCRIBER_SUBJECT = 'mercure-subscriber';
+
+    public function __construct(
+        private readonly ?MercureJwtCodec $codec = null,
+    ) {
+    }
 
     /**
      * @param array{publish?: list<string>, subscribe?: list<string>} $mercure
@@ -25,8 +35,10 @@ final class MercureJwtFactory
         int $ttl = 300,
         ?int $issuedAt = null,
     ): string {
-        if ($key === '') {
-            throw new MercureConfigurationException('The Mercure JWT signing key must not be empty.');
+        if (strlen($key) < self::MINIMUM_KEY_BYTES) {
+            throw new MercureConfigurationException(
+                sprintf('The Mercure JWT signing key must be at least %d bytes.', self::MINIMUM_KEY_BYTES),
+            );
         }
 
         $hash = self::HASH_ALGORITHMS[$algorithm] ?? null;
@@ -42,38 +54,47 @@ final class MercureJwtFactory
         }
 
         $issuedAt ??= time();
-        $header = $this->encode(['alg' => $algorithm, 'typ' => 'JWT']);
-        $claims = $this->encode([
+        $codec    = $this->codec ?? new MercureJwtCodec();
+        $unsigned = $codec->unsigned(['alg' => $algorithm, 'typ' => 'JWT'], [
+            'iss'     => self::ISSUER,
+            'aud'     => self::AUDIENCE,
+            'sub'     => self::subject($mercure),
+            'jti'     => self::jwtId(),
             'iat'     => $issuedAt,
             'exp'     => $issuedAt + $ttl,
             'mercure' => $mercure,
         ]);
-        $unsigned  = $header . '.' . $claims;
         $signature = hash_hmac($hash, $unsigned, $key, true);
 
-        return $unsigned . '.' . self::base64UrlEncode($signature);
+        return $unsigned . '.' . $codec->encodeBytes($signature);
     }
 
     /**
-     * @param array<string, mixed> $value
+     * @param array{publish?: list<string>, subscribe?: list<string>} $mercure
      */
-    private function encode(array $value): string
+    private static function subject(array $mercure): string
+    {
+        if (isset($mercure['publish']) && ! isset($mercure['subscribe'])) {
+            return self::PUBLISHER_SUBJECT;
+        }
+
+        if (isset($mercure['subscribe']) && ! isset($mercure['publish'])) {
+            return self::SUBSCRIBER_SUBJECT;
+        }
+
+        return 'mercure-token';
+    }
+
+    private static function jwtId(): string
     {
         try {
-            return self::base64UrlEncode(
-                json_encode($value, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES),
-            );
-        } catch (JsonException $exception) {
+            return bin2hex(random_bytes(16));
+        } catch (RandomException $exception) {
             throw new MercureConfigurationException(
-                'The Mercure JWT claims could not be encoded.',
+                'The Mercure JWT ID could not be generated.',
                 0,
                 $exception,
             );
         }
-    }
-
-    private static function base64UrlEncode(string $value): string
-    {
-        return rtrim(strtr(base64_encode($value), '+/', '-_'), '=');
     }
 }

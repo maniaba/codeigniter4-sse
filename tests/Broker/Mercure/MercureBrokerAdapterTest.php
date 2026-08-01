@@ -95,8 +95,8 @@ final class MercureBrokerAdapterTest extends TestCase
         $config->mercure = [
             'hubUrl'        => 'http://mercure/.well-known/mercure',
             'publicHubUrl'  => 'https://example.test/.well-known/mercure',
-            'publisherKey'  => 'publisher-test-secret',
-            'subscriberKey' => 'subscriber-test-secret',
+            'publisherKey'  => 'publisher-test-secret-at-least-32-bytes',
+            'subscriberKey' => 'subscriber-test-secret-at-least-32-bytes',
         ];
 
         return $config;

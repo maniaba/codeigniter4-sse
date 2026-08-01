@@ -10,6 +10,8 @@ use Maniaba\CodeIgniterSse\Support\ChannelNameValidator;
 
 final readonly class ChannelRequestParser
 {
+    private const MAXIMUM_CHANNEL_BYTES = 200;
+
     public function __construct(
         private int $maximumChannels = 20,
         private ?ChannelSelectorValidatorInterface $validator = null,
@@ -32,22 +34,25 @@ final readonly class ChannelRequestParser
 
         $values = is_array($input) ? $input : [$input];
         $parts  = [];
+        $bytes  = 0;
 
         foreach ($values as $value) {
             if (! is_string($value)) {
                 throw new InvalidChannelRequestException('The channels query parameter must contain strings.');
             }
 
-            foreach (explode(',', $value) as $part) {
-                $part = trim($part);
+            $bytes += strlen($value);
 
-                if ($part !== '') {
-                    $parts[] = $part;
-                }
+            if ($bytes > $this->maximumInputBytes()) {
+                throw new InvalidChannelRequestException(
+                    sprintf('The channels query parameter must not exceed %d bytes.', $this->maximumInputBytes()),
+                );
             }
+
+            $this->parseValue($value, $parts);
         }
 
-        $parts = array_values(array_unique($parts));
+        $parts = array_keys($parts);
 
         if ($parts === []) {
             throw new InvalidChannelRequestException('At least one channel is required.');
@@ -66,5 +71,34 @@ final readonly class ChannelRequestParser
         }
 
         return $parts;
+    }
+
+    /**
+     * @param array<string, true> $parts
+     */
+    private function parseValue(string $value, array &$parts): void
+    {
+        $length = strlen($value);
+        $start  = 0;
+
+        for ($offset = 0; $offset <= $length; $offset++) {
+            if ($offset !== $length && $value[$offset] !== ',') {
+                continue;
+            }
+
+            $part = trim(substr($value, $start, $offset - $start));
+
+            if ($part !== '') {
+                $parts[$part] = true;
+            }
+
+            $start = $offset + 1;
+        }
+    }
+
+    private function maximumInputBytes(): int
+    {
+        return $this->maximumChannels * self::MAXIMUM_CHANNEL_BYTES
+            + max(0, $this->maximumChannels - 1);
     }
 }

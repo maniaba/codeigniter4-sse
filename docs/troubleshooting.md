@@ -50,7 +50,8 @@ Valid requests include:
 /sse?channels[]=users.42&channels[]=orders.918
 ```
 
-Check the channel syntax and `maxChannelsPerConnection`. Patterns are rejected
+Check the channel syntax and `maxChannelsPerConnection`. Oversized raw
+`channels` query input is rejected before splitting. Patterns are rejected
 unless explicitly enabled.
 
 ## The endpoint returns 403

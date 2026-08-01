@@ -10,6 +10,7 @@ use Maniaba\CodeIgniterSse\Config\Sse;
 use Maniaba\CodeIgniterSse\Contracts\ChannelSelectorValidatorInterface;
 use Maniaba\CodeIgniterSse\Contracts\ChannelSelectorValidatorProviderInterface;
 use Maniaba\CodeIgniterSse\Contracts\PreflightSubscriptionEndpointInterface;
+use Maniaba\CodeIgniterSse\Exception\InvalidOriginException;
 use Maniaba\CodeIgniterSse\Factory\MercureSubscriptionFactory;
 use Maniaba\CodeIgniterSse\HTTP\AcceptHeaderNegotiator;
 use Maniaba\CodeIgniterSse\Support\ChannelNameValidator;
@@ -61,6 +62,10 @@ final readonly class MercureSubscriptionEndpoint implements PreflightSubscriptio
         ResponseInterface $response,
         array $channels,
     ): ResponseInterface {
+        if ($this->config->rejectCrossSiteBootstrap) {
+            $this->assertSameSiteRequest($request);
+        }
+
         $subscriptions = $this->subscriptions ?? new MercureSubscriptionFactory(mercure: $this->mercure);
         $subscription  = $subscriptions->create($this->config, $channels);
         $mercure       = $this->mercure ?? ($this->configs ?? new MercureConfigFactory())->create($this->config);
@@ -99,5 +104,14 @@ final readonly class MercureSubscriptionEndpoint implements PreflightSubscriptio
         );
 
         return $response;
+    }
+
+    private function assertSameSiteRequest(RequestInterface $request): void
+    {
+        if (strtolower($request->getHeaderLine('Sec-Fetch-Site')) === 'cross-site') {
+            throw new InvalidOriginException(
+                'Cross-site SSE authorization requests are not allowed.',
+            );
+        }
     }
 }

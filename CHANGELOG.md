@@ -7,6 +7,58 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [v1.0.0-rc2] - 2026-08-01
+
+Second release candidate focused on Mercure hardening, JWT validation, safer
+request parsing, and test cleanup before the initial stable `1.0.0` release.
+
+### Added
+
+- Added Mercure JWT standard claims for generated publisher and subscriber
+  tokens: `iss`, `aud`, `sub`, and unique `jti`.
+- Added `MercureJwtCodec` for compact JWT splitting, base64url encoding,
+  unsigned JWT creation, and JSON header/payload decoding.
+- Added structural validation for configured `publisherJwt` values:
+    - compact JWT format with three segments;
+    - supported HMAC `alg`;
+    - required and non-expired `exp`;
+    - required `mercure.publish` rights;
+    - publish selectors constrained to `topicPrefix` unless the global selector
+      is explicitly enabled.
+- Added `allowGlobalPublisherSelector` Mercure option. The global publisher
+  selector `*` is now allowed only when explicitly opted in.
+- Added `rejectCrossSiteBootstrap` option. Mercure authorization bootstrap
+  requests with `Sec-Fetch-Site: cross-site` are rejected by default before a
+  subscriber cookie is issued.
+
+### Changed
+
+- Changed the default Mercure publisher selector from global `*` to a scoped
+  selector derived from `topicPrefix`: `topicPrefix . '{channel}'`.
+- Refactored Mercure JWT encoding/decoding into a dedicated codec used by both
+  generated JWT creation and configured publisher JWT validation.
+- Refactored Mercure route tests to remove duplicated setup and share the
+  bootstrap response helper.
+
+### Security
+
+- Enforced a minimum 32-byte Mercure JWT HMAC signing key.
+- Rejected Mercure `topicPrefix` values containing wildcard or URI-template
+  characters such as `{`, `}`, `*`, `?`, `[`, and `]`.
+- Bounded the raw `channels` query input before parsing so oversized requests
+  are rejected before channel splitting/deduplication work.
+- Kept unauthorized channel responses generic while logging server-side audit
+  metadata for denied channel authorization attempts.
+- Added Fetch Metadata protection for Mercure subscriber authorization cookie
+  bootstrap requests.
+
+### Tests
+
+- Added and updated tests for Mercure JWT key length, standard JWT claims, JWT
+  codec behavior, configured publisher JWT validation, scoped publisher
+  selectors, `topicPrefix` safety, raw `channels` limits, and cross-site
+  bootstrap rejection.
+
 ## [v1.0.0-rc] - 2026-08-01
 
 First release candidate for CodeIgniter SSE. This version establishes the
@@ -19,9 +71,9 @@ for the initial stable `1.0.0` release.
 - Provides a framework-native CodeIgniter 4 API for publishing Server-Sent
   Events through `sse()->publish(...)`.
 - Supports two production transports out of the box:
-  - Redis Pub/Sub for direct PHP SSE streaming.
-  - Mercure Hub for high-concurrency deployments where long-lived browser
-    connections should be handled outside PHP-FPM.
+    - Redis Pub/Sub for direct PHP SSE streaming.
+    - Mercure Hub for high-concurrency deployments where long-lived browser
+      connections should be handled outside PHP-FPM.
 - Keeps application publishing code independent of the selected transport.
   Applications can start with Redis and switch to Mercure without rewriting
   domain publishing calls.
@@ -75,10 +127,10 @@ for the initial stable `1.0.0` release.
   subscription endpoints, broker adapters, and broker adapter factories.
 - Added configurable broker map through `Config\Sse::$brokers`.
 - Added built-in broker keys:
-  - `redis`
-  - `mercure`
-  - `memory`
-  - `null`
+    - `redis`
+    - `mercure`
+    - `memory`
+    - `null`
 - Added custom broker extension points so applications can provide their own
   adapters without changing the package's public publishing API.
 - Added in-memory broker for isolated one-process tests.
@@ -103,9 +155,9 @@ for the initial stable `1.0.0` release.
 - Added Redis subscriber health PINGs for half-open subscribed sockets.
 - Added bounded reconnect behavior for publisher and subscriber transports.
 - Added payload and RESP parser safety limits:
-  - maximum payload bytes;
-  - maximum RESP array elements;
-  - maximum RESP nesting depth.
+    - maximum payload bytes;
+    - maximum RESP array elements;
+    - maximum RESP nesting depth.
 - Added optional Redis pattern subscriptions with secure disabled-by-default
   configuration.
 - Added channel/event ID deduplication for overlapping exact and pattern
@@ -129,8 +181,8 @@ for the initial stable `1.0.0` release.
 - Added topic-scoped `mercure.publish` support for publisher credentials.
 - Added configurable publisher and subscriber token TTLs.
 - Added configurable Hub URLs:
-  - `hubUrl` for PHP/server-side publishing;
-  - `publicHubUrl` for browser-facing EventSource connections.
+    - `hubUrl` for PHP/server-side publishing;
+    - `publicHubUrl` for browser-facing EventSource connections.
 - Added secure Mercure cookie configuration for the HttpOnly subscriber token.
 - Added local-development support for non-secure Mercure cookies.
 - Added Mercure publish payload size limits.
@@ -148,11 +200,11 @@ for the initial stable `1.0.0` release.
 - Added TypeScript declaration files for the browser client and adapters.
 - Added `SseClient` wrapper around native `EventSource`.
 - Added frontend adapters for:
-  - Redis;
-  - Mercure;
-  - direct EventSource usage;
-  - local broker semantics;
-  - in-memory broker semantics.
+    - Redis;
+    - Mercure;
+    - direct EventSource usage;
+    - local broker semantics;
+    - in-memory broker semantics.
 - Added named event listeners with `on()` and `off()`.
 - Added global message handling.
 - Added lifecycle status notifications for connection state.
@@ -174,11 +226,11 @@ for the initial stable `1.0.0` release.
 #### Channel security and authorization
 
 - Added strict logical channel validation:
-  - 1 to 200 bytes;
-  - dot-separated segments;
-  - ASCII alphanumeric segment starts;
-  - `_` and `-` inside segments;
-  - no whitespace, slashes, empty segments, or control characters.
+    - 1 to 200 bytes;
+    - dot-separated segments;
+    - ASCII alphanumeric segment starts;
+    - `_` and `-` inside segments;
+    - no whitespace, slashes, empty segments, or control characters.
 - Added `Channel` value object and safe segment joining helpers.
 - Added maximum channel count per browser connection.
 - Added duplicate channel normalization.
@@ -202,10 +254,10 @@ for the initial stable `1.0.0` release.
 #### Developer tooling and installation
 
 - Added `php spark sse:install` command to publish:
-  - application config;
-  - browser ES module;
-  - TypeScript declarations;
-  - broker adapter browser modules.
+    - application config;
+    - browser ES module;
+    - TypeScript declarations;
+    - broker adapter browser modules.
 - Added `php spark sse:health-check` command for broker/config validation.
 - Added CodeIgniter service definitions for package services.
 - Added Composer package discovery integration for config, routes, services,
