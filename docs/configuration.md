@@ -95,7 +95,7 @@ then connects directly to the authorized Hub URL.
 | `retryMilliseconds` | `3000` | SSE reconnect delay hint sent to the browser. |
 | `heartbeatInterval` | `15` | Seconds between heartbeat comments while idle. |
 | `maxConnectionSeconds` | `300` | Finite lifetime of one HTTP stream. |
-| `maxChannelsPerConnection` | `20` | Maximum unique requested logical channels. |
+| `maxChannelsPerConnection` | `20` | Maximum unique requested logical channels. The raw `channels` query input is also bounded from this value before splitting. |
 | `emitConnectedEvent` | `true` | Send `sse.connected` after opening the stream. |
 
 The browser automatically opens a new stream after the server reaches
