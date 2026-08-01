@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Support\Adapter;
+namespace Support\Tests\Adapter;
 
 use Maniaba\CodeIgniterSse\Contracts\BrokerInterface;
 use Maniaba\CodeIgniterSse\Contracts\EventInterface;

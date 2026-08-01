@@ -15,8 +15,8 @@ use Maniaba\CodeIgniterSse\Event\SseEvent;
 use Maniaba\CodeIgniterSse\Exception\InvalidChannelException;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
-use Tests\Broker\Redis\Fixtures\FakeRedisConnection;
-use Tests\Broker\Redis\Fixtures\FakeRedisConnectionFactory;
+use Support\Tests\Broker\Redis\Fixtures\FakeRedisConnection;
+use Support\Tests\Broker\Redis\Fixtures\FakeRedisConnectionFactory;
 
 /**
  * @internal

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Support;
+namespace Support\Tests;
 
 use Maniaba\CodeIgniterSse\Contracts\SseOutputInterface;
 

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Config\Fixtures;
+namespace Support\Tests\Config\Fixtures;
 
 use Maniaba\CodeIgniterSse\Contracts\ChannelAuthorizerInterface;
 

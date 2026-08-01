@@ -16,8 +16,8 @@ use Maniaba\CodeIgniterSse\HTTP\SseController;
 use Maniaba\CodeIgniterSse\HTTP\SseResponseFactory;
 use Maniaba\CodeIgniterSse\Stream\SseConnectionManager;
 use Psr\Log\LoggerInterface;
-use Tests\Support\FixedEventIdGenerator;
-use Tests\Support\RecordingSubscriber;
+use Support\Tests\FixedEventIdGenerator;
+use Support\Tests\RecordingSubscriber;
 
 /**
  * @internal

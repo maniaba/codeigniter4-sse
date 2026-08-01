@@ -13,10 +13,10 @@ use Maniaba\CodeIgniterSse\Factory\BrokerBuildContext;
 use PHPUnit\Framework\TestCase;
 use ReflectionProperty;
 use stdClass;
-use Tests\Support\Adapter\BasicBrokerAdapter;
-use Tests\Support\Adapter\BasicBrokerAdapterFactory;
-use Tests\Support\Adapter\InvalidAdapter;
-use Tests\Support\Adapter\InvalidBrokerAdapterFactory;
+use Support\Tests\Adapter\BasicBrokerAdapter;
+use Support\Tests\Adapter\BasicBrokerAdapterFactory;
+use Support\Tests\Adapter\InvalidAdapter;
+use Support\Tests\Adapter\InvalidBrokerAdapterFactory;
 
 /**
  * @internal

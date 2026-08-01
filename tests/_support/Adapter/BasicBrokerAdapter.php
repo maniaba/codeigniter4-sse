@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace Tests\Support\Adapter;
+namespace Support\Tests\Adapter;
 
 use Maniaba\CodeIgniterSse\Contracts\PublisherInterface;
 use Maniaba\CodeIgniterSse\Contracts\SubscriberAwareBrokerAdapterInterface;
 use Maniaba\CodeIgniterSse\Contracts\SubscriberInterface;
 use Maniaba\CodeIgniterSse\Contracts\SubscriptionEndpointInterface;
-use Tests\Support\RecordingPublisher;
-use Tests\Support\RecordingSubscriber;
+use Support\Tests\RecordingPublisher;
+use Support\Tests\RecordingSubscriber;
 
 final class BasicBrokerAdapter implements SubscriberAwareBrokerAdapterInterface
 {

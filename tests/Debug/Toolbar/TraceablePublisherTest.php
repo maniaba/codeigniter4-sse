@@ -11,7 +11,7 @@ use Maniaba\CodeIgniterSse\Debug\Toolbar\TraceablePublisher;
 use Maniaba\CodeIgniterSse\Event\SseEvent;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
-use Tests\Support\RecordingPublisher;
+use Support\Tests\RecordingPublisher;
 
 /**
  * @internal

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Broker\Redis\Fixtures;
+namespace Support\Tests\Broker\Redis\Fixtures;
 
 use LogicException;
 use Maniaba\CodeIgniterSse\Broker\Redis\RedisConnectionFactoryInterface;

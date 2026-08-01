@@ -19,11 +19,11 @@ use Maniaba\CodeIgniterSse\Event\EventFactory;
 use Maniaba\CodeIgniterSse\Event\JsonEventSerializer;
 use Maniaba\CodeIgniterSse\Factory\BrokerBuildContext;
 use PHPUnit\Framework\TestCase;
-use Tests\Broker\Redis\Fixtures\FakeRedisConnection;
-use Tests\Broker\Redis\Fixtures\FakeRedisConnectionFactory;
-use Tests\Support\Adapter\BasicSubscriptionEndpoint;
-use Tests\Support\RecordingPublisher;
-use Tests\Support\RecordingSubscriber;
+use Support\Tests\Adapter\BasicSubscriptionEndpoint;
+use Support\Tests\Broker\Redis\Fixtures\FakeRedisConnection;
+use Support\Tests\Broker\Redis\Fixtures\FakeRedisConnectionFactory;
+use Support\Tests\RecordingPublisher;
+use Support\Tests\RecordingSubscriber;
 
 /**
  * @internal

@@ -18,11 +18,11 @@ use Maniaba\CodeIgniterSse\Event\EventFactory;
 use Maniaba\CodeIgniterSse\Event\JsonEventSerializer;
 use Maniaba\CodeIgniterSse\Factory\BrokerBuildContext;
 use PHPUnit\Framework\TestCase;
-use Tests\Support\Adapter\BasicSubscriptionEndpoint;
-use Tests\Support\Adapter\PublisherOnly;
-use Tests\Support\Adapter\RecordingBroker;
-use Tests\Support\RecordingPublisher;
-use Tests\Support\RecordingSubscriber;
+use Support\Tests\Adapter\BasicSubscriptionEndpoint;
+use Support\Tests\Adapter\PublisherOnly;
+use Support\Tests\Adapter\RecordingBroker;
+use Support\Tests\RecordingPublisher;
+use Support\Tests\RecordingSubscriber;
 
 /**
  * @internal

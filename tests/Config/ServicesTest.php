@@ -31,9 +31,9 @@ use Maniaba\CodeIgniterSse\Factory\BrokerBuildContext;
 use Maniaba\CodeIgniterSse\Factory\BrokerFactory;
 use Maniaba\CodeIgniterSse\Sse as SseManager;
 use ReflectionProperty;
-use Tests\Config\Fixtures\ConfiguredChannelAuthorizer;
-use Tests\Support\Adapter\BasicBrokerAdapter;
-use Tests\Support\Adapter\BasicSubscriptionEndpoint;
+use Support\Tests\Adapter\BasicBrokerAdapter;
+use Support\Tests\Adapter\BasicSubscriptionEndpoint;
+use Support\Tests\Config\Fixtures\ConfiguredChannelAuthorizer;
 
 /**
  * @internal

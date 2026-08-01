@@ -16,8 +16,8 @@ use Maniaba\CodeIgniterSse\Event\EventFactory;
 use Maniaba\CodeIgniterSse\Event\JsonEventSerializer;
 use Maniaba\CodeIgniterSse\Factory\BrokerBuildContext;
 use PHPUnit\Framework\TestCase;
-use Tests\Support\Adapter\BasicSubscriptionEndpoint;
-use Tests\Support\RecordingPublisher;
+use Support\Tests\Adapter\BasicSubscriptionEndpoint;
+use Support\Tests\RecordingPublisher;
 
 /**
  * @internal

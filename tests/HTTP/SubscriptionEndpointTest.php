@@ -18,8 +18,8 @@ use Maniaba\CodeIgniterSse\HTTP\LegacySseResponse;
 use Maniaba\CodeIgniterSse\Stream\SseConnectionManager;
 use Maniaba\CodeIgniterSse\Support\ChannelNameValidator;
 use PHPUnit\Framework\Attributes\DataProvider;
-use Tests\Support\FixedEventIdGenerator;
-use Tests\Support\RecordingSubscriber;
+use Support\Tests\FixedEventIdGenerator;
+use Support\Tests\RecordingSubscriber;
 
 /**
  * @internal

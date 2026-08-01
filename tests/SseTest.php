@@ -11,8 +11,8 @@ use Maniaba\CodeIgniterSse\Event\SseEvent;
 use Maniaba\CodeIgniterSse\Sse;
 use Maniaba\CodeIgniterSse\Support\Channel;
 use PHPUnit\Framework\TestCase;
-use Tests\Support\FixedEventIdGenerator;
-use Tests\Support\RecordingPublisher;
+use Support\Tests\FixedEventIdGenerator;
+use Support\Tests\RecordingPublisher;
 
 /**
  * @internal

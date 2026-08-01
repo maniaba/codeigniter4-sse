@@ -9,7 +9,7 @@ use Maniaba\CodeIgniterSse\Debug\Toolbar\SseEventHistory;
 use Maniaba\CodeIgniterSse\Debug\Toolbar\TraceablePublisher;
 use Maniaba\CodeIgniterSse\Event\SseEvent;
 use PHPUnit\Framework\TestCase;
-use Tests\Support\RecordingPublisher;
+use Support\Tests\RecordingPublisher;
 
 /**
  * @internal

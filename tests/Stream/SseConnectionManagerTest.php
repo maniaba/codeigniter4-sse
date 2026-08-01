@@ -13,9 +13,9 @@ use Maniaba\CodeIgniterSse\Event\SseEvent;
 use Maniaba\CodeIgniterSse\Stream\SseConnectionManager;
 use Maniaba\CodeIgniterSse\Stream\SseConnectionOptions;
 use PHPUnit\Framework\TestCase;
-use Tests\Support\FixedEventIdGenerator;
-use Tests\Support\RecordingSseOutput;
-use Tests\Support\RecordingSubscriber;
+use Support\Tests\FixedEventIdGenerator;
+use Support\Tests\RecordingSseOutput;
+use Support\Tests\RecordingSubscriber;
 
 /**
  * @internal
