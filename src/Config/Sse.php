@@ -141,13 +141,14 @@ class Sse extends BaseConfig
         ],
     ];
 
-    public string $channelPrefix         = 'app:sse:';
-    public int $retryMilliseconds        = 3000;
-    public int $heartbeatInterval        = 15;
-    public int $maxConnectionSeconds     = 300;
-    public int $maxChannelsPerConnection = 20;
-    public bool $emitConnectedEvent      = true;
-    public bool $requireAcceptHeader     = true;
+    public string $channelPrefix          = 'app:sse:';
+    public int $retryMilliseconds         = 3000;
+    public int $heartbeatInterval         = 15;
+    public int $maxConnectionSeconds      = 300;
+    public int $maxChannelsPerConnection  = 20;
+    public bool $emitConnectedEvent       = true;
+    public bool $requireAcceptHeader      = true;
+    public bool $rejectCrossSiteBootstrap = true;
 
     /**
      * CodeIgniter Debug Toolbar publisher tracing.

@@ -14,6 +14,11 @@ use PHPUnit\Framework\TestCase;
  */
 final class SseConfigTest extends TestCase
 {
+    public function testRejectsCrossSiteBootstrapByDefault(): void
+    {
+        $this->assertTrue((new Sse())->rejectCrossSiteBootstrap);
+    }
+
     /**
      * @param callable(Sse):void $configure
      */

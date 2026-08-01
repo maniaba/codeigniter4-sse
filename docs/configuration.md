@@ -501,6 +501,7 @@ Both classes must implement their package contracts. See
 |---|---:|---|
 | `allowedOrigins` | `[]` | Exact cross-origin frontend origins. |
 | `withCredentials` | `true` | Allow credentialed CORS responses. |
+| `rejectCrossSiteBootstrap` | `true` | Reject Mercure authorization bootstrap requests with `Sec-Fetch-Site: cross-site`. |
 
 Same-origin requests do not require an allowlist entry because browsers omit
 the cross-origin `Origin` case this policy is intended to control.
@@ -518,3 +519,9 @@ public bool $withCredentials = true;
 When credentials are enabled, `*` is not a valid allowed origin. Cookie domain,
 `Secure`, and `SameSite` settings must also permit the browser to send the
 session cookie.
+
+`rejectCrossSiteBootstrap` adds a Fetch Metadata check for browsers that send
+`Sec-Fetch-Site`. It is an extra defense for the Mercure authorization request
+that sets the HttpOnly subscriber cookie; it does not replace CORS, session
+authentication, or channel authorization. Disable it only for trusted legacy or
+non-browser clients that cannot send Fetch Metadata headers.

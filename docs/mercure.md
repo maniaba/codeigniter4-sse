@@ -275,6 +275,11 @@ For a cross-origin Hub:
 - serve both endpoints over HTTPS;
 - allow the Hub origin in Content Security Policy `connect-src`.
 
+The CodeIgniter authorization route also rejects
+`Sec-Fetch-Site: cross-site` bootstrap requests by default before issuing the
+subscriber cookie. Set `rejectCrossSiteBootstrap = false` only for trusted
+legacy or non-browser clients that cannot send Fetch Metadata headers.
+
 An application on `app.example.com` can set `domain = '.example.com'` for a
 Hub on `hub.example.com`. An application cannot set a cookie for an unrelated
 site. Use a same-origin reverse proxy in that case.

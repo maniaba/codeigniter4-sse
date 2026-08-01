@@ -59,10 +59,16 @@ final class SseController extends Controller
             );
         }
 
-        return $cors->apply(
-            $endpoint->respond($this->request, $this->response, $channels),
-            $origin,
-        );
+        try {
+            $response = $endpoint->respond($this->request, $this->response, $channels);
+        } catch (InvalidOriginException $exception) {
+            return $cors->apply(
+                $this->error(403, 'origin_forbidden', $exception->getMessage()),
+                $origin,
+            );
+        }
+
+        return $cors->apply($response, $origin);
     }
 
     /**
