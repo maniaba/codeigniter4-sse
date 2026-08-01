@@ -2,10 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Maniaba\CodeIgniterSse\Collectors;
+namespace Maniaba\CodeIgniterSse\Debug\Toolbar;
 
 use CodeIgniter\Debug\Toolbar\Collectors\BaseCollector;
-use Maniaba\CodeIgniterSse\Debug\Toolbar\SseEventHistory;
 
 final class SseEvents extends BaseCollector
 {

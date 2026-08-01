@@ -4,39 +4,28 @@ declare(strict_types=1);
 
 namespace Maniaba\CodeIgniterSse\HTTP;
 
+use CodeIgniter\API\ResponseTrait;
+use CodeIgniter\Controller;
 use CodeIgniter\HTTP\ResponseInterface;
-use CodeIgniter\RESTful\ResourceController;
-use Maniaba\CodeIgniterSse\Config\Services as SseServices;
+use LogicException;
 use Maniaba\CodeIgniterSse\Config\Sse as SseConfig;
 use Maniaba\CodeIgniterSse\Contracts\BrokerAdapterInterface;
 use Maniaba\CodeIgniterSse\Contracts\ChannelSelectorValidatorProviderInterface;
 use Maniaba\CodeIgniterSse\Contracts\PreflightSubscriptionEndpointInterface;
 use Maniaba\CodeIgniterSse\Contracts\SubscriptionEndpointInterface;
-use Maniaba\CodeIgniterSse\Endpoint\LocalSseSubscriptionEndpoint;
 use Maniaba\CodeIgniterSse\Exception\InvalidChannelException;
 use Maniaba\CodeIgniterSse\Exception\InvalidChannelRequestException;
 use Maniaba\CodeIgniterSse\Exception\InvalidOriginException;
 use Maniaba\CodeIgniterSse\Exception\UnauthorizedChannelException;
 use Maniaba\CodeIgniterSse\Factory\AuthorizationFactory;
-use Maniaba\CodeIgniterSse\Factory\BrokerFactory;
-use Maniaba\CodeIgniterSse\Factory\ConnectionManagerFactory;
-use Maniaba\CodeIgniterSse\Stream\SseConnectionManager;
 
-final class SseController extends ResourceController
+final class SseController extends Controller
 {
-    public function __construct(
-        private readonly ?SseConnectionManager $manager = null,
-        private readonly ?SseResponseFactory $responseFactory = null,
-        private readonly ?AuthorizationFactory $authorizations = null,
-        private readonly ?ConnectionManagerFactory $connectionManagers = null,
-        private readonly ?SseConfig $config = null,
-        private readonly ?BrokerFactory $brokers = null,
-    ) {
-    }
+    use ResponseTrait;
 
     public function stream(): ResponseInterface
     {
-        $config = $this->config ?? SseConfig::discover();
+        $config = SseConfig::discover();
         $origin = $this->request->getHeaderLine('Origin');
         $cors   = new CorsPolicy($config->allowedOrigins, $config->withCredentials);
 
@@ -89,7 +78,7 @@ final class SseController extends ResourceController
             $validator,
         ))->parse($this->request->getGet('channels'));
 
-        $authorizations = $this->authorizations ?? new AuthorizationFactory();
+        $authorizations = new AuthorizationFactory();
         $userResolver   = $authorizations->userResolver($config);
         $authorization  = $authorizations->channelAuthorization($config);
 
@@ -98,35 +87,13 @@ final class SseController extends ResourceController
 
     private function subscriptionEndpoint(SseConfig $config): SubscriptionEndpointInterface
     {
-        if ($this->manager !== null) {
-            return new LocalSseSubscriptionEndpoint(
-                $this->manager,
-                $config->requireAcceptHeader,
-                $this->responseFactory,
-            );
+        $adapter = service('sseBrokerAdapter', $config);
+
+        if (! $adapter instanceof BrokerAdapterInterface) {
+            throw new LogicException('The sseBrokerAdapter service must implement ' . BrokerAdapterInterface::class . '.');
         }
 
-        if ($this->connectionManagers !== null) {
-            return new LocalSseSubscriptionEndpoint(
-                $this->connectionManagers->create($config),
-                $config->requireAcceptHeader,
-                $this->responseFactory,
-            );
-        }
-
-        if ($this->config === null && $this->brokers === null) {
-            $adapter = service('sseBrokerAdapter');
-
-            if ($adapter instanceof BrokerAdapterInterface) {
-                return $adapter->subscriptionEndpoint();
-            }
-        }
-
-        if ($this->brokers !== null) {
-            return $this->brokers->subscriptionEndpoint($config);
-        }
-
-        return SseServices::sseBrokerAdapter($config, false)->subscriptionEndpoint();
+        return $adapter->subscriptionEndpoint();
     }
 
     private function error(int $status, string $code, string $message): ResponseInterface

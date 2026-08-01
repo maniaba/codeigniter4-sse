@@ -9,13 +9,18 @@ use CodeIgniter\HTTP\RequestInterface;
 use CodeIgniter\HTTP\ResponseInterface;
 use CodeIgniter\Superglobals;
 use CodeIgniter\Test\CIUnitTestCase;
+use Config\Services as FrameworkServices;
+use Maniaba\CodeIgniterSse\Broker\Mercure\MercureSubscriptionEndpoint;
 use Maniaba\CodeIgniterSse\Config\Sse;
+use Maniaba\CodeIgniterSse\Contracts\BrokerAdapterInterface;
+use Maniaba\CodeIgniterSse\Endpoint\LocalSseSubscriptionEndpoint;
 use Maniaba\CodeIgniterSse\Event\EventFactory;
 use Maniaba\CodeIgniterSse\Event\JsonEventSerializer;
 use Maniaba\CodeIgniterSse\HTTP\SseController;
 use Maniaba\CodeIgniterSse\HTTP\SseResponseFactory;
 use Maniaba\CodeIgniterSse\Stream\SseConnectionManager;
 use Psr\Log\LoggerInterface;
+use Support\Tests\Adapter\BasicBrokerAdapter;
 use Support\Tests\FixedEventIdGenerator;
 use Support\Tests\RecordingSubscriber;
 
@@ -63,8 +68,12 @@ final class SseControllerTest extends CIUnitTestCase
             $result = $this->controllerResponse(
                 null,
                 'text/event-stream',
-                $manager,
-                new SseResponseFactory($factoryResponse),
+                new BasicBrokerAdapter(
+                    endpoint: new LocalSseSubscriptionEndpoint(
+                        $manager,
+                        responseFactory: new SseResponseFactory($factoryResponse),
+                    ),
+                ),
             );
 
             ob_start();
@@ -119,7 +128,12 @@ final class SseControllerTest extends CIUnitTestCase
         $request->removeHeader('Accept');
 
         try {
-            $controller = new SseController(config: $config);
+            FrameworkServices::injectMock(
+                'sseBrokerAdapter',
+                new BasicBrokerAdapter(endpoint: new MercureSubscriptionEndpoint($config)),
+            );
+
+            $controller = new SseController();
             $controller->initController($request, $response, $logger);
             $result = $controller->stream();
             $body   = $result->getBody();
@@ -148,14 +162,14 @@ final class SseControllerTest extends CIUnitTestCase
             $this->assertSame('Lax', $cookie->getSameSite());
         } finally {
             $superglobals->setGetArray($previousGet);
+            FrameworkServices::resetSingle('sseBrokerAdapter');
         }
     }
 
     private function controllerResponse(
         ?string $origin,
         ?string $accept,
-        ?SseConnectionManager $manager = null,
-        ?SseResponseFactory $responseFactory = null,
+        ?BrokerAdapterInterface $adapter = null,
     ): ResponseInterface {
         $request  = single_service('request');
         $response = single_service('response');
@@ -176,9 +190,19 @@ final class SseControllerTest extends CIUnitTestCase
             $request->setHeader('Accept', $accept);
         }
 
-        $controller = new SseController($manager, $responseFactory);
-        $controller->initController($request, $response, $logger);
+        if ($adapter !== null) {
+            FrameworkServices::injectMock('sseBrokerAdapter', $adapter);
+        }
 
-        return $controller->stream();
+        try {
+            $controller = new SseController();
+            $controller->initController($request, $response, $logger);
+
+            return $controller->stream();
+        } finally {
+            if ($adapter !== null) {
+                FrameworkServices::resetSingle('sseBrokerAdapter');
+            }
+        }
     }
 }
