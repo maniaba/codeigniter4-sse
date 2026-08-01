@@ -20,8 +20,8 @@ final class MercureSubscriptionFactoryTest extends TestCase
         $config->mercure = [
             'publicHubUrl'       => 'https://example.test/.well-known/mercure',
             'topicPrefix'        => 'urn:example:sse:',
-            'publisherKey'       => 'publisher-test-secret',
-            'subscriberKey'      => 'subscriber-test-secret',
+            'publisherKey'       => 'publisher-test-secret-at-least-32-bytes',
+            'subscriberKey'      => 'subscriber-test-secret-at-least-32-bytes',
             'subscriberTokenTtl' => 600,
         ];
 

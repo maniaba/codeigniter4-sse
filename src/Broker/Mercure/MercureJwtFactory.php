@@ -9,7 +9,8 @@ use Maniaba\CodeIgniterSse\Broker\Mercure\Exception\MercureConfigurationExceptio
 
 final class MercureJwtFactory
 {
-    private const HASH_ALGORITHMS = [
+    private const MINIMUM_KEY_BYTES = 32;
+    private const HASH_ALGORITHMS   = [
         'HS256' => 'sha256',
         'HS384' => 'sha384',
         'HS512' => 'sha512',
@@ -25,8 +26,10 @@ final class MercureJwtFactory
         int $ttl = 300,
         ?int $issuedAt = null,
     ): string {
-        if ($key === '') {
-            throw new MercureConfigurationException('The Mercure JWT signing key must not be empty.');
+        if (strlen($key) < self::MINIMUM_KEY_BYTES) {
+            throw new MercureConfigurationException(
+                sprintf('The Mercure JWT signing key must be at least %d bytes.', self::MINIMUM_KEY_BYTES),
+            );
         }
 
         $hash = self::HASH_ALGORITHMS[$algorithm] ?? null;

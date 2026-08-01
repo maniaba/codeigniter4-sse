@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Broker\Mercure;
 
+use Maniaba\CodeIgniterSse\Broker\Mercure\Exception\MercureConfigurationException;
 use Maniaba\CodeIgniterSse\Broker\Mercure\MercureJwtFactory;
 use PHPUnit\Framework\TestCase;
 
@@ -12,11 +13,13 @@ use PHPUnit\Framework\TestCase;
  */
 final class MercureJwtFactoryTest extends TestCase
 {
+    private const SIGNING_KEY = 'test-secret-that-is-long-enough!';
+
     public function testCreatesSignedMercureClaimsWithExpiration(): void
     {
         $token = (new MercureJwtFactory())->create(
             ['subscribe' => ['urn:sse:users.42']],
-            'test-secret-that-is-long-enough',
+            self::SIGNING_KEY,
             'HS256',
             600,
             1_700_000_000,
@@ -27,7 +30,7 @@ final class MercureJwtFactoryTest extends TestCase
         $expectedSignature                                  = hash_hmac(
             'sha256',
             $encodedHeader . '.' . $encodedClaims,
-            'test-secret-that-is-long-enough',
+            self::SIGNING_KEY,
             true,
         );
 
@@ -42,6 +45,28 @@ final class MercureJwtFactoryTest extends TestCase
             rtrim(strtr(base64_encode($expectedSignature), '+/', '-_'), '='),
             $encodedSignature,
         );
+    }
+
+    public function testRejectsSigningKeysShorterThan32Bytes(): void
+    {
+        $this->expectException(MercureConfigurationException::class);
+        $this->expectExceptionMessage('The Mercure JWT signing key must be at least 32 bytes.');
+
+        (new MercureJwtFactory())->create(
+            ['subscribe' => ['urn:sse:users.42']],
+            str_repeat('a', 31),
+        );
+    }
+
+    public function testAllowsSigningKeyWith32Bytes(): void
+    {
+        $token = (new MercureJwtFactory())->create(
+            ['subscribe' => ['urn:sse:users.42']],
+            str_repeat('a', 32),
+            issuedAt: 1_700_000_000,
+        );
+
+        $this->assertCount(3, explode('.', $token));
     }
 
     /**

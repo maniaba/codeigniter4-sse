@@ -298,9 +298,10 @@ For local plain HTTP only, also set:
 sse.mercure.cookie.secure = false
 ```
 
-Keep Hub signing keys out of source control. The package validates Mercure
-configuration when the Mercure adapter factory builds the broker. The full key
-reference and deployment guidance are in [Mercure Hub](mercure.md).
+Keep Hub signing keys out of source control. HMAC JWT signing keys must be at
+least 32 bytes. The package validates Mercure configuration when the Mercure
+adapter factory builds the broker. The full key reference and deployment
+guidance are in [Mercure Hub](mercure.md).
 
 ## Redis connection
 

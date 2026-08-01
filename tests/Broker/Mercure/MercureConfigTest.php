@@ -94,7 +94,7 @@ final class MercureConfigTest extends TestCase
         yield 'missing publisher credentials' => [
             static function (Sse $config): void {
                 $config->mercure = [
-                    'subscriberKey' => 'subscriber-test-secret',
+                    'subscriberKey' => 'subscriber-test-secret-at-least-32-bytes',
                 ];
             },
         ];
@@ -102,7 +102,7 @@ final class MercureConfigTest extends TestCase
         yield 'missing subscriber key' => [
             static function (Sse $config): void {
                 $config->mercure = [
-                    'publisherKey' => 'publisher-test-secret',
+                    'publisherKey' => 'publisher-test-secret-at-least-32-bytes',
                 ];
             },
         ];
@@ -112,7 +112,7 @@ final class MercureConfigTest extends TestCase
                 $config->mercure = [
                     'private'              => true,
                     'authorizeSubscribers' => false,
-                    'publisherKey'         => 'publisher-test-secret',
+                    'publisherKey'         => 'publisher-test-secret-at-least-32-bytes',
                 ];
             },
         ];
@@ -120,8 +120,8 @@ final class MercureConfigTest extends TestCase
         yield 'publisher selectors must be a list' => [
             static function (Sse $config): void {
                 $config->mercure = [
-                    'publisherKey'            => 'publisher-test-secret',
-                    'subscriberKey'           => 'subscriber-test-secret',
+                    'publisherKey'            => 'publisher-test-secret-at-least-32-bytes',
+                    'subscriberKey'           => 'subscriber-test-secret-at-least-32-bytes',
                     'publisherTopicSelectors' => '*',
                 ];
             },
