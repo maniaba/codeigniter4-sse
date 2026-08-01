@@ -7,6 +7,58 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [v1.0.0-rc2] - 2026-08-01
+
+Second release candidate focused on Mercure hardening, JWT validation, safer
+request parsing, and test cleanup before the initial stable `1.0.0` release.
+
+### Added
+
+- Added Mercure JWT standard claims for generated publisher and subscriber
+  tokens: `iss`, `aud`, `sub`, and unique `jti`.
+- Added `MercureJwtCodec` for compact JWT splitting, base64url encoding,
+  unsigned JWT creation, and JSON header/payload decoding.
+- Added structural validation for configured `publisherJwt` values:
+  - compact JWT format with three segments;
+  - supported HMAC `alg`;
+  - required and non-expired `exp`;
+  - required `mercure.publish` rights;
+  - publish selectors constrained to `topicPrefix` unless the global selector
+    is explicitly enabled.
+- Added `allowGlobalPublisherSelector` Mercure option. The global publisher
+  selector `*` is now allowed only when explicitly opted in.
+- Added `rejectCrossSiteBootstrap` option. Mercure authorization bootstrap
+  requests with `Sec-Fetch-Site: cross-site` are rejected by default before a
+  subscriber cookie is issued.
+
+### Changed
+
+- Changed the default Mercure publisher selector from global `*` to a scoped
+  selector derived from `topicPrefix`: `topicPrefix . '{channel}'`.
+- Refactored Mercure JWT encoding/decoding into a dedicated codec used by both
+  generated JWT creation and configured publisher JWT validation.
+- Refactored Mercure route tests to remove duplicated setup and share the
+  bootstrap response helper.
+
+### Security
+
+- Enforced a minimum 32-byte Mercure JWT HMAC signing key.
+- Rejected Mercure `topicPrefix` values containing wildcard or URI-template
+  characters such as `{`, `}`, `*`, `?`, `[`, and `]`.
+- Bounded the raw `channels` query input before parsing so oversized requests
+  are rejected before channel splitting/deduplication work.
+- Kept unauthorized channel responses generic while logging server-side audit
+  metadata for denied channel authorization attempts.
+- Added Fetch Metadata protection for Mercure subscriber authorization cookie
+  bootstrap requests.
+
+### Tests
+
+- Added and updated tests for Mercure JWT key length, standard JWT claims, JWT
+  codec behavior, configured publisher JWT validation, scoped publisher
+  selectors, `topicPrefix` safety, raw `channels` limits, and cross-site
+  bootstrap rejection.
+
 ## [v1.0.0-rc] - 2026-08-01
 
 First release candidate for CodeIgniter SSE. This version establishes the
