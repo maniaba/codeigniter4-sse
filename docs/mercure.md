@@ -98,6 +98,9 @@ final class Sse extends BaseSse
 
         'publisherKey'  => null,
         'subscriberKey' => null,
+        // Defaults to topicPrefix . '{channel}'.
+        'publisherTopicSelectors' => null,
+        'allowGlobalPublisherSelector' => false,
 
         'cookie' => [
             'name'     => 'mercureAuthorization',
@@ -272,6 +275,11 @@ For a cross-origin Hub:
 - serve both endpoints over HTTPS;
 - allow the Hub origin in Content Security Policy `connect-src`.
 
+The CodeIgniter authorization route also rejects
+`Sec-Fetch-Site: cross-site` bootstrap requests by default before issuing the
+subscriber cookie. Set `rejectCrossSiteBootstrap = false` only for trusted
+legacy or non-browser clients that cannot send Fetch Metadata headers.
+
 An application on `app.example.com` can set `domain = '.example.com'` for a
 Hub on `hub.example.com`. An application cannot set a cookie for an unrelated
 site. Use a same-origin reverse proxy in that case.
@@ -306,7 +314,7 @@ pod. Do not expose the entire Caddy admin API publicly.
 |---|---|---|
 | `hubUrl` | `http://127.0.0.1:3000/.well-known/mercure` | Server-side publish URL. |
 | `publicHubUrl` | same local URL | Browser-facing subscription URL. |
-| `topicPrefix` | `urn:codeigniter4-sse:` | Absolute IRI prefix added to logical channels. |
+| `topicPrefix` | `urn:codeigniter4-sse:` | Literal absolute IRI prefix added to logical channels. Wildcard and URI-template characters are rejected. |
 | `private` | `true` | Mark published updates as private. |
 | `authorizeSubscribers` | `true` | Issue a topic-restricted subscriber JWT cookie. |
 | `publisherJwt` | `null` | Optional pre-generated publisher JWT. |
@@ -316,18 +324,25 @@ pod. Do not expose the entire Caddy admin API publicly.
 | `subscriberAlgorithm` | `HS256` | Subscriber JWT algorithm: HS256, HS384, or HS512. |
 | `publisherTokenTtl` | `300` | Generated publisher token lifetime in seconds. |
 | `subscriberTokenTtl` | `3600` | Browser token lifetime in seconds. |
-| `publisherTopicSelectors` | `['*']` | Topics the generated publisher JWT may publish. |
+| `publisherTopicSelectors` | `null` | Topics the generated publisher JWT may publish. `null` becomes `topicPrefix . '{channel}'`. |
+| `allowGlobalPublisherSelector` | `false` | Allows `publisherTopicSelectors` to contain `*`. Enable only for an intentionally global publisher. |
 | `connectTimeout` | `2.5` | Hub connection timeout in seconds. |
 | `timeout` | `5.0` | Complete publish request timeout in seconds. |
 | `verifyTls` | `true` | TLS verification flag or CA bundle path. |
 | `maxPayloadBytes` | `1048576` | Maximum serialized event size. |
 | `cookie` | secure Mercure defaults | Subscriber cookie attributes. |
 
-The built-in JWT issuer supports HMAC algorithms. `publisherJwt` can contain a
-token issued by an external system, but dynamic subscriber authorization still
-requires the configured HMAC subscriber key. Applications using an external
-OAuth/JWKS issuer should replace the authorization controller rather than
-exposing signing keys to the browser.
+The built-in JWT issuer supports HMAC algorithms and requires HMAC signing keys
+to be at least 32 bytes. Generated JWTs include `iss`, `aud`, `sub`, `jti`,
+`iat`, and `exp` claims plus the Mercure scope. `publisherJwt` can contain a
+token issued by an external system. The package does not cryptographically
+verify pre-generated publisher tokens, but it rejects malformed JWTs, unsupported
+`alg` values, missing or expired `exp` claims, missing `mercure.publish` rights,
+and publish selectors outside `topicPrefix` unless the global `*` selector was
+explicitly enabled. Dynamic subscriber authorization still requires the
+configured HMAC subscriber key. Applications using an external OAuth/JWKS issuer
+should replace the authorization controller rather than exposing signing keys to
+the browser.
 
 The adapter currently maps exact logical channels. Redis glob patterns are not
 accepted by the Mercure transport; pattern selectors remain a Redis adapter

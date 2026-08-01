@@ -32,6 +32,14 @@ final class ChannelRequestParserTest extends TestCase
         (new ChannelRequestParser(1))->parse('public.news,public.alerts');
     }
 
+    public function testOversizedRawChannelsParameterIsRejectedBeforeSplitting(): void
+    {
+        $this->expectException(InvalidChannelRequestException::class);
+        $this->expectExceptionMessage('The channels query parameter must not exceed 200 bytes.');
+
+        (new ChannelRequestParser(1))->parse(str_repeat('public.news,', 20) . 'public.news');
+    }
+
     public function testPatternsAreOptIn(): void
     {
         $this->expectException(InvalidChannelException::class);

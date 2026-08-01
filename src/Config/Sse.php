@@ -50,24 +50,25 @@ class Sse extends BaseConfig
      * @var array<string, mixed>
      */
     private const DEFAULT_MERCURE = [
-        'hubUrl'                  => 'http://127.0.0.1:3000/.well-known/mercure',
-        'publicHubUrl'            => 'http://127.0.0.1:3000/.well-known/mercure',
-        'topicPrefix'             => 'urn:codeigniter4-sse:',
-        'private'                 => true,
-        'authorizeSubscribers'    => true,
-        'publisherJwt'            => null,
-        'publisherKey'            => null,
-        'subscriberKey'           => null,
-        'publisherAlgorithm'      => 'HS256',
-        'subscriberAlgorithm'     => 'HS256',
-        'publisherTokenTtl'       => 300,
-        'subscriberTokenTtl'      => 3600,
-        'publisherTopicSelectors' => ['*'],
-        'connectTimeout'          => 2.5,
-        'timeout'                 => 5.0,
-        'verifyTls'               => true,
-        'maxPayloadBytes'         => 1_048_576,
-        'cookie'                  => [
+        'hubUrl'                       => 'http://127.0.0.1:3000/.well-known/mercure',
+        'publicHubUrl'                 => 'http://127.0.0.1:3000/.well-known/mercure',
+        'topicPrefix'                  => 'urn:codeigniter4-sse:',
+        'private'                      => true,
+        'authorizeSubscribers'         => true,
+        'publisherJwt'                 => null,
+        'publisherKey'                 => null,
+        'subscriberKey'                => null,
+        'publisherAlgorithm'           => 'HS256',
+        'subscriberAlgorithm'          => 'HS256',
+        'publisherTokenTtl'            => 300,
+        'subscriberTokenTtl'           => 3600,
+        'publisherTopicSelectors'      => null,
+        'allowGlobalPublisherSelector' => false,
+        'connectTimeout'               => 2.5,
+        'timeout'                      => 5.0,
+        'verifyTls'                    => true,
+        'maxPayloadBytes'              => 1_048_576,
+        'cookie'                       => [
             'name'     => 'mercureAuthorization',
             'domain'   => '',
             'path'     => '/.well-known/mercure',
@@ -140,13 +141,14 @@ class Sse extends BaseConfig
         ],
     ];
 
-    public string $channelPrefix         = 'app:sse:';
-    public int $retryMilliseconds        = 3000;
-    public int $heartbeatInterval        = 15;
-    public int $maxConnectionSeconds     = 300;
-    public int $maxChannelsPerConnection = 20;
-    public bool $emitConnectedEvent      = true;
-    public bool $requireAcceptHeader     = true;
+    public string $channelPrefix          = 'app:sse:';
+    public int $retryMilliseconds         = 3000;
+    public int $heartbeatInterval         = 15;
+    public int $maxConnectionSeconds      = 300;
+    public int $maxChannelsPerConnection  = 20;
+    public bool $emitConnectedEvent       = true;
+    public bool $requireAcceptHeader      = true;
+    public bool $rejectCrossSiteBootstrap = true;
 
     /**
      * CodeIgniter Debug Toolbar publisher tracing.

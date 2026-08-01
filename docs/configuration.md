@@ -95,7 +95,7 @@ then connects directly to the authorized Hub URL.
 | `retryMilliseconds` | `3000` | SSE reconnect delay hint sent to the browser. |
 | `heartbeatInterval` | `15` | Seconds between heartbeat comments while idle. |
 | `maxConnectionSeconds` | `300` | Finite lifetime of one HTTP stream. |
-| `maxChannelsPerConnection` | `20` | Maximum unique requested logical channels. |
+| `maxChannelsPerConnection` | `20` | Maximum unique requested logical channels. The raw `channels` query input is also bounded from this value before splitting. |
 | `emitConnectedEvent` | `true` | Send `sse.connected` after opening the stream. |
 
 The browser automatically opens a new stream after the server reaches
@@ -273,6 +273,9 @@ public array $mercure = [
 
     'publisherKey'  => null,
     'subscriberKey' => null,
+    // Defaults to topicPrefix . '{channel}'.
+    'publisherTopicSelectors' => null,
+    'allowGlobalPublisherSelector' => false,
 
     'cookie' => [
         'name'     => 'mercureAuthorization',
@@ -284,6 +287,11 @@ public array $mercure = [
     ],
 ];
 ```
+
+Use a literal absolute IRI prefix such as `urn:herceg:sse:`. Prefixes
+containing wildcard or URI-template characters, such as
+`https://example.com/{topic}`, are rejected because they can broaden Mercure
+topic selectors.
 
 Nested `.env` overrides are supported:
 
@@ -298,9 +306,10 @@ For local plain HTTP only, also set:
 sse.mercure.cookie.secure = false
 ```
 
-Keep Hub signing keys out of source control. The package validates Mercure
-configuration when the Mercure adapter factory builds the broker. The full key
-reference and deployment guidance are in [Mercure Hub](mercure.md).
+Keep Hub signing keys out of source control. HMAC JWT signing keys must be at
+least 32 bytes. The package validates Mercure configuration when the Mercure
+adapter factory builds the broker. The full key reference and deployment
+guidance are in [Mercure Hub](mercure.md).
 
 ## Redis connection
 
@@ -492,6 +501,7 @@ Both classes must implement their package contracts. See
 |---|---:|---|
 | `allowedOrigins` | `[]` | Exact cross-origin frontend origins. |
 | `withCredentials` | `true` | Allow credentialed CORS responses. |
+| `rejectCrossSiteBootstrap` | `true` | Reject Mercure authorization bootstrap requests with `Sec-Fetch-Site: cross-site`. |
 
 Same-origin requests do not require an allowlist entry because browsers omit
 the cross-origin `Origin` case this policy is intended to control.
@@ -509,3 +519,9 @@ public bool $withCredentials = true;
 When credentials are enabled, `*` is not a valid allowed origin. Cookie domain,
 `Secure`, and `SameSite` settings must also permit the browser to send the
 session cookie.
+
+`rejectCrossSiteBootstrap` adds a Fetch Metadata check for browsers that send
+`Sec-Fetch-Site`. It is an extra defense for the Mercure authorization request
+that sets the HttpOnly subscriber cookie; it does not replace CORS, session
+authentication, or channel authorization. Disable it only for trusted legacy or
+non-browser clients that cannot send Fetch Metadata headers.

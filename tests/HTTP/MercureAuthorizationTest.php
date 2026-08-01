@@ -298,6 +298,10 @@ final class MercureAuthorizationTest extends CIUnitTestCase
         $this->assertCount(3, $tokenParts);
         $claims = $this->decodeJwtPayload($tokenParts[1]);
 
+        $this->assertSame('maniaba/codeigniter4-sse', $claims['iss']);
+        $this->assertSame('mercure', $claims['aud']);
+        $this->assertSame('mercure-subscriber', $claims['sub']);
+        $this->assertMatchesRegularExpression('/\A[0-9a-f]{32}\z/', $claims['jti']);
         $this->assertSame(
             ['subscribe' => $topics],
             $claims['mercure'],
@@ -361,8 +365,8 @@ final class MercureAuthorizationTest extends CIUnitTestCase
             'hubUrl'        => 'http://mercure/.well-known/mercure',
             'publicHubUrl'  => 'https://example.test/.well-known/mercure',
             'topicPrefix'   => 'urn:example:sse:',
-            'publisherKey'  => 'publisher-test-secret',
-            'subscriberKey' => 'subscriber-test-secret',
+            'publisherKey'  => 'publisher-test-secret-at-least-32-bytes',
+            'subscriberKey' => 'subscriber-test-secret-at-least-32-bytes',
             'cookie'        => [
                 'name'     => 'mercureAuthorization',
                 'secure'   => true,
