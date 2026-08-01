@@ -521,6 +521,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#choosing-redis-or-mercure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Choosing Redis or Mercure
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#mercure" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1172,6 +1183,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#choosing-redis-or-mercure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Choosing Redis or Mercure
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#mercure" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1506,6 +1528,46 @@ other sensitive fields.</p>
 </tr>
 </tbody>
 </table>
+<h2 id="choosing-redis-or-mercure">Choosing Redis or Mercure</h2>
+<p>Use Redis when the deployment has a controlled number of simultaneous users
+and PHP-FPM capacity is sized for one open SSE response per connected browser.
+This is the simplest topology: CodeIgniter subscribes to Redis Pub/Sub and
+streams events directly from the <code>/sse</code> route.</p>
+<p>Use Mercure when the application expects larger concurrency, more active
+users, or frequent reconnect bursts. With Mercure, PHP only authorizes the
+requested channels and publishes events to the Hub. The browser's long-lived
+EventSource connection is held by Mercure, not by a PHP worker. This keeps
+normal page and API requests from competing with idle SSE streams for the
+same PHP-FPM pool.</p>
+<p>Recommended rule of thumb:</p>
+<table>
+<thead>
+<tr>
+<th>Deployment shape</th>
+<th>Recommended broker</th>
+<th>Reason</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Local development, small internal tools, bounded traffic</td>
+<td><code>redis</code></td>
+<td>Fewer moving parts and easy debugging.</td>
+</tr>
+<tr>
+<td>Multi-instance PHP application with moderate SSE usage</td>
+<td><code>redis</code> or <code>mercure</code></td>
+<td>Redis works if PHP worker capacity is planned; Mercure reduces worker pressure.</td>
+</tr>
+<tr>
+<td>Public application, many concurrent users, multi-tenant dashboards, high reconnect churn</td>
+<td><code>mercure</code></td>
+<td>The Hub is built to own long-lived SSE connections and lets PHP handle short requests.</td>
+</tr>
+</tbody>
+</table>
+<p>Publishing code does not change when switching between Redis and Mercure. The
+server-side <code>broker</code> and the browser adapter must match.</p>
 <p><code>memory</code> is useful for isolated tests in one PHP process. It cannot carry a
 message between separate HTTP requests or workers. <code>null</code> is a message sink:
 it discards published events but an enabled SSE route still keeps each stream
@@ -1563,7 +1625,15 @@ final class Sse extends BaseSse
     ];
 }</code></pre>
 <h2 id="mercure">Mercure</h2>
-<p>Mercure options live in one array, parallel to Redis:</p>
+<p>Mercure options live in one array, parallel to Redis. A complete Mercure setup
+has four parts:</p>
+<ol>
+<li>run a Mercure Hub with publisher and subscriber JWT keys;</li>
+<li>select <code>public string $broker = 'mercure';</code>;</li>
+<li>configure <code>hubUrl</code>, <code>publicHubUrl</code>, keys, topic prefix, and cookie options;</li>
+<li>use <code>MercureSseAdapter</code> in the browser client.</li>
+</ol>
+<p>Example application config:</p>
 <pre class="highlight"><code class="language-php">public string $broker = 'mercure';
 
 public array $mercure = [
@@ -1587,10 +1657,52 @@ public array $mercure = [
 <p>Nested <code>.env</code> overrides are supported:</p>
 <pre class="highlight"><code class="language-dotenv">sse.mercure.publisherKey = replace-with-the-hub-publisher-key
 sse.mercure.subscriberKey = replace-with-the-hub-subscriber-key</code></pre>
+<p>For local plain HTTP only, also set:</p>
+<pre class="highlight"><code class="language-dotenv">sse.mercure.cookie.secure = false</code></pre>
 <p>Keep Hub signing keys out of source control. The package validates Mercure
 configuration when the Mercure adapter factory builds the broker. The full key
 reference and deployment guidance are in <a href="../mercure/">Mercure Hub</a>.</p>
 <h2 id="redis-connection">Redis connection</h2>
+<p>Redis setup has five parts:</p>
+<ol>
+<li>run Redis and make it reachable from PHP;</li>
+<li>keep <code>public string $broker = 'redis';</code>;</li>
+<li>set an application-specific <code>channelPrefix</code>;</li>
+<li>configure the <code>redis</code> connection array or <code>.env</code> overrides;</li>
+<li>use <code>RedisSseAdapter</code> in the browser client.</li>
+</ol>
+<p>Minimal local configuration:</p>
+<pre class="highlight"><code class="language-php">public string $broker = 'redis';
+public string $channelPrefix = 'myapp:sse:';
+
+public array $redis = [
+    'host'     =&gt; '127.0.0.1',
+    'port'     =&gt; 6379,
+    'database' =&gt; 0,
+];</code></pre>
+<p>Equivalent <code>.env</code> overrides:</p>
+<pre class="highlight"><code class="language-dotenv">sse.broker = redis
+sse.channelPrefix = myapp:sse:
+sse.redis.host = 127.0.0.1
+sse.redis.port = 6379
+sse.redis.database = 0</code></pre>
+<p>Then verify the connection:</p>
+<pre class="highlight"><code class="language-bash">redis-cli ping
+php spark sse:health-check</code></pre>
+<p>For the browser client, use the Redis adapter:</p>
+<pre class="highlight"><code class="language-javascript">import {
+    RedisSseAdapter,
+    SseClient,
+} from '/vendor/codeigniter4-sse/sse-client.js';
+
+const live = new SseClient({
+    endpoint: '/sse',
+    adapter: new RedisSseAdapter(),
+    channels: ['public.news'],
+});</code></pre>
+<p>When Redis is selected, <code>/sse</code> is the long-lived SSE response. Configure the
+web server and PHP-FPM as described in
+<a href="../deployment/">Streaming and deployment</a>.</p>
 <p>All Redis options live under one config property:</p>
 <pre class="highlight"><code class="language-php">public array $redis = [
     'scheme'                     =&gt; 'tcp',

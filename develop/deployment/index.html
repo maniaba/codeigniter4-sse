@@ -1387,9 +1387,11 @@ with two parallel requests in the deployed environment.</p>
 application instance. Authentication/session storage may impose separate
 requirements.</p>
 <h2 id="larger-deployments">Larger deployments</h2>
-<p>PHP-FPM is suitable for a bounded number of live users. At larger concurrency,
-keep the publisher API in CI4 and move long-lived connections to a dedicated
-gateway:</p>
+<p>PHP-FPM is suitable for a bounded number of live users when capacity is planned
+around one open worker per direct Redis stream. At larger concurrency, keep
+the publisher API in CI4 and move long-lived connections to a dedicated
+gateway. This is the recommended direction for applications with many active
+users, dashboards opened all day, or reconnect bursts during deploys.</p>
 <pre class="highlight"><code class="language-text">CI4 application
     ↓ Redis publish
 Redis
@@ -1403,7 +1405,8 @@ code when this topology is introduced.</p>
 <pre class="highlight"><code class="language-text">CI4 application ── publish ──► Mercure Hub
 Browser EventSource ─────────► Mercure Hub</code></pre>
 <p>It removes long-lived browser streams from PHP without changing
-<code>sse()-&gt;publish(...)</code>.</p>
+<code>sse()-&gt;publish(...)</code>. Prefer Mercure for larger environments unless there is
+a specific operational reason to run a custom gateway.</p>
 <h2 id="verification">Verification</h2>
 <p>Use unbuffered curl:</p>
 <pre class="highlight"><code class="language-bash">curl -N -v \

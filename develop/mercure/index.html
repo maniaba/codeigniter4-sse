@@ -1247,6 +1247,11 @@ Browser
 <p>The <code>/sse</code> CodeIgniter route is a short authorization request in this mode. It
 does not emit an event stream and does not reserve a PHP worker.
 The Hub owns heartbeats, reconnects, history, and the live SSE response.</p>
+<p>Mercure is the recommended built-in broker for larger environments and
+applications with many concurrent users. Redis is simpler and works well when
+PHP worker capacity is intentionally sized for live streams. Mercure is a
+better fit when the number of open browser connections can grow beyond that
+comfort zone, because idle SSE connections no longer consume PHP-FPM workers.</p>
 <p>The adapter targets the stable Mercure 0.x protocol used by Mercure 0.24.2:
 <code>topic</code> subscription parameters, <code>mercure.publish</code> and <code>mercure.subscribe</code> JWT
 claims, and the <code>mercureAuthorization</code> cookie.</p>
@@ -1323,7 +1328,8 @@ final class Sse extends BaseSse
     ];
 }</code></pre>
 <p>Supply secrets through <code>.env</code>:</p>
-<pre class="highlight"><code class="language-dotenv">sse.mercure.publisherKey = replace-with-the-hub-publisher-key
+<pre class="highlight"><code class="language-dotenv">sse.broker = mercure
+sse.mercure.publisherKey = replace-with-the-hub-publisher-key
 sse.mercure.subscriberKey = replace-with-the-hub-subscriber-key</code></pre>
 <p>For a PHP process running outside Docker, <code>hubUrl</code> can be
 <code>http://127.0.0.1:3000/.well-known/mercure</code>. For local plain HTTP, set
@@ -1332,6 +1338,17 @@ sse.mercure.subscriberKey = replace-with-the-hub-subscriber-key</code></pre>
 application. A same-origin reverse proxy avoids most CORS and cookie-domain
 problems:</p>
 <pre class="highlight"><code class="language-text">https://app.example.com/.well-known/mercure → http://mercure/.well-known/mercure</code></pre>
+<p>At minimum, production Mercure configuration should cover:</p>
+<ul>
+<li>a Hub instance reachable from PHP through <code>hubUrl</code>;</li>
+<li>a browser-facing Hub URL in <code>publicHubUrl</code>;</li>
+<li>separate long random publisher and subscriber keys;</li>
+<li>matching keys in the Hub environment and CodeIgniter <code>.env</code>;</li>
+<li><code>private = true</code> and <code>authorizeSubscribers = true</code> for user or tenant data;</li>
+<li>HTTPS and secure cookies outside local development;</li>
+<li>exact CORS origins when the frontend and Hub are cross-origin;</li>
+<li>a reverse proxy or load balancer that supports long-lived Hub responses.</li>
+</ul>
 <h2 id="publish">Publish</h2>
 <p>No application publishing code changes:</p>
 <pre class="highlight"><code class="language-php">sse()-&gt;publish(
