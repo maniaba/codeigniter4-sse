@@ -42,6 +42,10 @@ final class MercureSubscriptionFactoryTest extends TestCase
         $this->assertCount(3, $parts);
         $claims = $this->decode($parts[1]);
 
+        $this->assertSame('maniaba/codeigniter4-sse', $claims['iss']);
+        $this->assertSame('mercure', $claims['aud']);
+        $this->assertSame('mercure-subscriber', $claims['sub']);
+        $this->assertMatchesRegularExpression('/\A[0-9a-f]{32}\z/', $claims['jti']);
         $this->assertSame(
             ['subscribe' => $subscription->topics],
             $claims['mercure'],

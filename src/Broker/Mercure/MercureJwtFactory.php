@@ -6,6 +6,7 @@ namespace Maniaba\CodeIgniterSse\Broker\Mercure;
 
 use JsonException;
 use Maniaba\CodeIgniterSse\Broker\Mercure\Exception\MercureConfigurationException;
+use Random\RandomException;
 
 final class MercureJwtFactory
 {
@@ -15,6 +16,10 @@ final class MercureJwtFactory
         'HS384' => 'sha384',
         'HS512' => 'sha512',
     ];
+    private const ISSUER             = 'maniaba/codeigniter4-sse';
+    private const AUDIENCE           = 'mercure';
+    private const PUBLISHER_SUBJECT  = 'mercure-publisher';
+    private const SUBSCRIBER_SUBJECT = 'mercure-subscriber';
 
     /**
      * @param array{publish?: list<string>, subscribe?: list<string>} $mercure
@@ -47,6 +52,10 @@ final class MercureJwtFactory
         $issuedAt ??= time();
         $header = $this->encode(['alg' => $algorithm, 'typ' => 'JWT']);
         $claims = $this->encode([
+            'iss'     => self::ISSUER,
+            'aud'     => self::AUDIENCE,
+            'sub'     => self::subject($mercure),
+            'jti'     => self::jwtId(),
             'iat'     => $issuedAt,
             'exp'     => $issuedAt + $ttl,
             'mercure' => $mercure,
@@ -69,6 +78,35 @@ final class MercureJwtFactory
         } catch (JsonException $exception) {
             throw new MercureConfigurationException(
                 'The Mercure JWT claims could not be encoded.',
+                0,
+                $exception,
+            );
+        }
+    }
+
+    /**
+     * @param array{publish?: list<string>, subscribe?: list<string>} $mercure
+     */
+    private static function subject(array $mercure): string
+    {
+        if (isset($mercure['publish']) && ! isset($mercure['subscribe'])) {
+            return self::PUBLISHER_SUBJECT;
+        }
+
+        if (isset($mercure['subscribe']) && ! isset($mercure['publish'])) {
+            return self::SUBSCRIBER_SUBJECT;
+        }
+
+        return 'mercure-token';
+    }
+
+    private static function jwtId(): string
+    {
+        try {
+            return bin2hex(random_bytes(16));
+        } catch (RandomException $exception) {
+            throw new MercureConfigurationException(
+                'The Mercure JWT ID could not be generated.',
                 0,
                 $exception,
             );

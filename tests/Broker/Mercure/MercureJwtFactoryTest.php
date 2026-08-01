@@ -35,6 +35,10 @@ final class MercureJwtFactoryTest extends TestCase
         );
 
         $this->assertSame(['alg' => 'HS256', 'typ' => 'JWT'], $header);
+        $this->assertSame('maniaba/codeigniter4-sse', $claims['iss']);
+        $this->assertSame('mercure', $claims['aud']);
+        $this->assertSame('mercure-subscriber', $claims['sub']);
+        $this->assertMatchesRegularExpression('/\A[0-9a-f]{32}\z/', $claims['jti']);
         $this->assertSame(1_700_000_000, $claims['iat']);
         $this->assertSame(1_700_000_600, $claims['exp']);
         $this->assertSame(
@@ -44,6 +48,42 @@ final class MercureJwtFactoryTest extends TestCase
         $this->assertSame(
             rtrim(strtr(base64_encode($expectedSignature), '+/', '-_'), '='),
             $encodedSignature,
+        );
+    }
+
+    public function testCreatesPublisherSubjectForPublisherTokens(): void
+    {
+        $token = (new MercureJwtFactory())->create(
+            ['publish' => ['*']],
+            self::SIGNING_KEY,
+            issuedAt: 1_700_000_000,
+        );
+        [, $encodedClaims] = explode('.', $token);
+        $claims            = $this->decode($encodedClaims);
+
+        $this->assertSame('mercure-publisher', $claims['sub']);
+    }
+
+    public function testCreatesUniqueJwtIds(): void
+    {
+        $factory = new MercureJwtFactory();
+        $first   = $factory->create(
+            ['subscribe' => ['urn:sse:users.42']],
+            self::SIGNING_KEY,
+            issuedAt: 1_700_000_000,
+        );
+        $second = $factory->create(
+            ['subscribe' => ['urn:sse:users.42']],
+            self::SIGNING_KEY,
+            issuedAt: 1_700_000_000,
+        );
+
+        [, $firstClaims]  = explode('.', $first);
+        [, $secondClaims] = explode('.', $second);
+
+        $this->assertNotSame(
+            $this->decode($firstClaims)['jti'],
+            $this->decode($secondClaims)['jti'],
         );
     }
 

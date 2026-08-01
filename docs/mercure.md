@@ -324,11 +324,12 @@ pod. Do not expose the entire Caddy admin API publicly.
 | `cookie` | secure Mercure defaults | Subscriber cookie attributes. |
 
 The built-in JWT issuer supports HMAC algorithms and requires HMAC signing keys
-to be at least 32 bytes. `publisherJwt` can contain a token issued by an
-external system, but dynamic subscriber authorization still requires the
-configured HMAC subscriber key. Applications using an external OAuth/JWKS issuer
-should replace the authorization controller rather than exposing signing keys to
-the browser.
+to be at least 32 bytes. Generated JWTs include `iss`, `aud`, `sub`, `jti`,
+`iat`, and `exp` claims plus the Mercure scope. `publisherJwt` can contain a
+token issued by an external system, but dynamic subscriber authorization still
+requires the configured HMAC subscriber key. Applications using an external
+OAuth/JWKS issuer should replace the authorization controller rather than
+exposing signing keys to the browser.
 
 The adapter currently maps exact logical channels. Redis glob patterns are not
 accepted by the Mercure transport; pattern selectors remain a Redis adapter
