@@ -70,10 +70,9 @@ jobs:
 
       - if: matrix.php-version == '8.3'
         name: Run Coveralls
-        continue-on-error: true
-        run: |
-          composer global require php-coveralls/php-coveralls
-          ~/.composer/vendor/bin/php-coveralls --verbose --coverage_clover=build/phpunit/clover.xml --json_path build/phpunit/coveralls-upload.json
-        env:
-          COVERALLS_REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          COVERALLS_FLAG_NAME: PHP ${{ matrix.php-version }}
+        uses: coverallsapp/github-action@v2.3.8
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          file: build/phpunit/clover.xml
+          format: clover
+          flag-name: PHP ${{ matrix.php-version }}
