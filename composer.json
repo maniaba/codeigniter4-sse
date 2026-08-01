@@ -77,7 +77,7 @@
         "rector": "rector process --dry-run",
         "rector-fix": "rector process",
         "style": "@cs-fix",
-        "test": "phpunit --configuration=phpunit.xml.dist",
+        "test": "phpunit --configuration=phpunit.xml.dist --no-coverage",
         "test-browser": "node --test tests/Browser/*.test.mjs"
     },
     "config": {
