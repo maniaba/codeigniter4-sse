@@ -5,9 +5,9 @@ applications without coupling application code to broker sockets, Hub HTTP
 requests, or streaming details.
 
 ```text
-                         ┌─ Redis Pub/Sub ── PHP SSE response ─┐
-Application publisher ──┤                                    ├─ EventSource
-                         └─ Mercure Hub ──────────────────────┘
+                        ┌─ Redis Pub/Sub ── PHP SSE response ─┐
+Application publisher ──┤                                     ├─ EventSource
+                        └─ Mercure Hub ───────────────────────┘
 ```
 
 ## What it provides
