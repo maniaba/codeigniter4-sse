@@ -41,7 +41,7 @@ jobs:
           php-version: ${{ matrix.php-version }}
           tools: composer
           extensions: json, mbstring, xml
-          coverage: none
+          coverage: xdebug
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -64,6 +64,29 @@ jobs:
           fi
 
       - name: Test with PHPUnit
-        run: composer test
+        run: vendor/bin/phpunit --coverage-text
         env:
           TERM: xterm-256color
+
+      - if: matrix.php-version == '8.3'
+        name: Run Coveralls
+        continue-on-error: true
+        run: |
+          composer global require php-coveralls/php-coveralls
+          ~/.composer/vendor/bin/php-coveralls --verbose --coverage_clover=build/phpunit/clover.xml --json_path build/phpunit/coveralls-upload.json
+        env:
+          COVERALLS_REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          COVERALLS_PARALLEL: true
+          COVERALLS_FLAG_NAME: PHP ${{ matrix.php-version }}
+
+  coveralls:
+    needs: [main]
+    name: Coveralls Finished
+    runs-on: ubuntu-latest
+    steps:
+      - name: Upload Coveralls results
+        uses: coverallsapp/github-action@master
+        continue-on-error: true
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          parallel-finished: true

@@ -9,6 +9,15 @@
     executionOrder="random"
     failOnRisky="true"
     failOnWarning="true">
+    <coverage includeUncoveredFiles="true">
+        <report>
+            <clover outputFile="build/phpunit/clover.xml"/>
+            <html outputDirectory="build/phpunit/html"/>
+            <php outputFile="build/phpunit/coverage.serialized"/>
+            <text outputFile="php://stdout" showUncoveredFiles="false"/>
+            <xml outputDirectory="build/phpunit/xml-coverage"/>
+        </report>
+    </coverage>
     <testsuites>
         <testsuite name="CodeIgniter SSE">
             <directory>tests</directory>
@@ -20,6 +29,8 @@
         </include>
     </source>
     <php>
+        <env name="XDEBUG_MODE" value="coverage"/>
+        <env name="COMPOSER_DISABLE_XDEBUG_WARN" value="1"/>
         <server name="app.baseURL" value="https://example.com/"/>
         <const name="HOMEPATH" value="./"/>
         <const name="CONFIGPATH" value="vendor/codeigniter4/framework/app/Config/"/>
