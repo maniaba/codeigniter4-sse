@@ -1128,7 +1128,7 @@ the browser decides how the page should react.</p>
 <h2 id="publish-an-event">Publish an event</h2>
 <p>The high-level service accepts a logical channel, an event name, and a payload:</p>
 <pre class="highlight"><code class="language-php">sse()-&gt;publish(
-    "users.{$userId}",
+    "users.{$userId}.notifications",
     'notification.created',
     [
         'title'   =&gt; 'Order paid',
@@ -1136,8 +1136,10 @@ the browser decides how the page should react.</p>
     ],
 );</code></pre>
 <p>Domain code can also publish one object that knows its channel, event name, and
-payload:</p>
-<pre class="highlight"><code class="language-php">use Maniaba\CodeIgniterSse\Contracts\PublishableEventInterface;
+payload. Prefer building that channel through the registered channel definition
+so publishing and subscription authorization share the same naming rules:</p>
+<pre class="highlight"><code class="language-php">use App\Sse\Channels\UserNotificationsChannel;
+use Maniaba\CodeIgniterSse\Contracts\PublishableEventInterface;
 use Maniaba\CodeIgniterSse\Support\Channel;
 
 final readonly class OrderPaidNotification implements PublishableEventInterface
@@ -1150,7 +1152,7 @@ final readonly class OrderPaidNotification implements PublishableEventInterface
 
     public function channel(): Channel
     {
-        return Channel::join('users', $this-&gt;userId);
+        return UserNotificationsChannel::forUser($this-&gt;userId);
     }
 
     public function event(): string

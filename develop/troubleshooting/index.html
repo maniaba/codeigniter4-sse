@@ -1443,12 +1443,12 @@ unless explicitly enabled.</p>
 <h2 id="the-endpoint-returns-403">The endpoint returns 403</h2>
 <p>There are two common causes:</p>
 <ul>
-<li>one or more channels failed <code>ChannelAuthorizerInterface</code>;</li>
+<li>one or more channels failed registered channel authorization;</li>
 <li>a cross-origin request is not in <code>allowedOrigins</code>.</li>
 </ul>
 <p>Verify that <code>UserResolverInterface::resolve()</code> returns the expected
 authenticated object. Do not “fix” a private-channel denial by switching to an
-authorizer that permits every channel.</p>
+overly broad channel definition that permits every channel.</p>
 <h2 id="redis-health-check-fails">Redis health check fails</h2>
 <p>Run:</p>
 <pre class="highlight"><code class="language-bash">php spark sse:health-check</code></pre>

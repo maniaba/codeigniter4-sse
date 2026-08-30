@@ -1278,8 +1278,8 @@ cp -R vendor/maniaba/codeigniter4-sse/resources/js/adapters \
 <pre class="highlight"><code class="language-javascript">import { SseClient } from '/assets/sse-client.js';</code></pre>
 <p>Do not serve the entire <code>vendor/</code> directory from the web root.</p>
 <h2 id="verify-the-http-stream">Verify the HTTP stream</h2>
-<p>The default authorizer permits <code>public.*</code> channels, so a public channel is
-useful for the first smoke test:</p>
+<p>The default channel registry permits <code>public.*</code> channels, so a public channel
+is useful for the first smoke test:</p>
 <pre class="highlight"><code class="language-bash">curl -N \
     -H 'Accept: text/event-stream' \
     'http://localhost:8080/sse?channels=public.demo'</code></pre>
@@ -1294,7 +1294,7 @@ Spark command:</p>
 <h2 id="production-checklist">Production checklist</h2>
 <p>Before exposing the endpoint:</p>
 <ol>
-<li>implement private-channel authorization;</li>
+<li>register private channel definitions;</li>
 <li>configure the authenticated user resolver;</li>
 <li>apply application authentication plus reconnect rate/concurrency filters to
    private stream routes;</li>

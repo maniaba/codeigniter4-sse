@@ -1198,8 +1198,8 @@ live.connect();</code></pre>
 <p>Use the frontend adapter that matches the configured broker. Redis, local, and
 in-memory adapters connect directly to the package route; Mercure authorizes
 through the route and then connects to the Hub.</p>
-<p>Private channels are denied until the application supplies an authorizer. Start
-with the <a href="quick-start/">Quick start</a>, then configure
+<p>Private channels are denied until the application registers channel
+definitions. Start with the <a href="quick-start/">Quick start</a>, then configure
 <a href="channels-and-authorization/">channels and authorization</a>.
 If Redis or Mercure is not the right transport, see
 <a href="custom-brokers/">Custom brokers</a>.</p>

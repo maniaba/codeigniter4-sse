@@ -1290,15 +1290,20 @@ declare(strict_types=1);
 
 namespace Config;
 
-use App\Sse\ChannelAuthorizer;
+use App\Sse\Channels\UserNotificationsChannel;
 use Maniaba\CodeIgniterSse\Authorization\ShieldUserResolver;
+use Maniaba\CodeIgniterSse\Authorization\Channels\PublicChannel;
 use Maniaba\CodeIgniterSse\Config\Sse as BaseSse;
 
 final class Sse extends BaseSse
 {
     public string $broker = 'mercure';
 
-    public string $channelAuthorizer = ChannelAuthorizer::class;
+    public array $channels = [
+        PublicChannel::class,
+        UserNotificationsChannel::class,
+    ];
+
     public string $userResolver = ShieldUserResolver::class;
 
     public array $mercure = [
@@ -1308,7 +1313,7 @@ final class Sse extends BaseSse
         // URL returned to browsers.
         'publicHubUrl' =&gt; 'https://app.example.com/.well-known/mercure',
 
-        // Produces topics such as urn:storefront:sse:users.42.
+        // Produces topics such as urn:storefront:sse:users.42.notifications.
         'topicPrefix'  =&gt; 'urn:storefront:sse:',
 
         'private'              =&gt; true,
@@ -1386,7 +1391,7 @@ publisher decorator used for every broker.</p>
 const live = new SseClient({
     endpoint: '/sse',
     adapter: new MercureSseAdapter(),
-    channels: [`users.${currentUserId}`],
+    channels: [`users.${currentUserId}.notifications`],
     withCredentials: true,
 });
 
@@ -1396,13 +1401,13 @@ live.on('notification.created', ({ data }) =&gt; {
 
 live.connect();</code></pre>
 <p>The client first fetches:</p>
-<pre class="highlight"><code class="language-http">GET /sse?channels=users.42
+<pre class="highlight"><code class="language-http">GET /sse?channels=users.42.notifications
 Accept: application/json</code></pre>
 <p>CodeIgniter validates and authorizes every channel, sets an HttpOnly
 <code>mercureAuthorization</code> cookie, and returns:</p>
 <pre class="highlight"><code class="language-json">{
   "hub": "https://app.example.com/.well-known/mercure",
-  "topics": ["urn:storefront:sse:users.42"],
+  "topics": ["urn:storefront:sse:users.42.notifications"],
   "expiresAt": 1785520800
 }</code></pre>
 <p>The JWT is never exposed to JavaScript or placed in the EventSource URL. The
@@ -1418,7 +1423,7 @@ each other's exact-topic authorization during authorization or reconnect.</p>
 application policy:</p>
 <ol>
 <li><code>UserResolverInterface</code> resolves the authenticated application user.</li>
-<li><code>ChannelAuthorizerInterface</code> approves every requested logical channel.</li>
+<li>A registered channel definition approves every requested logical channel.</li>
 <li>The package maps only approved channels to topics.</li>
 <li>The subscriber JWT contains only those exact topics in
    <code>mercure.subscribe</code>.</li>

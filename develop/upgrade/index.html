@@ -965,6 +965,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#upgrade-from-v100-rc2-to-v100-rc3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Upgrade from v1.0.0-rc2 to v1.0.0-rc3
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#event-envelope-changes" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1078,6 +1089,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#upgrade-from-v100-rc2-to-v100-rc3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Upgrade from v1.0.0-rc2 to v1.0.0-rc3
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#event-envelope-changes" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1142,12 +1164,73 @@ and contracts rather than concrete Redis or HTTP classes.</p>
 <li><code>sse()-&gt;publish()</code></li>
 <li><code>PublisherInterface</code></li>
 <li><code>SubscriberInterface</code></li>
-<li><code>ChannelAuthorizerInterface</code></li>
+<li><code>ChannelDefinitionInterface</code></li>
 <li><code>UserResolverInterface</code></li>
 <li><code>EventInterface</code></li>
 <li><code>Channel</code></li>
 <li><code>SseEvent</code></li>
 </ul>
+<h2 id="upgrade-from-v100-rc2-to-v100-rc3">Upgrade from v1.0.0-rc2 to v1.0.0-rc3</h2>
+<p>The <code>v1.0.0-rc3</code> channel model replaces the single application-wide
+<code>ChannelAuthorizerInterface</code> from <code>v1.0.0-rc2</code> with registered channel
+definitions.</p>
+<p>Update the package:</p>
+<pre class="highlight"><code class="language-bash">composer require maniaba/codeigniter4-sse:1.0.0-rc3
+php spark sse:install</code></pre>
+<p>Then update <code>app/Config/Sse.php</code>.</p>
+<p>Before:</p>
+<pre class="highlight"><code class="language-php">public string $channelAuthorizer = \App\Sse\ChannelAuthorizer::class;</code></pre>
+<p>After:</p>
+<pre class="highlight"><code class="language-php">public array $channels = [
+    \Maniaba\CodeIgniterSse\Authorization\Channels\PublicChannel::class,
+    \App\Sse\Channels\UserNotificationsChannel::class,
+];</code></pre>
+<p>Keep <code>public string $userResolver</code> unchanged unless the application is also
+changing authentication.</p>
+<p>Move each channel family from the old central authorizer into a small
+<code>ChannelDefinitionInterface</code> implementation:</p>
+<pre class="highlight"><code class="language-php">namespace App\Sse\Channels;
+
+use Maniaba\CodeIgniterSse\Authorization\ChannelAuthorizationContext;
+use Maniaba\CodeIgniterSse\Contracts\ChannelDefinitionInterface;
+use Maniaba\CodeIgniterSse\Support\Channel;
+
+final class UserNotificationsChannel implements ChannelDefinitionInterface
+{
+    public static function pattern(): string
+    {
+        return 'users.{userId}.notifications';
+    }
+
+    public static function forUser(int|string $userId): Channel
+    {
+        return Channel::join('users', $userId, 'notifications');
+    }
+
+    public function authorize(ChannelAuthorizationContext $context): bool
+    {
+        $user = $context-&gt;user();
+
+        return $user !== null
+            &amp;&amp; (string) $user-&gt;id === $context-&gt;param('userId');
+    }
+}</code></pre>
+<p>An old authorizer branch like this:</p>
+<pre class="highlight"><code class="language-php">if (preg_match('/^users\.(\d+)$/', $channel, $matches) === 1) {
+    return $user !== null &amp;&amp; (string) $user-&gt;id === $matches[1];
+}</code></pre>
+<p>becomes a registered channel definition with a pattern such as
+<code>users.{userId}</code> or, for notification-specific streams,
+<code>users.{userId}.notifications</code>.</p>
+<p>The package no longer ships <code>PublicChannelAuthorizer</code>; the equivalent default
+is <code>Authorization\Channels\PublicChannel</code>.</p>
+<p>Event object publishing does not need to change. Existing classes that
+implement <code>PublishableEventInterface</code> can keep calling <code>channel()</code>, <code>event()</code>,
+and <code>data()</code>. Prefer returning channels through the new channel definitions:</p>
+<pre class="highlight"><code class="language-php">public function channel(): Channel
+{
+    return UserNotificationsChannel::forUser($this-&gt;userId);
+}</code></pre>
 <p>Redis socket internals and legacy response adapters are implementation
 details.</p>
 <h2 id="event-envelope-changes">Event envelope changes</h2>

@@ -1888,9 +1888,9 @@ ACL policy allows it.</p>
 </thead>
 <tbody>
 <tr>
-<td><code>channelAuthorizer</code></td>
-<td><code>PublicChannelAuthorizer::class</code></td>
-<td>Authorizes each requested logical channel.</td>
+<td><code>channels</code></td>
+<td><code>[PublicChannel::class]</code></td>
+<td>Registered logical channel definitions.</td>
 </tr>
 <tr>
 <td><code>userResolver</code></td>
@@ -1899,13 +1899,19 @@ ACL policy allows it.</p>
 </tr>
 </tbody>
 </table>
-<p>The secure default allows only <code>public.*</code>. Set both class names when private
-channels are used:</p>
-<pre class="highlight"><code class="language-php">public string $channelAuthorizer = \App\Sse\ChannelAuthorizer::class;
+<p>The secure default allows only <code>public.*</code>. Register every private channel
+family and configure the user resolver when private channels are used:</p>
+<pre class="highlight"><code class="language-php">public array $channels = [
+    \Maniaba\CodeIgniterSse\Authorization\Channels\PublicChannel::class,
+    \App\Sse\Channels\UserNotificationsChannel::class,
+    \App\Sse\Channels\TenantDashboardChannel::class,
+];
+
 public string $userResolver = \App\Sse\UserResolver::class;</code></pre>
 <p>Applications using CodeIgniter Shield can use the packaged resolver:</p>
 <pre class="highlight"><code class="language-php">public string $userResolver = \Maniaba\CodeIgniterSse\Authorization\ShieldUserResolver::class;</code></pre>
-<p>Both classes must implement their package contracts. See
+<p>Each registered channel must implement <code>ChannelDefinitionInterface</code>; the user
+resolver must implement <code>UserResolverInterface</code>. See
 <a href="../channels-and-authorization/">Channels and authorization</a>.</p>
 <h2 id="cors-and-credentials">CORS and credentials</h2>
 <table>

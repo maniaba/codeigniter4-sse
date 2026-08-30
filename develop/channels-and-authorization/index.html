@@ -538,10 +538,32 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#channel-authorizer" class="md-nav__link">
+  <a href="#channel-definitions" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Channel authorizer
+        Channel definitions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#register-channels" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Register channels
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#publish-notification-objects" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Publish notification objects
       
     </span>
   </a>
@@ -1133,10 +1155,32 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#channel-authorizer" class="md-nav__link">
+  <a href="#channel-definitions" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Channel authorizer
+        Channel definitions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#register-channels" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Register channels
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#publish-notification-objects" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Publish notification objects
       
     </span>
   </a>
@@ -1214,8 +1258,12 @@
 
 <h1 id="channels-and-authorization">Channels and authorization</h1>
 <p>Channel names arrive from an untrusted browser. The package validates their
-syntax and count, but the application must decide whether the current user is
-allowed to subscribe.</p>
+syntax and count, then matches each requested logical channel against the
+application's registered channel definitions.</p>
+<p>Each channel definition owns one responsibility: it describes the channel name
+shape and decides whether the current user may subscribe to a concrete channel
+instance. Publishing code can then use the same channel class to build names
+without duplicating strings.</p>
 <h2 id="naming-rules">Naming rules</h2>
 <p>A normal channel:</p>
 <ul>
@@ -1226,7 +1274,7 @@ allowed to subscribe.</p>
 </ul>
 <p>Valid examples:</p>
 <pre class="highlight"><code class="language-text">public.news
-users.42
+users.42.notifications
 orders.918
 tenants.7.dashboard
 projects.project_15.activity
@@ -1238,13 +1286,14 @@ needs to safely compose a channel from dynamic segments:</p>
 <pre class="highlight"><code class="language-php">use Maniaba\CodeIgniterSse\Support\Channel;
 
 $channel = new Channel('public.news');
-$user = Channel::join('users', $userId);
+$user = Channel::join('users', $userId, 'notifications');
 $tenantDashboard = Channel::join('tenants', $tenantId, 'dashboard');</code></pre>
 <h2 id="secure-default">Secure default</h2>
-<p><code>PublicChannelAuthorizer</code> allows only <code>public.*</code>:</p>
-<pre class="highlight"><code class="language-text">public.news  → allowed
-users.42     → denied
-orders.918   → denied</code></pre>
+<p>The default registry contains only <code>PublicChannel</code>, which authorizes channels
+under <code>public.*</code>:</p>
+<pre class="highlight"><code class="language-text">public.news      allowed
+users.42         denied
+orders.918       denied</code></pre>
 <p><code>NullUserResolver</code> returns <code>null</code>. As a result, installing the package does not
 silently expose application data.</p>
 <h2 id="user-resolver">User resolver</h2>
@@ -1279,84 +1328,152 @@ final class Sse extends BaseSse
 authentication layer opens a locking PHP session, release the session lock
 after resolving the user so the SSE connection does not block the user's
 normal HTTP requests.</p>
-<h2 id="channel-authorizer">Channel authorizer</h2>
-<p>The authorizer receives the resolved user and one validated logical channel:</p>
-<pre class="highlight"><code class="language-php">namespace App\Sse;
+<h2 id="channel-definitions">Channel definitions</h2>
+<p>Implement <code>ChannelDefinitionInterface</code> for every private channel family the
+application exposes:</p>
+<pre class="highlight"><code class="language-php">namespace App\Sse\Channels;
 
-use Maniaba\CodeIgniterSse\Contracts\ChannelAuthorizerInterface;
+use Maniaba\CodeIgniterSse\Authorization\ChannelAuthorizationContext;
+use Maniaba\CodeIgniterSse\Contracts\ChannelDefinitionInterface;
+use Maniaba\CodeIgniterSse\Support\Channel;
 
-final class ChannelAuthorizer implements ChannelAuthorizerInterface
+final class UserNotificationsChannel implements ChannelDefinitionInterface
 {
-    public function authorize(?object $user, string $channel): bool
+    public static function pattern(): string
     {
-        if (str_starts_with($channel, 'public.')) {
-            return true;
-        }
+        return 'users.{userId}.notifications';
+    }
 
-        if ($user === null) {
-            return false;
-        }
+    public static function forUser(int|string $userId): Channel
+    {
+        return Channel::join('users', $userId, 'notifications');
+    }
 
-        if (preg_match('/^users\.(\d+)$/', $channel, $match) === 1) {
-            return (string) $user-&gt;id === $match[1];
-        }
+    public function authorize(ChannelAuthorizationContext $context): bool
+    {
+        $user = $context-&gt;user();
 
-        return false;
+        return $user !== null
+            &amp;&amp; (string) $user-&gt;id === $context-&gt;param('userId');
     }
 }</code></pre>
-<p>Every requested channel must pass. If any channel is denied, the connection is
-rejected rather than silently subscribing to a subset.</p>
+<p>The pattern may contain literal segments, <code>{parameter}</code> segments, and a final
+<code>*</code> wildcard segment. Parameters are available through the authorization
+context:</p>
+<pre class="highlight"><code class="language-php">$context-&gt;channel();       // users.42.notifications
+$context-&gt;pattern();       // users.{userId}.notifications
+$context-&gt;param('userId'); // 42</code></pre>
+<p>A wildcard segment is intended for broad public or intentionally broad private
+families:</p>
+<pre class="highlight"><code class="language-php">final class PublicChannel implements ChannelDefinitionInterface
+{
+    public static function pattern(): string
+    {
+        return 'public.*';
+    }
+
+    public function authorize(ChannelAuthorizationContext $context): bool
+    {
+        return true;
+    }
+}</code></pre>
+<p>Unknown channels are denied. Every requested channel must match a registered
+definition and pass that definition's authorization check. If any channel is
+denied, the connection is rejected rather than silently subscribing to a
+subset.</p>
+<p>When more than one definition could match the same channel, the registry uses
+the most specific pattern. For example, <code>users.{userId}.notifications</code> wins
+over <code>users.*</code>.</p>
+<h2 id="register-channels">Register channels</h2>
+<p>List channel definitions in <code>app/Config/Sse.php</code>:</p>
+<pre class="highlight"><code class="language-php">namespace Config;
+
+use App\Sse\Channels\UserNotificationsChannel;
+use App\Sse\UserResolver;
+use Maniaba\CodeIgniterSse\Authorization\Channels\PublicChannel;
+use Maniaba\CodeIgniterSse\Config\Sse as BaseSse;
+
+final class Sse extends BaseSse
+{
+    public array $channels = [
+        PublicChannel::class,
+        UserNotificationsChannel::class,
+    ];
+
+    public string $userResolver = UserResolver::class;
+}</code></pre>
 <p>For private streams, also apply an application authentication filter and a
 rate/concurrency filter through <code>Config\Sse::$route['filters']</code>. Authentication
 filters reject unauthenticated requests early; concurrency limits prevent one
 user or reconnect loop from consuming an unbounded number of PHP workers.
 Neither replaces per-channel authorization.</p>
-<p>The same route filters and authorizer protect direct EventSource requests and
-Mercure authorization requests. With Redis, authorization happens before the
-PHP stream opens. With Mercure, the resulting subscriber JWT contains only
-approved topics. The long-lived Hub connection does not occupy a PHP worker,
-but rate limiting still protects token issuance and reconnect churn.</p>
-<p>For zero-argument implementations, select both classes in the package config:</p>
-<pre class="highlight"><code class="language-php">namespace Config;
+<p>The same route filters and channel definitions protect direct EventSource
+requests and Mercure authorization requests. With Redis, authorization happens
+before the PHP stream opens. With Mercure, the resulting subscriber JWT
+contains only approved topics. The long-lived Hub connection does not occupy a
+PHP worker, but rate limiting still protects token issuance and reconnect
+churn.</p>
+<h2 id="publish-notification-objects">Publish notification objects</h2>
+<p>Event objects should use the channel definition to build the target channel:</p>
+<pre class="highlight"><code class="language-php">namespace App\Sse\Notifications;
 
-use App\Sse\ChannelAuthorizer;
-use App\Sse\UserResolver;
-use Maniaba\CodeIgniterSse\Config\Sse as BaseSse;
+use App\Sse\Channels\UserNotificationsChannel;
+use Maniaba\CodeIgniterSse\Contracts\PublishableEventInterface;
+use Maniaba\CodeIgniterSse\Support\Channel;
 
-final class Sse extends BaseSse
+final readonly class OrderPaidNotification implements PublishableEventInterface
 {
-    public string $channelAuthorizer = ChannelAuthorizer::class;
-    public string $userResolver = UserResolver::class;
-}</code></pre>
-<h2 id="dependencies">Dependencies</h2>
-<p>The config stores class names. Keep these adapters small and constructor-free.
-When an adapter needs application services, resolve them inside the adapter
-method:</p>
-<pre class="highlight"><code class="language-php">use App\Sse\PolicyChannelAuthorizer;
-use Maniaba\CodeIgniterSse\Config\Sse as BaseSse;
+    public function __construct(
+        private int $userId,
+        private int $orderId,
+    ) {
+    }
 
-final class Sse extends BaseSse
-{
-    public string $channelAuthorizer = PolicyChannelAuthorizer::class;
-}</code></pre>
-<pre class="highlight"><code class="language-php">namespace App\Sse;
-
-use Maniaba\CodeIgniterSse\Contracts\ChannelAuthorizerInterface;
-
-final class PolicyChannelAuthorizer implements ChannelAuthorizerInterface
-{
-    public function authorize(?object $user, string $channel): bool
+    public function channel(): Channel
     {
-        $orderPolicy = service('orderPolicy');
-        $memberships = service('tenantMemberships');
+        return UserNotificationsChannel::forUser($this-&gt;userId);
+    }
 
-        // Apply application rules here.
-        return $orderPolicy-&gt;allows($user, $channel)
-            || $memberships-&gt;allows($user, $channel);
+    public function event(): string
+    {
+        return 'notification.created';
+    }
+
+    public function data(): array
+    {
+        return [
+            'type'    =&gt; 'order_paid',
+            'orderId' =&gt; $this-&gt;orderId,
+        ];
     }
 }</code></pre>
-<p>This keeps package internals out of CodeIgniter's global service registry while
-still letting the application integrate its own dependencies.</p>
+<p>Then publish the object directly:</p>
+<pre class="highlight"><code class="language-php">sse()-&gt;publish(new OrderPaidNotification($order-&gt;user_id, $order-&gt;id));</code></pre>
+<p>The event object knows where the message is published. The channel definition
+knows who may subscribe to that channel.</p>
+<h2 id="dependencies">Dependencies</h2>
+<p>Channel definitions are usually small and constructor-free. When a definition
+needs application services, resolve them inside the authorization method:</p>
+<pre class="highlight"><code class="language-php">namespace App\Sse\Channels;
+
+use Maniaba\CodeIgniterSse\Authorization\ChannelAuthorizationContext;
+use Maniaba\CodeIgniterSse\Contracts\ChannelDefinitionInterface;
+
+final class TenantDashboardChannel implements ChannelDefinitionInterface
+{
+    public static function pattern(): string
+    {
+        return 'tenants.{tenantId}.dashboard';
+    }
+
+    public function authorize(ChannelAuthorizationContext $context): bool
+    {
+        return service('tenantMemberships')-&gt;allows(
+            $context-&gt;user(),
+            $context-&gt;param('tenantId'),
+        );
+    }
+}</code></pre>
 <p>Keep database queries bounded: authorization runs before the stream starts,
 but a request can contain up to <code>maxChannelsPerConnection</code> channels.</p>
 <p>Batch tenant or project membership checks when possible instead of executing
@@ -1366,10 +1483,12 @@ one unindexed query per channel.</p>
 <pre class="highlight"><code class="language-php">public array $redis = [
     'allowPatternSubscriptions' =&gt; false,
 ];</code></pre>
-<p>Enabling them allows glob-style Redis subscription patterns. A pattern can
-cover a much larger data set than its text suggests, so the authorizer must
-recognize and explicitly approve patterns. Never enable them for ordinary
-users merely because the corresponding exact channel would be allowed.</p>
+<p>Enabling them allows Redis glob-style subscription patterns in the browser
+request. A pattern can cover a much larger data set than its text suggests, so
+a channel definition must explicitly match and approve that pattern. A
+registered <code>users.{userId}</code> definition does not authorize <code>users.*</code>.</p>
+<p>Never enable pattern subscriptions for ordinary users merely because the
+corresponding exact channel would be allowed.</p>
 <p>Redis may report the same publication through overlapping exact and pattern
 subscriptions. The adapter suppresses recently seen channel/event ID pairs
 using <code>redis['deduplicationCapacity']</code>; avoid unnecessary overlap so
@@ -1386,7 +1505,7 @@ provide a standard way to set arbitrary authorization headers.</p>
 new SseClient({
     endpoint: '/sse',
     adapter: new RedisSseAdapter(),
-    channels: ['users.42'],
+    channels: ['users.42.notifications'],
     withCredentials: true,
 });</code></pre>
 <p>For a cross-origin frontend, configure:</p>

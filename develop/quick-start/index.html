@@ -412,10 +412,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#2-authorize-the-user-channel" class="md-nav__link">
+  <a href="#2-define-the-user-notification-channel" class="md-nav__link">
     <span class="md-ellipsis">
       
-        2. Authorize the user channel
+        2. Define the user notification channel
       
     </span>
   </a>
@@ -423,10 +423,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#3-publish-an-event" class="md-nav__link">
+  <a href="#3-publish-a-notification-object" class="md-nav__link">
     <span class="md-ellipsis">
       
-        3. Publish an event
+        3. Publish a notification object
       
     </span>
   </a>
@@ -1087,10 +1087,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#2-authorize-the-user-channel" class="md-nav__link">
+  <a href="#2-define-the-user-notification-channel" class="md-nav__link">
     <span class="md-ellipsis">
       
-        2. Authorize the user channel
+        2. Define the user notification channel
       
     </span>
   </a>
@@ -1098,10 +1098,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#3-publish-an-event" class="md-nav__link">
+  <a href="#3-publish-a-notification-object" class="md-nav__link">
     <span class="md-ellipsis">
       
-        3. Publish an event
+        3. Publish a notification object
       
     </span>
   </a>
@@ -1182,31 +1182,39 @@ public array $redis = [
 ];</code></pre>
 <p>Verify it:</p>
 <pre class="highlight"><code class="language-bash">php spark sse:health-check</code></pre>
-<h2 id="2-authorize-the-user-channel">2. Authorize the user channel</h2>
-<p>The browser will request a logical channel such as <code>users.42</code>. Private
-channels are denied by default, so the application must decide whether the
-current user may subscribe.</p>
-<p>Implement <code>ChannelAuthorizerInterface</code>:</p>
+<h2 id="2-define-the-user-notification-channel">2. Define the user notification channel</h2>
+<p>The browser will request a logical channel such as <code>users.42.notifications</code>.
+Private channels are denied by default, so the application must register the
+channel and decide whether the current user may subscribe.</p>
+<p>Implement <code>ChannelDefinitionInterface</code>:</p>
 <pre class="highlight"><code class="language-php">&lt;?php
 
 declare(strict_types=1);
 
-namespace App\Sse;
+namespace App\Sse\Channels;
 
-use Maniaba\CodeIgniterSse\Contracts\ChannelAuthorizerInterface;
+use Maniaba\CodeIgniterSse\Authorization\ChannelAuthorizationContext;
+use Maniaba\CodeIgniterSse\Contracts\ChannelDefinitionInterface;
+use Maniaba\CodeIgniterSse\Support\Channel;
 
-final class ChannelAuthorizer implements ChannelAuthorizerInterface
+final class UserNotificationsChannel implements ChannelDefinitionInterface
 {
-    public function authorize(?object $user, string $channel): bool
+    public static function pattern(): string
     {
-        if (
-            $user !== null
-            &amp;&amp; preg_match('/^users\.(\d+)$/', $channel, $matches) === 1
-        ) {
-            return (string) $user-&gt;id === $matches[1];
-        }
+        return 'users.{userId}.notifications';
+    }
 
-        return str_starts_with($channel, 'public.');
+    public static function forUser(int|string $userId): Channel
+    {
+        return Channel::join('users', $userId, 'notifications');
+    }
+
+    public function authorize(ChannelAuthorizationContext $context): bool
+    {
+        $user = $context-&gt;user();
+
+        return $user !== null
+            &amp;&amp; (string) $user-&gt;id === $context-&gt;param('userId');
     }
 }</code></pre>
 <p>Implement <code>UserResolverInterface</code> for the application's authentication layer:</p>
@@ -1225,40 +1233,66 @@ final class UserResolver implements UserResolverInterface
         return service('auth')-&gt;user();
     }
 }</code></pre>
-<p>Select these implementations in <code>app/Config/Sse.php</code>:</p>
+<p>Register the channel and resolver in <code>app/Config/Sse.php</code>:</p>
 <pre class="highlight"><code class="language-php">&lt;?php
 
 declare(strict_types=1);
 
 namespace Config;
 
-use App\Sse\ChannelAuthorizer;
+use App\Sse\Channels\UserNotificationsChannel;
 use App\Sse\UserResolver;
+use Maniaba\CodeIgniterSse\Authorization\Channels\PublicChannel;
 use Maniaba\CodeIgniterSse\Config\Sse as BaseSse;
 
 final class Sse extends BaseSse
 {
-    public string $channelAuthorizer = ChannelAuthorizer::class;
+    public array $channels = [
+        PublicChannel::class,
+        UserNotificationsChannel::class,
+    ];
+
     public string $userResolver = UserResolver::class;
 }</code></pre>
-<h2 id="3-publish-an-event">3. Publish an event</h2>
+<h2 id="3-publish-a-notification-object">3. Publish a notification object</h2>
 <p>Publish only after the domain operation has succeeded:</p>
-<pre class="highlight"><code class="language-php">$order-&gt;markAsPaid();
+<pre class="highlight"><code class="language-php">use App\Sse\Channels\UserNotificationsChannel;
+use Maniaba\CodeIgniterSse\Contracts\PublishableEventInterface;
+use Maniaba\CodeIgniterSse\Support\Channel;
 
-sse()-&gt;publish(
-    "users.{$order-&gt;user_id}",
-    'notification.created',
-    [
-        'title'   =&gt; 'Order paid',
-        'orderId' =&gt; $order-&gt;id,
-    ],
-);</code></pre>
+final readonly class OrderPaidNotification implements PublishableEventInterface
+{
+    public function __construct(
+        private int $userId,
+        private int $orderId,
+    ) {
+    }
+
+    public function channel(): Channel
+    {
+        return UserNotificationsChannel::forUser($this-&gt;userId);
+    }
+
+    public function event(): string
+    {
+        return 'notification.created';
+    }
+
+    public function data(): array
+    {
+        return [
+            'title'   =&gt; 'Order paid',
+            'orderId' =&gt; $this-&gt;orderId,
+        ];
+    }
+}
+
+$order-&gt;markAsPaid();
+
+sse()-&gt;publish(new OrderPaidNotification($order-&gt;user_id, $order-&gt;id));</code></pre>
 <p>The publisher builds a versioned envelope and sends it to the prefixed Redis
 channel. Application code does not build Redis channel names and does not
 write SSE frames.</p>
-<p>If the application already has an event object, implement
-<code>PublishableEventInterface</code> and call <code>sse()-&gt;publish($object)</code>. The object
-provides the channel, event name or event object, and payload.</p>
 <h2 id="4-connect-from-the-browser">4. Connect from the browser</h2>
 <pre class="highlight"><code class="language-javascript">import {
     RedisSseAdapter,
@@ -1268,7 +1302,7 @@ provides the channel, event name or event object, and payload.</p>
 const live = new SseClient({
     endpoint: '/sse',
     adapter: new RedisSseAdapter(),
-    channels: [`users.${currentUserId}`],
+    channels: [`users.${currentUserId}.notifications`],
     withCredentials: true,
 });
 
@@ -1283,7 +1317,7 @@ live.on('status', ({ status }) =&gt; {
 
 live.connect();</code></pre>
 <p>With the default Redis broker, the browser opens:</p>
-<pre class="highlight"><code class="language-http">GET /sse?channels=users.42
+<pre class="highlight"><code class="language-http">GET /sse?channels=users.42.notifications
 Accept: text/event-stream</code></pre>
 <p>Session cookies are sent when allowed by the browser and CORS configuration.
 Standard browser <code>EventSource</code> does not support arbitrary <code>Authorization</code>
