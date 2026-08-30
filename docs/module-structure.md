@@ -40,7 +40,7 @@ For typed integrations, depend on:
 - `BrokerAdapterInterface`
 - `BrokerAdapterFactoryInterface`
 - `SubscriptionEndpointInterface`
-- `ChannelAuthorizerInterface`
+- `ChannelDefinitionInterface`
 - `UserResolverInterface`
 - `EventInterface`
 - `SerializerInterface`

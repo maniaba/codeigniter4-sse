@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Config;
 
 use Maniaba\CodeIgniterSse\Authorization\NullUserResolver;
-use Maniaba\CodeIgniterSse\Authorization\PublicChannelAuthorizer;
+use Maniaba\CodeIgniterSse\Authorization\Channels\PublicChannel;
 use Maniaba\CodeIgniterSse\Config\Sse as BaseSse;
 use Maniaba\CodeIgniterSse\HTTP\SseController;
 
@@ -109,11 +109,13 @@ class Sse extends BaseSse
     public bool $withCredentials = true;
 
     /**
-     * Replace these with application implementations for private channels.
+     * Register every logical channel the application exposes.
      *
-     * @var class-string<\Maniaba\CodeIgniterSse\Contracts\ChannelAuthorizerInterface>
+     * @var list<callable(): \Maniaba\CodeIgniterSse\Contracts\ChannelDefinitionInterface|\Maniaba\CodeIgniterSse\Contracts\ChannelDefinitionInterface|class-string<\Maniaba\CodeIgniterSse\Contracts\ChannelDefinitionInterface>>
      */
-    public string $channelAuthorizer = PublicChannelAuthorizer::class;
+    public array $channels = [
+        PublicChannel::class,
+    ];
 
     /**
      * Use an application resolver, ShieldUserResolver::class, or another adapter.

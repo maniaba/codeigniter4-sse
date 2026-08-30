@@ -7,6 +7,55 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [v1.0.0-rc3] - 2026-08-30
+
+Third release candidate focused on making channels first-class application
+definitions. This is a breaking change for applications that configured a
+single `ChannelAuthorizerInterface` implementation in `v1.0.0-rc2`.
+
+### Breaking Changes
+
+- Removed `ChannelAuthorizerInterface`. Applications now register channel
+  definitions that implement `ChannelDefinitionInterface`.
+- Removed `PublicChannelAuthorizer`. The secure public default is now the
+  registered `Authorization\Channels\PublicChannel` definition.
+- Replaced `Config\Sse::$channelAuthorizer` with `Config\Sse::$channels`.
+- Changed channel authorization from one application-wide authorizer to a
+  registry lookup. A requested channel must match a registered channel
+  definition and pass that definition's authorization check.
+- Unknown channel namespaces are denied before application channel policies are
+  called.
+
+### Migration from v1.0.0-rc2
+
+1. Replace `public string $channelAuthorizer` in `app/Config/Sse.php` with
+   `public array $channels`.
+2. Keep public channels by registering
+   `Maniaba\CodeIgniterSse\Authorization\Channels\PublicChannel::class`.
+3. Move each branch from the old central authorizer into a small
+   `ChannelDefinitionInterface` class with a `pattern()` and `authorize()`
+   method.
+4. Keep `public string $userResolver` unchanged.
+5. Update imports and remove references to `ChannelAuthorizerInterface` and
+   `PublicChannelAuthorizer`.
+
+### Changed
+
+- Replaced the single `ChannelAuthorizerInterface` authorization hook with
+  registered `ChannelDefinitionInterface` classes.
+- Replaced `Config\Sse::$channelAuthorizer` with `Config\Sse::$channels`.
+- Replaced `PublicChannelAuthorizer` with the registered `PublicChannel`
+  definition.
+- Updated authorization documentation and quick-start examples to use channel
+  definitions plus `sse()->publish(new Notification(...))` event objects.
+
+### Added
+
+- Added channel pattern matching with literal segments, `{parameter}` segments,
+  and final `*` wildcard segments.
+- Added `ChannelAuthorizationContext`, `ChannelMatch`, `ChannelPattern`, and
+  `ChannelRegistry` for registered channel authorization.
+
 ## [v1.0.0-rc2] - 2026-08-01
 
 Second release candidate focused on Mercure hardening, JWT validation, safer
@@ -19,12 +68,12 @@ request parsing, and test cleanup before the initial stable `1.0.0` release.
 - Added `MercureJwtCodec` for compact JWT splitting, base64url encoding,
   unsigned JWT creation, and JSON header/payload decoding.
 - Added structural validation for configured `publisherJwt` values:
-  - compact JWT format with three segments;
-  - supported HMAC `alg`;
-  - required and non-expired `exp`;
-  - required `mercure.publish` rights;
-  - publish selectors constrained to `topicPrefix` unless the global selector
-    is explicitly enabled.
+    - compact JWT format with three segments;
+    - supported HMAC `alg`;
+    - required and non-expired `exp`;
+    - required `mercure.publish` rights;
+    - publish selectors constrained to `topicPrefix` unless the global selector
+      is explicitly enabled.
 - Added `allowGlobalPublisherSelector` Mercure option. The global publisher
   selector `*` is now allowed only when explicitly opted in.
 - Added `rejectCrossSiteBootstrap` option. Mercure authorization bootstrap
@@ -71,9 +120,9 @@ for the initial stable `1.0.0` release.
 - Provides a framework-native CodeIgniter 4 API for publishing Server-Sent
   Events through `sse()->publish(...)`.
 - Supports two production transports out of the box:
-  - Redis Pub/Sub for direct PHP SSE streaming.
-  - Mercure Hub for high-concurrency deployments where long-lived browser
-    connections should be handled outside PHP-FPM.
+    - Redis Pub/Sub for direct PHP SSE streaming.
+    - Mercure Hub for high-concurrency deployments where long-lived browser
+      connections should be handled outside PHP-FPM.
 - Keeps application publishing code independent of the selected transport.
   Applications can start with Redis and switch to Mercure without rewriting
   domain publishing calls.
@@ -127,10 +176,10 @@ for the initial stable `1.0.0` release.
   subscription endpoints, broker adapters, and broker adapter factories.
 - Added configurable broker map through `Config\Sse::$brokers`.
 - Added built-in broker keys:
-  - `redis`
-  - `mercure`
-  - `memory`
-  - `null`
+    - `redis`
+    - `mercure`
+    - `memory`
+    - `null`
 - Added custom broker extension points so applications can provide their own
   adapters without changing the package's public publishing API.
 - Added in-memory broker for isolated one-process tests.
@@ -155,9 +204,9 @@ for the initial stable `1.0.0` release.
 - Added Redis subscriber health PINGs for half-open subscribed sockets.
 - Added bounded reconnect behavior for publisher and subscriber transports.
 - Added payload and RESP parser safety limits:
-  - maximum payload bytes;
-  - maximum RESP array elements;
-  - maximum RESP nesting depth.
+    - maximum payload bytes;
+    - maximum RESP array elements;
+    - maximum RESP nesting depth.
 - Added optional Redis pattern subscriptions with secure disabled-by-default
   configuration.
 - Added channel/event ID deduplication for overlapping exact and pattern
@@ -181,8 +230,8 @@ for the initial stable `1.0.0` release.
 - Added topic-scoped `mercure.publish` support for publisher credentials.
 - Added configurable publisher and subscriber token TTLs.
 - Added configurable Hub URLs:
-  - `hubUrl` for PHP/server-side publishing;
-  - `publicHubUrl` for browser-facing EventSource connections.
+    - `hubUrl` for PHP/server-side publishing;
+    - `publicHubUrl` for browser-facing EventSource connections.
 - Added secure Mercure cookie configuration for the HttpOnly subscriber token.
 - Added local-development support for non-secure Mercure cookies.
 - Added Mercure publish payload size limits.
@@ -200,11 +249,11 @@ for the initial stable `1.0.0` release.
 - Added TypeScript declaration files for the browser client and adapters.
 - Added `SseClient` wrapper around native `EventSource`.
 - Added frontend adapters for:
-  - Redis;
-  - Mercure;
-  - direct EventSource usage;
-  - local broker semantics;
-  - in-memory broker semantics.
+    - Redis;
+    - Mercure;
+    - direct EventSource usage;
+    - local broker semantics;
+    - in-memory broker semantics.
 - Added named event listeners with `on()` and `off()`.
 - Added global message handling.
 - Added lifecycle status notifications for connection state.
@@ -226,11 +275,11 @@ for the initial stable `1.0.0` release.
 #### Channel security and authorization
 
 - Added strict logical channel validation:
-  - 1 to 200 bytes;
-  - dot-separated segments;
-  - ASCII alphanumeric segment starts;
-  - `_` and `-` inside segments;
-  - no whitespace, slashes, empty segments, or control characters.
+    - 1 to 200 bytes;
+    - dot-separated segments;
+    - ASCII alphanumeric segment starts;
+    - `_` and `-` inside segments;
+    - no whitespace, slashes, empty segments, or control characters.
 - Added `Channel` value object and safe segment joining helpers.
 - Added maximum channel count per browser connection.
 - Added duplicate channel normalization.
@@ -254,10 +303,10 @@ for the initial stable `1.0.0` release.
 #### Developer tooling and installation
 
 - Added `php spark sse:install` command to publish:
-  - application config;
-  - browser ES module;
-  - TypeScript declarations;
-  - broker adapter browser modules.
+    - application config;
+    - browser ES module;
+    - TypeScript declarations;
+    - broker adapter browser modules.
 - Added `php spark sse:health-check` command for broker/config validation.
 - Added CodeIgniter service definitions for package services.
 - Added Composer package discovery integration for config, routes, services,

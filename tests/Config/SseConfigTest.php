@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Config;
 
 use InvalidArgumentException;
+use Maniaba\CodeIgniterSse\Authorization\Channels\PublicChannel;
 use Maniaba\CodeIgniterSse\Config\Sse;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -17,6 +18,11 @@ final class SseConfigTest extends TestCase
     public function testRejectsCrossSiteBootstrapByDefault(): void
     {
         $this->assertTrue((new Sse())->rejectCrossSiteBootstrap);
+    }
+
+    public function testRegistersPublicChannelByDefault(): void
+    {
+        $this->assertSame([PublicChannel::class], (new Sse())->channels);
     }
 
     /**

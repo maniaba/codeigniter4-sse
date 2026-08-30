@@ -17,8 +17,13 @@ use Maniaba\CodeIgniterSse\HTTP\SseController;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Psr\Log\LoggerInterface;
 use Support\Tests\Adapter\BasicBrokerAdapter;
+use Support\Tests\Config\Fixtures\MercureAdminChannel;
+use Support\Tests\Config\Fixtures\MercureChannelAuthorizationRecorder;
+use Support\Tests\Config\Fixtures\MercureProjectChannel;
+use Support\Tests\Config\Fixtures\MercurePublicChannel;
+use Support\Tests\Config\Fixtures\MercureTenantChannel;
 use Support\Tests\Config\Fixtures\MercureTestUserResolver;
-use Support\Tests\Config\Fixtures\MercureUserChannelAuthorizer;
+use Support\Tests\Config\Fixtures\MercureUserChannel;
 
 /**
  * @internal
@@ -36,12 +41,18 @@ final class MercureAuthorizationTest extends CIUnitTestCase
         int $expectedStatus,
         array $expectedAuthorizedChannels,
     ): void {
-        $config                    = $this->mercureConfig();
-        $config->channelAuthorizer = MercureUserChannelAuthorizer::class;
-        $config->userResolver      = MercureTestUserResolver::class;
+        $config           = $this->mercureConfig();
+        $config->channels = [
+            MercurePublicChannel::class,
+            MercureUserChannel::class,
+            MercureTenantChannel::class,
+            MercureProjectChannel::class,
+            MercureAdminChannel::class,
+        ];
+        $config->userResolver = MercureTestUserResolver::class;
 
-        MercureTestUserResolver::$user          = $user;
-        MercureUserChannelAuthorizer::$attempts = [];
+        MercureTestUserResolver::$user = $user;
+        MercureChannelAuthorizationRecorder::reset();
 
         $request  = single_service('request');
         $response = single_service('response');
@@ -87,8 +98,8 @@ final class MercureAuthorizationTest extends CIUnitTestCase
             $superglobals->setGetArray($previousGet);
             FrameworkServices::resetSingle('sseBrokerAdapter');
             Factories::reset('config');
-            MercureTestUserResolver::$user          = null;
-            MercureUserChannelAuthorizer::$attempts = [];
+            MercureTestUserResolver::$user = null;
+            MercureChannelAuthorizationRecorder::reset();
         }
     }
 
@@ -316,8 +327,14 @@ final class MercureAuthorizationTest extends CIUnitTestCase
         array $authorizedBeforeFailure,
         int $expectedStatus,
     ): void {
-        $attempts = MercureUserChannelAuthorizer::$attempts;
-        $this->assertNotSame([], $attempts);
+        $attempts = MercureChannelAuthorizationRecorder::$attempts;
+
+        if ($attempts === []) {
+            $this->assertSame(403, $expectedStatus);
+            $this->assertSame([], $authorizedBeforeFailure);
+
+            return;
+        }
 
         foreach ($attempts as $attempt) {
             $this->assertSame($user, $attempt['user']);

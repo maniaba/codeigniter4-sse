@@ -20,11 +20,102 @@ These APIs should be treated as the main compatibility surface:
 - `sse()->publish()`
 - `PublisherInterface`
 - `SubscriberInterface`
-- `ChannelAuthorizerInterface`
+- `ChannelDefinitionInterface`
 - `UserResolverInterface`
 - `EventInterface`
 - `Channel`
 - `SseEvent`
+
+## Upgrade from v1.0.0-rc2 to v1.0.0-rc3
+
+The `v1.0.0-rc3` channel model replaces the single application-wide
+`ChannelAuthorizerInterface` from `v1.0.0-rc2` with registered channel
+definitions.
+
+Update the package:
+
+```bash
+composer require maniaba/codeigniter4-sse:1.0.0-rc3
+php spark sse:install
+```
+
+Then update `app/Config/Sse.php`.
+
+Before:
+
+```php
+public string $channelAuthorizer = \App\Sse\ChannelAuthorizer::class;
+```
+
+After:
+
+```php
+public array $channels = [
+    \Maniaba\CodeIgniterSse\Authorization\Channels\PublicChannel::class,
+    \App\Sse\Channels\UserNotificationsChannel::class,
+];
+```
+
+Keep `public string $userResolver` unchanged unless the application is also
+changing authentication.
+
+Move each channel family from the old central authorizer into a small
+`ChannelDefinitionInterface` implementation:
+
+```php
+namespace App\Sse\Channels;
+
+use Maniaba\CodeIgniterSse\Authorization\ChannelAuthorizationContext;
+use Maniaba\CodeIgniterSse\Contracts\ChannelDefinitionInterface;
+use Maniaba\CodeIgniterSse\Support\Channel;
+
+final class UserNotificationsChannel implements ChannelDefinitionInterface
+{
+    public static function pattern(): string
+    {
+        return 'users.{userId}.notifications';
+    }
+
+    public static function forUser(int|string $userId): Channel
+    {
+        return Channel::join('users', $userId, 'notifications');
+    }
+
+    public function authorize(ChannelAuthorizationContext $context): bool
+    {
+        $user = $context->user();
+
+        return $user !== null
+            && (string) $user->id === $context->param('userId');
+    }
+}
+```
+
+An old authorizer branch like this:
+
+```php
+if (preg_match('/^users\.(\d+)$/', $channel, $matches) === 1) {
+    return $user !== null && (string) $user->id === $matches[1];
+}
+```
+
+becomes a registered channel definition with a pattern such as
+`users.{userId}` or, for notification-specific streams,
+`users.{userId}.notifications`.
+
+The package no longer ships `PublicChannelAuthorizer`; the equivalent default
+is `Authorization\Channels\PublicChannel`.
+
+Event object publishing does not need to change. Existing classes that
+implement `PublishableEventInterface` can keep calling `channel()`, `event()`,
+and `data()`. Prefer returning channels through the new channel definitions:
+
+```php
+public function channel(): Channel
+{
+    return UserNotificationsChannel::forUser($this->userId);
+}
+```
 
 Redis socket internals and legacy response adapters are implementation
 details.

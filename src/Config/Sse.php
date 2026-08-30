@@ -7,15 +7,15 @@ namespace Maniaba\CodeIgniterSse\Config;
 use CodeIgniter\Config\BaseConfig;
 use InvalidArgumentException;
 use LogicException;
+use Maniaba\CodeIgniterSse\Authorization\Channels\PublicChannel;
 use Maniaba\CodeIgniterSse\Authorization\NullUserResolver;
-use Maniaba\CodeIgniterSse\Authorization\PublicChannelAuthorizer;
 use Maniaba\CodeIgniterSse\Broker\InMemory\InMemoryBrokerAdapterFactory;
 use Maniaba\CodeIgniterSse\Broker\Mercure\MercureBrokerAdapterFactory;
 use Maniaba\CodeIgniterSse\Broker\Null\NullBrokerAdapterFactory;
 use Maniaba\CodeIgniterSse\Broker\Redis\RedisBrokerAdapterFactory;
 use Maniaba\CodeIgniterSse\Contracts\BrokerAdapterFactoryInterface;
 use Maniaba\CodeIgniterSse\Contracts\BrokerAdapterInterface;
-use Maniaba\CodeIgniterSse\Contracts\ChannelAuthorizerInterface;
+use Maniaba\CodeIgniterSse\Contracts\ChannelDefinitionInterface;
 use Maniaba\CodeIgniterSse\Contracts\UserResolverInterface;
 use Maniaba\CodeIgniterSse\HTTP\SseController;
 
@@ -171,9 +171,11 @@ class Sse extends BaseConfig
     public bool $withCredentials = true;
 
     /**
-     * @var class-string<ChannelAuthorizerInterface>
+     * @var list<callable(): ChannelDefinitionInterface|ChannelDefinitionInterface|class-string<ChannelDefinitionInterface>>
      */
-    public string $channelAuthorizer = PublicChannelAuthorizer::class;
+    public array $channels = [
+        PublicChannel::class,
+    ];
 
     /**
      * @var class-string<UserResolverInterface>

@@ -475,14 +475,19 @@ Do not disable peer verification in production.
 
 | Property | Default | Purpose |
 |---|---|---|
-| `channelAuthorizer` | `PublicChannelAuthorizer::class` | Authorizes each requested logical channel. |
+| `channels` | `[PublicChannel::class]` | Registered logical channel definitions. |
 | `userResolver` | `NullUserResolver::class` | Resolves the current authenticated user or `null`. |
 
-The secure default allows only `public.*`. Set both class names when private
-channels are used:
+The secure default allows only `public.*`. Register every private channel
+family and configure the user resolver when private channels are used:
 
 ```php
-public string $channelAuthorizer = \App\Sse\ChannelAuthorizer::class;
+public array $channels = [
+    \Maniaba\CodeIgniterSse\Authorization\Channels\PublicChannel::class,
+    \App\Sse\Channels\UserNotificationsChannel::class,
+    \App\Sse\Channels\TenantDashboardChannel::class,
+];
+
 public string $userResolver = \App\Sse\UserResolver::class;
 ```
 
@@ -492,7 +497,8 @@ Applications using CodeIgniter Shield can use the packaged resolver:
 public string $userResolver = \Maniaba\CodeIgniterSse\Authorization\ShieldUserResolver::class;
 ```
 
-Both classes must implement their package contracts. See
+Each registered channel must implement `ChannelDefinitionInterface`; the user
+resolver must implement `UserResolverInterface`. See
 [Channels and authorization](channels-and-authorization.md).
 
 ## CORS and credentials

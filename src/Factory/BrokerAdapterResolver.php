@@ -33,9 +33,7 @@ final class BrokerAdapterResolver
         if ($shared) {
             $cacheKey = spl_object_id($config) . ':' . $config->broker;
 
-            if (! isset($this->shared[$cacheKey])) {
-                $this->shared[$cacheKey] = $this->make($config, $definition);
-            }
+            $this->shared[$cacheKey] ??= $this->make($config, $definition);
 
             return $this->shared[$cacheKey];
         }

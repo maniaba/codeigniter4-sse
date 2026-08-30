@@ -25,35 +25,43 @@ Verify it:
 php spark sse:health-check
 ```
 
-## 2. Authorize the user channel
+## 2. Define the user notification channel
 
-The browser will request a logical channel such as `users.42`. Private
-channels are denied by default, so the application must decide whether the
-current user may subscribe.
+The browser will request a logical channel such as `users.42.notifications`.
+Private channels are denied by default, so the application must register the
+channel and decide whether the current user may subscribe.
 
-Implement `ChannelAuthorizerInterface`:
+Implement `ChannelDefinitionInterface`:
 
 ```php
 <?php
 
 declare(strict_types=1);
 
-namespace App\Sse;
+namespace App\Sse\Channels;
 
-use Maniaba\CodeIgniterSse\Contracts\ChannelAuthorizerInterface;
+use Maniaba\CodeIgniterSse\Authorization\ChannelAuthorizationContext;
+use Maniaba\CodeIgniterSse\Contracts\ChannelDefinitionInterface;
+use Maniaba\CodeIgniterSse\Support\Channel;
 
-final class ChannelAuthorizer implements ChannelAuthorizerInterface
+final class UserNotificationsChannel implements ChannelDefinitionInterface
 {
-    public function authorize(?object $user, string $channel): bool
+    public static function pattern(): string
     {
-        if (
-            $user !== null
-            && preg_match('/^users\.(\d+)$/', $channel, $matches) === 1
-        ) {
-            return (string) $user->id === $matches[1];
-        }
+        return 'users.{userId}.notifications';
+    }
 
-        return str_starts_with($channel, 'public.');
+    public static function forUser(int|string $userId): Channel
+    {
+        return Channel::join('users', $userId, 'notifications');
+    }
+
+    public function authorize(ChannelAuthorizationContext $context): bool
+    {
+        $user = $context->user();
+
+        return $user !== null
+            && (string) $user->id === $context->param('userId');
     }
 }
 ```
@@ -78,7 +86,7 @@ final class UserResolver implements UserResolverInterface
 }
 ```
 
-Select these implementations in `app/Config/Sse.php`:
+Register the channel and resolver in `app/Config/Sse.php`:
 
 ```php
 <?php
@@ -87,41 +95,66 @@ declare(strict_types=1);
 
 namespace Config;
 
-use App\Sse\ChannelAuthorizer;
+use App\Sse\Channels\UserNotificationsChannel;
 use App\Sse\UserResolver;
+use Maniaba\CodeIgniterSse\Authorization\Channels\PublicChannel;
 use Maniaba\CodeIgniterSse\Config\Sse as BaseSse;
 
 final class Sse extends BaseSse
 {
-    public string $channelAuthorizer = ChannelAuthorizer::class;
+    public array $channels = [
+        PublicChannel::class,
+        UserNotificationsChannel::class,
+    ];
+
     public string $userResolver = UserResolver::class;
 }
 ```
 
-## 3. Publish an event
+## 3. Publish a notification object
 
 Publish only after the domain operation has succeeded:
 
 ```php
+use App\Sse\Channels\UserNotificationsChannel;
+use Maniaba\CodeIgniterSse\Contracts\PublishableEventInterface;
+use Maniaba\CodeIgniterSse\Support\Channel;
+
+final readonly class OrderPaidNotification implements PublishableEventInterface
+{
+    public function __construct(
+        private int $userId,
+        private int $orderId,
+    ) {
+    }
+
+    public function channel(): Channel
+    {
+        return UserNotificationsChannel::forUser($this->userId);
+    }
+
+    public function event(): string
+    {
+        return 'notification.created';
+    }
+
+    public function data(): array
+    {
+        return [
+            'title'   => 'Order paid',
+            'orderId' => $this->orderId,
+        ];
+    }
+}
+
 $order->markAsPaid();
 
-sse()->publish(
-    "users.{$order->user_id}",
-    'notification.created',
-    [
-        'title'   => 'Order paid',
-        'orderId' => $order->id,
-    ],
-);
+sse()->publish(new OrderPaidNotification($order->user_id, $order->id));
 ```
 
 The publisher builds a versioned envelope and sends it to the prefixed Redis
 channel. Application code does not build Redis channel names and does not
 write SSE frames.
-
-If the application already has an event object, implement
-`PublishableEventInterface` and call `sse()->publish($object)`. The object
-provides the channel, event name or event object, and payload.
 
 ## 4. Connect from the browser
 
@@ -134,7 +167,7 @@ import {
 const live = new SseClient({
     endpoint: '/sse',
     adapter: new RedisSseAdapter(),
-    channels: [`users.${currentUserId}`],
+    channels: [`users.${currentUserId}.notifications`],
     withCredentials: true,
 });
 
@@ -153,7 +186,7 @@ live.connect();
 With the default Redis broker, the browser opens:
 
 ```http
-GET /sse?channels=users.42
+GET /sse?channels=users.42.notifications
 Accept: text/event-stream
 ```
 

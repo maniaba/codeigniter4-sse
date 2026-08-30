@@ -8,13 +8,39 @@ services, and workers publish events without touching Redis directly.
 Publish from any PHP process:
 
 ```php
+use App\Sse\Channels\UserNotificationsChannel;
+use Maniaba\CodeIgniterSse\Contracts\PublishableEventInterface;
+use Maniaba\CodeIgniterSse\Support\Channel;
+
+final readonly class OrderPaidNotification implements PublishableEventInterface
+{
+    public function __construct(
+        private int $userId,
+        private int $orderId,
+    ) {
+    }
+
+    public function channel(): Channel
+    {
+        return UserNotificationsChannel::forUser($this->userId);
+    }
+
+    public function event(): string
+    {
+        return 'notification.created';
+    }
+
+    public function data(): array
+    {
+        return [
+            'title'   => 'Order paid',
+            'orderId' => $this->orderId,
+        ];
+    }
+}
+
 sse()->publish(
-    "users.{$userId}",
-    'notification.created',
-    [
-        'title'   => 'Order paid',
-        'orderId' => 918,
-    ],
+    new OrderPaidNotification($userId, 918),
 );
 ```
 
@@ -29,7 +55,7 @@ import {
 const live = new SseClient({
     endpoint: '/sse',
     adapter: new RedisSseAdapter(),
-    channels: [`users.${currentUserId}`],
+    channels: [`users.${currentUserId}.notifications`],
 });
 
 live.on('notification.created', ({ data }) => {

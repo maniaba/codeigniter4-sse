@@ -58,12 +58,12 @@ unless explicitly enabled.
 
 There are two common causes:
 
-- one or more channels failed `ChannelAuthorizerInterface`;
+- one or more channels failed registered channel authorization;
 - a cross-origin request is not in `allowedOrigins`.
 
 Verify that `UserResolverInterface::resolve()` returns the expected
 authenticated object. Do not “fix” a private-channel denial by switching to an
-authorizer that permits every channel.
+overly broad channel definition that permits every channel.
 
 ## Redis health check fails
 

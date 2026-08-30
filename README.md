@@ -62,24 +62,17 @@ application.
 
 ## Quick start
 
-Publish an event from a controller, domain service, listener, command, or queue
-worker:
+Publish an event object from a controller, domain service, listener, command,
+or queue worker:
 
 ```php
-sse()->publish(
-    "users.{$userId}",
-    'notification.created',
-    [
-        'title'   => 'Order paid',
-        'orderId' => 918,
-    ],
-);
+sse()->publish(new OrderPaidNotification($userId, 918));
 ```
 
 Open the stream for one or more logical channels:
 
 ```http
-GET /sse?channels=users.42,orders.918
+GET /sse?channels=users.42.notifications,orders.918
 Accept: text/event-stream
 ```
 
@@ -94,7 +87,7 @@ import {
 const live = new SseClient({
     endpoint: '/sse',
     adapter: new RedisSseAdapter(),
-    channels: [`users.${currentUserId}`],
+    channels: [`users.${currentUserId}.notifications`],
     withCredentials: true,
 });
 
@@ -119,41 +112,56 @@ With Mercure, the browser streams directly from the Hub.
 
 ## Channel security
 
-The built-in authorization policy permits only channels under `public.*`.
-Every user, tenant, order, project, or other private channel is denied until
-the application provides a `ChannelAuthorizerInterface` implementation.
+The built-in channel registry permits only channels under `public.*`. Every
+user, tenant, order, project, or other private channel is denied until the
+application registers an explicit channel definition.
 
 ```php
-namespace App\Sse;
+namespace App\Sse\Channels;
 
-use Maniaba\CodeIgniterSse\Contracts\ChannelAuthorizerInterface;
+use Maniaba\CodeIgniterSse\Authorization\ChannelAuthorizationContext;
+use Maniaba\CodeIgniterSse\Contracts\ChannelDefinitionInterface;
+use Maniaba\CodeIgniterSse\Support\Channel;
 
-final class ChannelAuthorizer implements ChannelAuthorizerInterface
+final class UserNotificationsChannel implements ChannelDefinitionInterface
 {
-    public function authorize(?object $user, string $channel): bool
+    public static function pattern(): string
     {
-        if (str_starts_with($channel, 'public.')) {
-            return true;
-        }
+        return 'users.{userId}.notifications';
+    }
 
-        if (
-            $user !== null
-            && preg_match('/^users\.(\d+)$/', $channel, $matches) === 1
-        ) {
-            return (string) $user->id === $matches[1];
-        }
+    public static function forUser(int|string $userId): Channel
+    {
+        return Channel::join('users', $userId, 'notifications');
+    }
 
-        return false;
+    public function authorize(ChannelAuthorizationContext $context): bool
+    {
+        $user = $context->user();
+
+        return $user !== null
+            && (string) $user->id === $context->param('userId');
     }
 }
 ```
 
-Register a matching `UserResolverInterface` when the application uses session,
-Shield, JWT, or another authentication system. Channel names supplied by the
-browser are logical names; clients never receive or control the internal Redis
-prefix. In production, private SSE routes should also use application
-authentication and per-user rate/concurrency filters to control open streams
-and reconnect churn; filters do not replace per-channel authorization.
+Register the channel and a matching `UserResolverInterface` when the
+application uses session, Shield, JWT, or another authentication system:
+
+```php
+public array $channels = [
+    \Maniaba\CodeIgniterSse\Authorization\Channels\PublicChannel::class,
+    \App\Sse\Channels\UserNotificationsChannel::class,
+];
+
+public string $userResolver = \App\Sse\UserResolver::class;
+```
+
+Channel names supplied by the browser are logical names; clients never receive
+or control the internal Redis prefix. In production, private SSE routes should
+also use application authentication and per-user rate/concurrency filters to
+control open streams and reconnect churn; filters do not replace per-channel
+authorization.
 
 See [Channels and authorization](docs/channels-and-authorization.md) for the
 complete setup.
