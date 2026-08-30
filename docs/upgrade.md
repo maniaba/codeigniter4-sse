@@ -20,11 +20,39 @@ These APIs should be treated as the main compatibility surface:
 - `sse()->publish()`
 - `PublisherInterface`
 - `SubscriberInterface`
-- `ChannelAuthorizerInterface`
+- `ChannelDefinitionInterface`
 - `UserResolverInterface`
 - `EventInterface`
 - `Channel`
 - `SseEvent`
+
+## Upgrade to v2
+
+The v2 channel model replaces the single application-wide
+`ChannelAuthorizerInterface` with registered channel definitions.
+
+Before:
+
+```php
+public string $channelAuthorizer = \App\Sse\ChannelAuthorizer::class;
+```
+
+After:
+
+```php
+public array $channels = [
+    \Maniaba\CodeIgniterSse\Authorization\Channels\PublicChannel::class,
+    \App\Sse\Channels\UserNotificationsChannel::class,
+];
+```
+
+Move each channel family from the old central authorizer into a
+`ChannelDefinitionInterface` implementation. A definition provides a pattern
+such as `users.{userId}.notifications` and authorizes a matched concrete
+channel through `ChannelAuthorizationContext`.
+
+The package no longer ships `PublicChannelAuthorizer`; the equivalent default
+is `Authorization\Channels\PublicChannel`.
 
 Redis socket internals and legacy response adapters are implementation
 details.

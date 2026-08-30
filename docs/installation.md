@@ -167,8 +167,8 @@ Do not serve the entire `vendor/` directory from the web root.
 
 ## Verify the HTTP stream
 
-The default authorizer permits `public.*` channels, so a public channel is
-useful for the first smoke test:
+The default channel registry permits `public.*` channels, so a public channel
+is useful for the first smoke test:
 
 ```bash
 curl -N \
@@ -193,7 +193,7 @@ sse()->publish(
 
 Before exposing the endpoint:
 
-1. implement private-channel authorization;
+1. register private channel definitions;
 2. configure the authenticated user resolver;
 3. apply application authentication plus reconnect rate/concurrency filters to
    private stream routes;

@@ -72,15 +72,20 @@ declare(strict_types=1);
 
 namespace Config;
 
-use App\Sse\ChannelAuthorizer;
+use App\Sse\Channels\UserNotificationsChannel;
 use Maniaba\CodeIgniterSse\Authorization\ShieldUserResolver;
+use Maniaba\CodeIgniterSse\Authorization\Channels\PublicChannel;
 use Maniaba\CodeIgniterSse\Config\Sse as BaseSse;
 
 final class Sse extends BaseSse
 {
     public string $broker = 'mercure';
 
-    public string $channelAuthorizer = ChannelAuthorizer::class;
+    public array $channels = [
+        PublicChannel::class,
+        UserNotificationsChannel::class,
+    ];
+
     public string $userResolver = ShieldUserResolver::class;
 
     public array $mercure = [
@@ -90,7 +95,7 @@ final class Sse extends BaseSse
         // URL returned to browsers.
         'publicHubUrl' => 'https://app.example.com/.well-known/mercure',
 
-        // Produces topics such as urn:storefront:sse:users.42.
+        // Produces topics such as urn:storefront:sse:users.42.notifications.
         'topicPrefix'  => 'urn:storefront:sse:',
 
         'private'              => true,
@@ -192,7 +197,7 @@ import {
 const live = new SseClient({
     endpoint: '/sse',
     adapter: new MercureSseAdapter(),
-    channels: [`users.${currentUserId}`],
+    channels: [`users.${currentUserId}.notifications`],
     withCredentials: true,
 });
 
@@ -206,7 +211,7 @@ live.connect();
 The client first fetches:
 
 ```http
-GET /sse?channels=users.42
+GET /sse?channels=users.42.notifications
 Accept: application/json
 ```
 
@@ -216,7 +221,7 @@ CodeIgniter validates and authorizes every channel, sets an HttpOnly
 ```json
 {
   "hub": "https://app.example.com/.well-known/mercure",
-  "topics": ["urn:storefront:sse:users.42"],
+  "topics": ["urn:storefront:sse:users.42.notifications"],
   "expiresAt": 1785520800
 }
 ```
@@ -237,7 +242,7 @@ Mercure authorization adds a second enforcement layer; it does not replace the
 application policy:
 
 1. `UserResolverInterface` resolves the authenticated application user.
-2. `ChannelAuthorizerInterface` approves every requested logical channel.
+2. A registered channel definition approves every requested logical channel.
 3. The package maps only approved channels to topics.
 4. The subscriber JWT contains only those exact topics in
    `mercure.subscribe`.

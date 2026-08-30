@@ -33,7 +33,7 @@ use Maniaba\CodeIgniterSse\Sse as SseManager;
 use ReflectionProperty;
 use Support\Tests\Adapter\BasicBrokerAdapter;
 use Support\Tests\Adapter\BasicSubscriptionEndpoint;
-use Support\Tests\Config\Fixtures\ConfiguredChannelAuthorizer;
+use Support\Tests\Config\Fixtures\ConfiguredUserChannel;
 
 /**
  * @internal
@@ -356,17 +356,17 @@ final class ServicesTest extends CIUnitTestCase
         }
     }
 
-    public function testAuthorizationFactoryCanUseConfiguredClass(): void
+    public function testAuthorizationFactoryCanUseConfiguredChannelClass(): void
     {
-        ConfiguredChannelAuthorizer::$channels = [];
+        ConfiguredUserChannel::$channels = [];
 
-        $config                    = new Sse();
-        $config->channelAuthorizer = ConfiguredChannelAuthorizer::class;
+        $config           = new Sse();
+        $config->channels = [ConfiguredUserChannel::class];
 
         $channels = (new AuthorizationFactory())->channelAuthorization($config)
             ->authorizeAll(null, ['users.42']);
 
         $this->assertSame(['users.42'], $channels);
-        $this->assertSame(['users.42'], ConfiguredChannelAuthorizer::$channels);
+        $this->assertSame(['users.42'], ConfiguredUserChannel::$channels);
     }
 }

@@ -7,6 +7,28 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+### Changed
+
+- Replaced the single `ChannelAuthorizerInterface` authorization hook with
+  registered `ChannelDefinitionInterface` classes.
+- Replaced `Config\Sse::$channelAuthorizer` with `Config\Sse::$channels`.
+- Replaced `PublicChannelAuthorizer` with the registered `PublicChannel`
+  definition.
+- Updated authorization documentation and quick-start examples to use channel
+  definitions plus `sse()->publish(new Notification(...))` event objects.
+
+### Added
+
+- Added channel pattern matching with literal segments, `{parameter}` segments,
+  and final `*` wildcard segments.
+- Added `ChannelAuthorizationContext`, `ChannelMatch`, `ChannelPattern`, and
+  `ChannelRegistry` for registered channel authorization.
+
+### Removed
+
+- Removed `ChannelAuthorizerInterface`.
+- Removed `PublicChannelAuthorizer`.
+
 ## [v1.0.0-rc2] - 2026-08-01
 
 Second release candidate focused on Mercure hardening, JWT validation, safer

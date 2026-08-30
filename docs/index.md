@@ -70,8 +70,8 @@ Use the frontend adapter that matches the configured broker. Redis, local, and
 in-memory adapters connect directly to the package route; Mercure authorizes
 through the route and then connects to the Hub.
 
-Private channels are denied until the application supplies an authorizer. Start
-with the [Quick start](quick-start.md), then configure
+Private channels are denied until the application registers channel
+definitions. Start with the [Quick start](quick-start.md), then configure
 [channels and authorization](channels-and-authorization.md).
 If Redis or Mercure is not the right transport, see
 [Custom brokers](custom-brokers.md).
