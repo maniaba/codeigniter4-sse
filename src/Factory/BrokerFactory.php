@@ -54,12 +54,10 @@ final class BrokerFactory
 
     private function resolver(): BrokerAdapterResolver
     {
-        if ($this->resolver === null) {
-            $this->resolver = new BrokerAdapterResolver(
-                $this->serializer,
-                $this->events,
-            );
-        }
+        $this->resolver ??= new BrokerAdapterResolver(
+            $this->serializer,
+            $this->events,
+        );
 
         return $this->resolver;
     }

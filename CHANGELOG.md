@@ -7,6 +7,38 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [v1.0.0-rc3] - 2026-08-30
+
+Third release candidate focused on making channels first-class application
+definitions. This is a breaking change for applications that configured a
+single `ChannelAuthorizerInterface` implementation in `v1.0.0-rc2`.
+
+### Breaking Changes
+
+- Removed `ChannelAuthorizerInterface`. Applications now register channel
+  definitions that implement `ChannelDefinitionInterface`.
+- Removed `PublicChannelAuthorizer`. The secure public default is now the
+  registered `Authorization\Channels\PublicChannel` definition.
+- Replaced `Config\Sse::$channelAuthorizer` with `Config\Sse::$channels`.
+- Changed channel authorization from one application-wide authorizer to a
+  registry lookup. A requested channel must match a registered channel
+  definition and pass that definition's authorization check.
+- Unknown channel namespaces are denied before application channel policies are
+  called.
+
+### Migration from v1.0.0-rc2
+
+1. Replace `public string $channelAuthorizer` in `app/Config/Sse.php` with
+   `public array $channels`.
+2. Keep public channels by registering
+   `Maniaba\CodeIgniterSse\Authorization\Channels\PublicChannel::class`.
+3. Move each branch from the old central authorizer into a small
+   `ChannelDefinitionInterface` class with a `pattern()` and `authorize()`
+   method.
+4. Keep `public string $userResolver` unchanged.
+5. Update imports and remove references to `ChannelAuthorizerInterface` and
+   `PublicChannelAuthorizer`.
+
 ### Changed
 
 - Replaced the single `ChannelAuthorizerInterface` authorization hook with
@@ -23,11 +55,6 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
   and final `*` wildcard segments.
 - Added `ChannelAuthorizationContext`, `ChannelMatch`, `ChannelPattern`, and
   `ChannelRegistry` for registered channel authorization.
-
-### Removed
-
-- Removed `ChannelAuthorizerInterface`.
-- Removed `PublicChannelAuthorizer`.
 
 ## [v1.0.0-rc2] - 2026-08-01
 
