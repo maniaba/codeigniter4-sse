@@ -41,7 +41,7 @@ Application service / controller / worker
    Short CodeIgniter authorization route
 ```
 
-Both paths use the same event envelope, channel authorizer, browser event
+Both paths use the same event envelope, channel registry, browser event
 handlers, and `sse()->publish(...)` API.
 
 The browser uses a frontend adapter that matches the configured broker. Redis,

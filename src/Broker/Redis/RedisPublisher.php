@@ -82,9 +82,7 @@ final class RedisPublisher implements PublisherInterface
 
     private function connection(): RedisConnectionInterface
     {
-        if ($this->connection === null) {
-            $this->connection = $this->connectionFactory->create();
-        }
+        $this->connection ??= $this->connectionFactory->create();
 
         if (! $this->connection->isConnected()) {
             $this->connection->connect();

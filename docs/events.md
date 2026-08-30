@@ -9,7 +9,7 @@ The high-level service accepts a logical channel, an event name, and a payload:
 
 ```php
 sse()->publish(
-    "users.{$userId}",
+    "users.{$userId}.notifications",
     'notification.created',
     [
         'title'   => 'Order paid',
@@ -19,9 +19,11 @@ sse()->publish(
 ```
 
 Domain code can also publish one object that knows its channel, event name, and
-payload:
+payload. Prefer building that channel through the registered channel definition
+so publishing and subscription authorization share the same naming rules:
 
 ```php
+use App\Sse\Channels\UserNotificationsChannel;
 use Maniaba\CodeIgniterSse\Contracts\PublishableEventInterface;
 use Maniaba\CodeIgniterSse\Support\Channel;
 
@@ -35,7 +37,7 @@ final readonly class OrderPaidNotification implements PublishableEventInterface
 
     public function channel(): Channel
     {
-        return Channel::join('users', $this->userId);
+        return UserNotificationsChannel::forUser($this->userId);
     }
 
     public function event(): string
